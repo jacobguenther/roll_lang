@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Roll Lang</title>
+	</head>
+	<body>
+
+		<article>
+		<h1>Roll Lang</h1>
+		<p>An RPG dice roller that mostly mimics roll20's.</p>
+		<noscript>This webpage requires javascript to run. Please enable javascript.</noscript>
+
+		<section>
+		<h2>History</h2>
+		<ul id="history">
+		</ul>
+		</section>
+	
+		<form action="javascript:void(0);" onsubmit="RollLang.run()">
+			<label for="source">Input</label>
+			<textarea id="source" name="source" placeholder="/roll 1d20" rows="2"></textarea>
+			<input type="submit" value="Run"></input>
+			<br>
+			<input type="button" value="Clear History" onclick="RollLang.clearHistory()"></input>
+			<br>
+			<input type="button" value="Save History" onclick="RollLang.saveHistory()"></input>
+			<input type="text" id="save history name" name="save history name"></input>
+			<br>
+			<select name="saved histories" id="">
+				<option value="">--Please Choose One--</option>
+			</select>
+			<input type="button" id="load history" value="load history"></input>
+		</form>
+
+		<section>
+			<h2>Help</h2>
+			<nav>
+				<ul>
+					<li>Basic Usage</li>
+					<li>Differences from Roll20</li>
+				</ul>
+			</nav>
+			<h3>Basic Usage</h3>
+			<p></p>
+			<h3>Differences from Roll20</h3>
+			<p></p>
+		</section>
+		</article>
+	</body>
+</html>
