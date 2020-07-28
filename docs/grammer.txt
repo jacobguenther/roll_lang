@@ -1,0 +1,83 @@
+
+<expression> ::=
+	  <expression> {("+" | "-") <term>}
+
+<term> ::=
+	  <term> {("*" | "/") <factor>}
+
+<factor> ::=
+	  <exponent> ("**" | "^") <factor>
+	| <exponent>
+
+<exponent> ::=
+	  <function>
+	| <dice>
+	| <number>
+	| "(" <expression> ")"
+
+<function> ::=
+	<fucntion_name> "(" <expression> ")"
+
+<function_name> ::=
+	  "abs"
+	| "ceil"
+	| "floor"
+	| "round"
+
+<number> ::=
+	  <integer>
+	| <float>
+
+<integer> ::=
+	{"0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"}-
+
+<float> ::=
+	<integer> "." <integer>
+
+
+
+
+<dice> ::=
+	| (<dice_base> | <fate> | <computed>)
+		[<exploding> | <compounding>]
+		[(<high> <low> | <low> <high>)]
+		[<successes>]
+		[<critical>]
+
+<dice_base> ::=
+	[<integer>] "d" <integer>
+<fate> ::=
+	[<integer>] "dF"
+
+<computed> ::=
+	  <integer> "d" "(" <expression> ")"
+	| "(" <expression> ")" "d" <integer>
+	| "(" <expression> ")" "d" "(" <expression> ")"
+
+<exploding> ::=
+	"!" {[<comparison_operator>] <integer>}
+
+<compounding> ::=
+	"!!" {[<comparison_operator>] <integer>}
+
+<high> ::=
+	("dh" | "k" | "kh") <integer>
+
+<low> ::=
+	("d" | "dl" | "kl") <integer>
+
+<reroll> ::=
+	{"r" [<comparison_operator>] <integer>}-
+
+<successes> ::=
+	{<comparison_operator> <integer>}-
+
+<critical> ::=
+	{("cs" | "cf") [<comparison_operator>] <integer>}-
+
+<comparison_operator> ::=
+	  "="
+	| "<"
+	| "<="
+	| ">"
+	| ">="

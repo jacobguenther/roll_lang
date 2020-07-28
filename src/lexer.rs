@@ -147,7 +147,6 @@ impl<'a> LexerT for Lexer<'a> {
 }
 trait LexerPrivateT {
 	fn current_char(&self) -> Option<String>;
-	fn next_char(&self) -> Option<String>;
 	fn at_end(&self) -> bool;
 
 	fn add_one(&mut self, lexeme: &mut Lexeme);
@@ -170,13 +169,6 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 	fn current_char(&self) -> Option<String> {
 		if self.current_index < self.graphemes.len() {
 			Some(self.graphemes[self.current_index].to_owned())
-		} else {
-			None
-		}
-	}
-	fn next_char(&self) -> Option<String> {
-		if self.current_index < self.graphemes.len() {
-			Some(self.graphemes[self.current_index + 1].to_owned())
 		} else {
 			None
 		}
@@ -212,44 +204,40 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 	fn handle_start(&mut self, lexeme: &mut Lexeme) {
 		let c = self.current_char().unwrap();
 
-		match Lexer::is_digit(&c) {
-			true => {
-				self.add_one(lexeme);
-				*lexeme = lexeme.into("number");
+		if Lexer::is_digit(&c) {
+			self.add_one(lexeme);
+			*lexeme = lexeme.into("number");
+			self.state = State::Digit;
+			if self.at_end() {
+				self.state = State::Done;
+			} else {
 				self.state = State::Digit;
-				if self.at_end() {
-					self.state = State::Done;
-				} else {
-					self.state = State::Digit;
-				}
-				return;
-			},
-			false => (),
-		};
+			}
+			return;
+		}
 
-		match Lexer::is_whitespace(&c) {
-			true => {
-				self.add_one(lexeme);
-				*lexeme = lexeme.into("whitespace");
-				if self.at_end() {
-					self.state = State::Done;
-				} else {
-					self.state = State::Whitespace;
-				}
-				return;
-			},
-			false => (),
-		};
+		if Lexer::is_whitespace(&c) {
+			self.add_one(lexeme);
+			*lexeme = lexeme.into("whitespace");
+			if self.at_end() {
+				self.state = State::Done;
+			} else {
+				self.state = State::Whitespace;
+			}
+			return;
+		}
 
+		super::log(&format!("{:?}", c));
 		if Lexer::is_comparison_operator(&c) {
 			self.add_one(lexeme);
 			*lexeme = lexeme.into("comparison");
-			if !self.at_end() &&
-				(&c == "<" || &c == ">") &&
-				&self.current_char().unwrap() == "="
+			super::log(&format!("{:?}", lexeme));
+			if !self.at_end()
+				&& ((c == "<" || c == ">") && self.current_char().unwrap() == "=")
 			{
 				self.add_one(lexeme);
 			}
+			super::log(&format!("{:?}", lexeme));
 			self.state = State::Done;
 			return;
 		}
@@ -257,6 +245,12 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 		if Lexer::is_operator(&c) {
 			self.add_one(lexeme);
 			*lexeme = lexeme.into("operator");
+			if !self.at_end()
+				&& (c == "*" && self.current_char().unwrap() == "*")
+				|| (c == "!" && self.current_char().unwrap() == "!")
+			{
+				self.add_one(lexeme);	
+			}
 			self.state = State::Done;
 			return;
 		}
@@ -281,8 +275,9 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 				break;
 			}
 			let c = self.current_char().unwrap();
-			if !Lexer::is_digit(&c) && !Lexer::is_whitespace(&c) &&
-				!Lexer::is_operator(&c) && !Lexer::is_punctuation(&c)
+			if !Lexer::is_digit(&c) && !Lexer::is_whitespace(&c)
+				&& !Lexer::is_operator(&c) && !Lexer::is_punctuation(&c)
+				&& !Lexer::is_comparison_operator(&c) 
 			{
 				self.add_one(lexeme);
 			} else {
@@ -327,13 +322,13 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 	}
 	fn is_operator(s: &str) -> bool {
 		match s {
-			"+" | "-" | "*" | "/" | "!" | "%" | "|" => true,
+			"+" | "-" | "*" | "/" | "!" | "!!" | "%" | "**" | "^" => true,
 			_ => false, 
 		}
 	}
 	fn is_punctuation(s: &str) -> bool {
 		match s {
-			"[" | "]" | "(" | ")" | "{" | "}" | "[" | "]" | "\\" | "." => true,
+			"[" | "]" | "(" | ")" | "{" | "}" | "\\" | "." => true,
 			_ => false,
 		}
 	}
