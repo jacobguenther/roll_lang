@@ -1,22 +1,26 @@
 # Roll Lang
 
-Roll Lang is a domain specific language for interpreting common RPG and tabletop game dice rolls and math. You can check out the demo page and find out more at [Comming Soon]().
-Roll Lang is primarily written in Rust and is meant to be compiled to WebAssembly for use client side use in the browser.
+Roll Lang is a domain specific language for interpreting common RPG and tabletop game dice rolls and math. Roll Lang is primarily written in Rust and is meant to be compiled to WebAssembly for use client side use in the browser. You can check out the [demo page(comming soon)]() to find out more.
 
 ## Build Dependencies
 
 * [rustup and Cargo](https://www.rust-lang.org/tools/install)
-* [npm]()
+* [npm](https://www.npmjs.com/get-npm)
 
-## Building
+### Building
 
 In the project folder run the following commands to install the build dependencies
 
 > npm install --save-dev webpack
+
 > npm install --save-dev webpack-cli
+
 > npm install --save-dev webpack-dev-server
+
 > npm install --save-dev @wasm-tool/wasm-pack-plugin
+
 > npm install --save-dev html-webpack-plugin
+
 > npm install --save-dev text-encoding
 
 Then build the project with
@@ -25,7 +29,7 @@ Then build the project with
 And run the demo page with
 > npm run serve
 
-You can check it out at localhost:8080 in your favorite browser.
+You can now check it out at localhost:8080 in your favorite browser.
 
 ## Authors
 
