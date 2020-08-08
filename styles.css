@@ -1,15 +1,11 @@
 
+div {
+	display: inline-block;
+}
 .source {
 
 }
-.formula {
-	display: inline-block;
-	font-weight: bold;
-}
-.result {
-	display: inline-block;
-	font-weight: bold;
-}
+
 .tooltip {
 	position: relative;
 	display: inline-block;
@@ -21,7 +17,7 @@
 	background-color: black;
 	color: #fff;
 	text-align: center;
-	padding: 5px 0;
+	padding: 5px 5px;
 	border-radius: 6px;
 
 	position: absolute;
@@ -29,4 +25,29 @@
 }
 .tooltip:hover .tooltiptext {
 	visibility: visible;
+}
+
+.formula {
+	font-weight: bold;
+	background-color: tan;
+}
+.basic-roll {
+
+}
+.success-roll {
+	color: greenyellow;
+}
+.fail-roll {
+
+}
+.critical-success-roll {
+	color: green;
+}
+.critical-fail-roll {
+	color: red;
+}
+.result {
+	display: inline-block;
+	font-weight: bold;
+	background-color: goldenrod;
 }
