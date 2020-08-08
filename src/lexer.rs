@@ -7,7 +7,7 @@ pub trait TokenT {
 	fn start(&self) -> usize;
 	fn end(&self) -> usize;
 	fn length(&self) -> usize;
-	fn add_str(&mut self, s: &str);
+	fn push_str(&mut self, s: &str);
 }
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
@@ -35,8 +35,8 @@ impl TokenT for Token {
 	fn length(&self) -> usize {
 		self.source.len()
 	}
-	fn add_str(&mut self, s: &str) {
-		self.source.push_str(s);
+	fn push_str(&mut self, s: &str) {
+		self.source = format!("{}{}", self.source, s);
 	}
 }
 
@@ -90,8 +90,8 @@ impl TokenT for Lexeme {
 	fn length(&self) -> usize {
 		self.token().length()
 	}
-	fn add_str(&mut self, s: &str) {
-		self.mut_token().add_str(s);
+	fn push_str(&mut self, s: &str) {
+		self.mut_token().push_str(s);
 	}
 }
 
@@ -103,7 +103,6 @@ enum State {
 	Digit,
 	Done,
 }
-
 
 pub struct Lexer<'a> {
 	graphemes: Vec<&'a str>,
@@ -178,7 +177,7 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 	}
 
 	fn add_one(&mut self, lexeme: &mut Lexeme) {
-		lexeme.add_str(&self.current_char().unwrap());
+		lexeme.push_str(&self.current_char().unwrap());
 		self.current_index += 1;
 	}
 
@@ -227,17 +226,14 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 			return;
 		}
 
-		super::log(&format!("{:?}", c));
 		if Lexer::is_comparison_operator(&c) {
 			self.add_one(lexeme);
 			*lexeme = lexeme.into("comparison");
-			super::log(&format!("{:?}", lexeme));
 			if !self.at_end()
 				&& ((c == "<" || c == ">") && self.current_char().unwrap() == "=")
 			{
 				self.add_one(lexeme);
 			}
-			super::log(&format!("{:?}", lexeme));
 			self.state = State::Done;
 			return;
 		}
@@ -328,7 +324,7 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 	}
 	fn is_punctuation(s: &str) -> bool {
 		match s {
-			"[" | "]" | "(" | ")" | "{" | "}" | "\\" | "." => true,
+			"[" | "]" | "(" | ")" | "{" | "}" | "\\" | "." | "?" | "|" => true,
 			_ => false,
 		}
 	}
