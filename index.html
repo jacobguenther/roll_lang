@@ -3,8 +3,6 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Roll Lang</title>
-		<link rel="stylesheet" href="styles.css">
 	</head>
 	<body>
 
@@ -21,7 +19,7 @@
 	
 		<form action="javascript:void(0);" onsubmit="RollLang.run()">
 			<label for="source">Input</label>
-			<textarea id="source" name="source" placeholder="/roll 1d20" rows="2"></textarea>
+			<textarea id="source" name="source" placeholder="/roll 1d20" cols="120" rows="2"></textarea>
 			<input type="submit" value="Run"></input>
 			<br>
 			<input type="button" value="Clear History" onclick="RollLang.clearHistory()"></input>

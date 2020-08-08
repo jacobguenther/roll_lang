@@ -1,3 +1,7 @@
+// File: index.js
+
+import('./styles.css');
+
 const rust = import('./pkg');
 
 const sourceInputField = document.getElementById('source');
