@@ -1,0 +1,32 @@
+
+.source {
+
+}
+.formula {
+	display: inline-block;
+	font-weight: bold;
+}
+.result {
+	display: inline-block;
+	font-weight: bold;
+}
+.tooltip {
+	position: relative;
+	display: inline-block;
+	border-bottom: 1px dotted black; 
+}
+.tooltiptext {
+	visibility: hidden;
+	width: 240px;
+	background-color: black;
+	color: #fff;
+	text-align: center;
+	padding: 5px 0;
+	border-radius: 6px;
+
+	position: absolute;
+	z-index: 1;
+}
+.tooltip:hover .tooltiptext {
+	visibility: visible;
+}
