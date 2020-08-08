@@ -1,5 +1,8 @@
 // File: interpreter.rs
 
+pub mod output;
+use output::*;
+
 use super::ast::{
 	*,
 	number::*,
@@ -11,145 +14,6 @@ use super::parser::{
 };
 
 use std::convert::TryInto;
-
-#[derive(Debug)]
-pub struct Output {
-	source: String,
-	fragments: Vec<OutputFragment>,
-	error: Option<InterpretError>,
-}
-impl Output {
-	fn new(source: &str) -> Output {
-		Output {
-			source: source.to_owned(),
-			fragments: Vec::new(),
-			error: None,
-		}
-	}
-	pub fn into_html(&self) -> String {
-		let mut out = String::new();
-		for fragment in &self.fragments {
-			match fragment {
-				OutputFragment::StringLit(s) => {
-					out = format!("{}{}",
-						out,
-						s
-					);
-				},
-				OutputFragment::Roll(roll_type) => match roll_type {
-					RollType::ExplicitRoll(expression_output) => {
-						out = format!("{}rolling [\
-								<div class=\"formula\">{}\
-								</div> =\
-								<div class=\"result\">{}\
-								</div>]",
-							out,
-							expression_output.formula_fragments.to_html(),
-							String::from(expression_output.result)
-						);
-					},
-					RollType::InlineRoll(expression_output) => {
-						out = format!("{}\
-								<div class=\"result tooltip\">{}\
-									<div class=\"tooltiptext\">\
-										<div class=\"formula\">{}\
-										</div>\
-										=\
-										<div class=\"result\">{}\
-										</div>\
-									</div>\
-								</div>",
-							out,
-							String::from(expression_output.result),
-							expression_output.formula_fragments.to_html(),
-							String::from(expression_output.result),
-						);
-					}
-				}
-			}
-		}
-		match &self.error {
-			Some(e) => out = format!("{} Error::{:?}", out, e.clone()),
-			None => (),
-		}
-		out
-	}
-}
-
-#[derive(Debug, Clone)]
-pub enum OutputFragment {
-	StringLit(String),
-	Roll(RollType),
-}
-#[derive(Debug, Clone)]
-pub enum RollType {
-	ExplicitRoll(ExpressionOutput),
-	InlineRoll(ExpressionOutput),
-}
-#[derive(Debug, Clone)]
-pub struct ExpressionOutput {
-	formula_fragments: FormulaFragments,
-	result: Number,
-}
-
-type FormulaFragments = Vec<FormulaFragment>;
-trait FormulaFragmentsT {
-	fn push_str(&mut self, s: &str);
-	fn push_number_roll(&mut self, int: &Integer);
-	fn push_success_fail_roll(&mut self, success_fail: &SuccessFail);
-	fn to_html(&self) -> String;
-}
-impl FormulaFragmentsT for FormulaFragments {
-	fn push_str(&mut self, s: &str) {
-		match self.last_mut() {
-			Some(FormulaFragment::Basic(string)) => {
-				string.push_str(s);
-			},
-			_ => self.push(FormulaFragment::Basic(String::from(s))),
-		}
-	}
-	fn push_number_roll(&mut self, int: &Integer) {
-		match self.last_mut() {
-			Some(FormulaFragment::NumberRolls(_first, rolls)) => rolls.push(*int),
-			_ => self.push(FormulaFragment::NumberRolls(*int, vec!())),
-		}
-	}
-	fn push_success_fail_roll(&mut self, success_fail: &SuccessFail) {
-		match self.last_mut() {
-			Some(FormulaFragment::SuccessFailRolls(_first, rolls)) => rolls.push(*success_fail),
-			_ => self.push(FormulaFragment::SuccessFailRolls(*success_fail, vec!())),
-		}
-	}
-	fn to_html(&self) -> String {
-		let mut html = String::new();
-		for fragment in self {
-			match fragment {
-				FormulaFragment::Basic(string) => html.push_str(&string),
-				FormulaFragment::NumberRolls(first_roll, rolls) => {
-					html.push_str(&format!("{}", first_roll.value()));
-					for roll in rolls {
-						html.push_str(&format!("+{}", roll.value()));
-					}
-				},
-				_ => (),
-			}
-		}
-		html
-	}
-}
-#[derive(Debug, Clone)]
-pub enum FormulaFragment {
-	Basic(String),
-	NumberRolls(Integer, Vec<Integer>),
-	SuccessFailRolls(SuccessFail, Vec<SuccessFail>),
-}
-#[derive(Debug, Copy, Clone)]
-pub enum SuccessFail {
-	Success(Number),
-	Fail(Number),
-	CriticalSuccess(Number),
-	CriticalFail(Number),
-}
 
 
 #[derive(Debug, Clone)]
@@ -401,6 +265,10 @@ impl InterpreterPrivateT for Interpreter {
 				},
 				_ => Err(InterpretError::RandomNumberGenerator),
 			}
+		};
+		let rand_range = | low: i32, high: i32 | -> i32 {
+			use js_sys::Math::random;
+			(low as f64 + random() * (high-1) as f64).ceil() as i32
 		};
 
 		formula.push_str("(");
