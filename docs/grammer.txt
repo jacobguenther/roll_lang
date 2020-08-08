@@ -1,19 +1,33 @@
+<roll> ::=
+	  <explicit_roll>
+	| <inline_roll>
+
+<explicit_roll> ::=
+	  "/roll" <expression> ["\"]
+
+<inline_roll> ::=
+	"[[" <expression> "]]"
 
 <expression> ::=
-	  <expression> {("+" | "-") <term>}
+	  <expression> {("+" | "-") <mul_div>}
 
-<term> ::=
-	  <term> {("*" | "/") <factor>}
+<mul_div> ::=
+	  <mul_div> {("*" | "/") <power>}
 
-<factor> ::=
-	  <exponent> ("**" | "^") <factor>
-	| <exponent>
+<power> ::=
+	  <unary> ("**" | "^") <power>
+	| <unary>
 
-<exponent> ::=
-	  <function>
-	| <dice>
-	| <number>
-	| "(" <expression> ")"
+<unary> ::=
+	  [<inline>] "-" <unary> =
+	| <atom>
+
+<atom>
+	  [<inline>] <function> [<inline>]
+	| [<inline>] <dice> [<inline>]
+	| [<inline>] <number> [<inline>]
+	| [<inline>] <roll_query> [<inline>]
+	| [<inline>] "(" <expression> ")" [<inline>]
 
 <function> ::=
 	<fucntion_name> "(" <expression> ")"
@@ -34,31 +48,37 @@
 <float> ::=
 	<integer> "." <integer>
 
+<roll_query> ::=
+	"?{" <any> ["|" <expression>] "}"
 
-
+<inline> ::=
+	  "[" <any>+ "]"
 
 <dice> ::=
-	| (<dice_base> | <fate> | <computed>)
-		[<exploding> | <compounding>]
-		[(<high> <low> | <low> <high>)]
-		[<successes>]
-		[<critical>]
+	| (<normal> | <fate> | <computed>) [<modifiers>] [<inline>]
 
-<dice_base> ::=
-	[<integer>] "d" <integer>
+<modifiers> :=
+	[<exploding> | <compounding>]
+	[(<high> [<low>] | <low> [<high>])]
+	[<critical>]
+	[<successes>]
+
+<normal> ::=
+	[<integer> | <roll_query>] "d" (<integer> | <roll_query>)
+
 <fate> ::=
-	[<integer>] "dF"
+	([<integer>] | <roll_query>) "dF"
 
 <computed> ::=
-	  <integer> "d" "(" <expression> ")"
-	| "(" <expression> ")" "d" <integer>
-	| "(" <expression> ")" "d" "(" <expression> ")"
+	  [    <integer>       ] "d" "(" <expression> ")"
+	|  "(" <expression> ")"  "d"     <integer>
+	| ["(" <expression> ")"] "d" "(" <expression> ")"
 
 <exploding> ::=
-	"!" {[<comparison_operator>] <integer>}
+	"!" [[<comparison_operator>] <integer>]
 
 <compounding> ::=
-	"!!" {[<comparison_operator>] <integer>}
+	"!!" [[<comparison_operator>] <integer>]
 
 <high> ::=
 	("dh" | "k" | "kh") <integer>
@@ -67,13 +87,13 @@
 	("d" | "dl" | "kl") <integer>
 
 <reroll> ::=
-	{"r" [<comparison_operator>] <integer>}-
+	{"r" [<comparison_operator>] (<integer> | <roll_query>)}-
 
 <successes> ::=
 	{<comparison_operator> <integer>}-
 
 <critical> ::=
-	{("cs" | "cf") [<comparison_operator>] <integer>}-
+	{("cs" | "cf") [<comparison_operator>] (<integer> | <roll_query>)}-
 
 <comparison_operator> ::=
 	  "="
