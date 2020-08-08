@@ -42,26 +42,30 @@ pub fn init_panic_hook() {
 
 #[wasm_bindgen]
 pub fn run(source: &str) -> String {
-	let mut out = String::new();
+	if false {
+		let mut out = String::new();
 
-	if true {
-	    let mut lexer = Lexer::new(source);
-	    while let Some(lexeme) = lexer.next() {
-	        out = format!("{}{:?}", out, lexeme);
-	    }
+		if true {
+			let mut lexer = Lexer::new(source);
+			while let Some(lexeme) = lexer.next() {
+				out = format!("{}{:?}", out, lexeme);
+			}
+		}
+		
+		if true {
+			let mut parser = Parser::new(source);
+			let ast = parser.parse();
+			out = format!("{}<br><br>{:?}", out, ast);
+		}
+		
+		let interpreter = Interpreter::new(source);
+		format!("{}<br><br>{}",
+			out,
+			interpreter.interpret().as_html()
+		)
+	} else {
+		Interpreter::new(source)
+			.interpret()
+			.as_html()
 	}
-	
-	if true {
-	    let mut parser = Parser::new(source);
-	    let ast = parser.parse();
-	    out = format!("{}<br><br>{:?}", out, ast);
-	}
-	
-	let interpreter = Interpreter::new(source);
-	out = format!("{}<br><br>{}",
-		out,
-		interpreter.interpret().into_html()
-	);
-
-	out
 }
