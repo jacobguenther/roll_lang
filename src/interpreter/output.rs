@@ -42,7 +42,7 @@ impl Output {
 					RollType::InlineRoll(expression_output) => {
 						let result_string = String::from(expression_output.result);
 						out = format!("{}\
-								<div class=\"result tooltip\">{}\
+								<div class=\"result tooltipped\">{}\
 									<div class=\"tooltiptext\">\
 										<div class=\"formula\">{}=\
 										</div>\
