@@ -32,6 +32,19 @@ impl Number {
 			Number::Float(float) => Number::Float(Float::new(float.value().abs())),	
 		}
 	}
+	pub fn pow(&self, exponent: &Number) -> Number {
+		let (b, e) = match (self, exponent) {
+			(Number::Integer(b), Number::Integer(e)) =>
+				(b.value() as f32, e.value() as f32),
+			(Number::Integer(b), Number::Float(e)) => 
+				(b.value() as f32, e.value()),
+			(Number::Float(b), Number::Integer(e)) => 
+				(b.value(), e.value() as f32),
+			(Number::Float(b), Number::Float(e)) =>
+				(b.value(), e.value())
+		};
+		Number::Float(Float::new(b.powf(e)))
+	}
 }
 impl From<Number> for String {
 	fn from(num: Number) -> String {
