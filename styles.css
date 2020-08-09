@@ -1,53 +1,69 @@
 
+body, nav,
+article, header, footer, section,
+p, span,
+form, input, label, textarea,
+ul, li,
+br, hr,
+h1, h2, h3, h4, h5, h6
+{
+	padding: 0 0 0 0;
+	margin: 0 0 0 0;
+}
 div {
 	display: inline-block;
 }
-.source {
-
+ul {
+	list-style-type: none;
 }
 
-.tooltip {
-	position: relative;
-	display: inline-block;
-	border-bottom: 1px dotted black; 
+#page-container,
+#input-container
+{
+	display: grid;
+	justify-content: center;
+	justify-items: center;
+	align-items: center;
 }
-.tooltiptext {
-	visibility: hidden;
-	width: 240px;
-	background-color: black;
-	color: #fff;
-	text-align: center;
-	padding: 5px 5px;
-	border-radius: 6px;
-
-	position: absolute;
-	z-index: 1;
-}
-.tooltip:hover .tooltiptext {
-	visibility: visible;
+#page-container .grid-item {
+	width: 550px;
 }
 
-.formula {
-	font-weight: bold;
-	background-color: tan;
-}
-.basic-roll {
 
-}
-.success-roll {
-	color: greenyellow;
-}
-.fail-roll {
 
+#input-container {
+	grid-column-gap: 10px;
+
+	grid-template-columns: auto auto auto;
+	grid-template-areas:
+		"input-label input-textarea input-submit";
 }
-.critical-success-roll {
-	color: green;
+#input-container #input-label {
+	grid-area: input-label;
 }
-.critical-fail-roll {
-	color: red;
+#input-container #input-textarea {
+	grid-area: input-textarea;
+	resize: vertical;
 }
-.result {
-	display: inline-block;
-	font-weight: bold;
-	background-color: goldenrod;
+#input-container #input-textarea:focus {
+	border: 3px solid #555;
+}
+#input-container #input-submit {
+	grid-area: input-submit;
+}
+
+#roll-lang-form {
+	border: 2px solid black;
+}
+#history-section {
+	background-color: lightblue;
+	padding: 5px 5px 5px 5px;
+}
+#history {
+	list-style-type: none;
+}
+#history li:nth-child(even) {
+	background: lightgreen;
+	margin-top: 5px;
+	margin-bottom: 5px;
 }

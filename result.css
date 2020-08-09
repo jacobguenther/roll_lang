@@ -1,0 +1,55 @@
+
+.tooltipped {
+	position: relative;
+	display: inline-block;
+	border-bottom: 1px dotted black; 
+}
+.tooltipped:hover .tooltiptext {
+	visibility: visible;
+}
+.tooltiptext {
+	visibility: hidden;
+	width: 240px;
+	background-color: black;
+	color: #fff;
+	text-align: center;
+	padding: 5px 5px;
+	border-radius: 6px;
+
+	position: absolute;
+	z-index: 1;
+}
+.tooltiptext .formula {
+	background-color: black;
+}
+.tooltiptext .result {
+	background-color: black;
+}
+
+.source {
+	color: rgb(63, 63, 63);
+}
+.formula {
+	font-weight: bold;
+	background-color: wheat;
+}
+.basic-roll {
+
+}
+.success-roll {
+	color: greenyellow;
+}
+.fail-roll {
+
+}
+.critical-success-roll {
+	color: green;
+}
+.critical-fail-roll {
+	color: red;
+}
+.result {
+	display: inline-block;
+	font-weight: bold;
+	background-color: lightyellow;
+}
