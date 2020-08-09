@@ -16,8 +16,10 @@ module.exports = {
 			.then((interpreter) => {
 				let t0 = performance.now();
 				const source = readSource();
-				const result = interpreter.run(source);
-				appendHistory(source, result);
+				if (source.length > 0) {
+					const result = interpreter.run(source);
+					appendHistory(source, result);
+				}
 				let t1 = performance.now();
 				console.log(`Call to interpreter.run() took ${t1 - t0} milliseconds.`);
 			})
