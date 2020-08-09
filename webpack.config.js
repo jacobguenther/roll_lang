@@ -15,19 +15,17 @@ module.exports = {
 		libraryTarget: 'var',
 		library: 'RollLang',
 	},
-	module: {
-		rules: [
-			{
-				test: /\.css$/i,
-				use: [MiniCssExtractPlugin.loader, 'css-loader'],
-			},
-		],
-	},
 	plugins: [
 		new HtmlWebpackPlugin({
 			title: 'Roll Lang',
 			template: 'index.html',
 			scriptLoading: 'defer',
+			minify: {
+				collapseWhitespace: true,
+				removeComments: true,
+				removeEmptyAttributes: true,
+				removeRedundantAttributes: true,
+			}
 		}),
 		new MiniCssExtractPlugin(),
 		new WasmPackPlugin({
@@ -38,4 +36,12 @@ module.exports = {
 		  TextEncoder: ['text-encoding', 'TextEncoder']
 		})
 	],
+	module: {
+		rules: [
+			{
+				test: /\.css$/i,
+				use: [MiniCssExtractPlugin.loader, 'css-loader'],
+			},
+		],
+	},
 };
