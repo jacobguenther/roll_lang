@@ -4,25 +4,32 @@
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
-<body>
-	<header>
+<body id="page-container">
+	<header class="grid-item">
 		<h1>Roll Lang</h1>
-		<p>An RPG dice roller that mostly mimics Roll20's.</p>
+		<p>An open source RPG dice roller.</p>
 		<noscript>This webpage requires javascript and WebAssembly to run. Please enable javascript or if your browser does not support WebAssembly consider using Firefox, Chrome, Edge or Safari.</noscript>
 	</header>
 
-	<form action="javascript:void(0);" onsubmit="RollLang.run()">
-		<section>
+	<form id="roll-lang-form" class="grid-item" action="javascript:void(0);" onsubmit="RollLang.run()">
+		<section id="history-section">
 			<h2>History</h2>
 			<ul id="history">
 			</ul>
 		</section>
-		<label for="source">Input</label>
-		<textarea id="source" name="source" placeholder="/roll 1d20" cols="120" rows="2"></textarea>
-		<input type="submit" value="Run"></input>
-		<br>
+		<hr>
+		<div id="input-container">
+			<label id="input-label" for="input-textarea">Input</label>
+			<textarea id="input-textarea"
+				name="input-textarea"
+				placeholder="Attack roll is /roll 1d20 + [BAB]3 + [STR]3 \."
+				cols="40"
+				rows="2"></textarea>
+			<input id="input-submit" type="submit" value="Run"></input>
+		</div>
+		<hr>
 		<input type="button" value="Clear History" onclick="RollLang.clearHistory()"></input>
-		<br>
+		<!--
 		<input type="button" value="Save History" onclick="RollLang.saveHistory()"></input>
 		<input type="text" id="save history name" name="save history name"></input>
 		<br>
@@ -30,24 +37,25 @@
 			<option value="">--Please Choose One--</option>
 		</select>
 		<input type="button" id="load history" value="load history"></input>
+		-->
 	</form>
 
-	<article>
+	<article class="grid-item">
 		<header>
 			<h2>About</h2>
 		</header>
 		<p>Find the source code and report bugs for this project on <a href="https://github.com/jacobguenther/roll_lang">GitHub</a>.</p>
-		<p>Donate to this project <a href="">Patreaon</a>.</p>
+		<p>Donate to this project on <a href="">Patreaon</a>.</p>
+		<h3>Planned Features</h3>
+		<p></p>
 	</article>
-	<article>
+	<articl class="grid-item"e>
 		<header>
 			<h2>Help</h2>
 			<nav>
 				<ul>
 					<li>Quick Guide</li>
 					<li>Advanced Features</li>
-					<li>Differences from Roll20</li>
-					<li>Planned Features</li>
 					<li>Formal Grammer(EBNF)</li>
 				</ul>
 			</nav>
@@ -58,27 +66,7 @@
 		</section>
 		<hr>
 		<section>
-			<h3>Differences from Roll20</h3>
-			<nav>
-				<ul>
-					<li>Comparisons</li>
-					<li>Power</li>
-					<li>Missing Features</li>
-				</ul>
-			</nav>
-			<h4>Comparisons</h4>
-			<p>Less than or equal to is now represented as <strong>&lt;=</strong> instead of as <strong>&lt;</strong>.</p>
-			<p><strong>&lt;</strong> is now the less than operator which was missing on Roll20.</p>
-			<p>Greater than or equal is now represented as <strong>&gt;</strong> instead of as <strong>></strong>.</p>
-			<p><strong>&gt;</strong> is now the greater than operator which was missing on Roll20.</p>
-			<h4>Power</h4>
-			<p>Rasing to a power can now be done using <strong>^</strong> as well as <strong>**</strong></p>
-			<h4>Missing Features</h4>
-			<p></p>
-		</section>
-		<hr>
-		<section>
-			<h3>Planned Features</h3>
+			<h3>Advanced Guide</h3>
 			<p></p>
 		</section>
 		<hr>
@@ -88,7 +76,7 @@
 		</section>
 	</article>
 
-	<footer>
+	<footer class="grid-item">
 
 	</footer>
 	</body>
