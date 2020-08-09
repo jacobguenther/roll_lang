@@ -1,12 +1,13 @@
 // File: index.js
 
 import('./styles.css');
+import('./result.css');
 
 const rust = import('./pkg');
 
-const sourceInputField = document.getElementById('source');
+const sourceInputField = document.getElementById('input-textarea');
 const history = document.getElementById('history');
-const saveHistoryName = document.getElementById('save history name');
+// const saveHistoryName = document.getElementById('save history name');
 
 let historyIDCounter = 0;
 
@@ -32,9 +33,9 @@ module.exports = {
 			history.removeChild(history.lastChild);
 		}
 	},
-	saveHistory: function() {
+	// saveHistory: function() {
 
-	},
+	// },
 	deleteHistoryEntry: function(id) {
 		let entry = document.getElementById(id);
 		history.removeChild(entry);
@@ -52,6 +53,7 @@ function appendHistory(source, result) {
 
 	latestEntry.setAttribute('id', historyIDCounter);
 	sourceElement.innerHTML = source;
+	sourceElement.setAttribute('class', 'source');
 	resultElement.innerHTML = result;
 	deleteEntry.type = 'button';
 	deleteEntry.innerHTML = 'Delete Entry';
