@@ -25,6 +25,8 @@ In the project folder run the following commands to install the build dependenci
 
 > npm install --save-dev css-loader
 
+> npm install --save-dev optimize-css-assets-webpack-plugin
+
 > npm install --save-dev text-encoding
 
 Then build the project with
