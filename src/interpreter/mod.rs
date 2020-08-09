@@ -179,16 +179,7 @@ impl InterpreterPrivateT for Interpreter {
 				let base = self.interpret_unary(u, formula)?;
 				formula.push_str("^");
 				let exponent = self.interpret_power(p, formula)?;
-				match (base, exponent) {
-					(Number::Integer(b), Number::Integer(e)) => {
-						Ok(Number::Integer(
-							Integer::new(
-								b.value().pow(e.value().try_into().unwrap())
-							)
-						))
-					},
-					_ => Err(InterpretError::Unkown) // Fix Me
-				}
+				Ok(base.pow(&exponent))
 			},
 			Power::Unary(unary) => self.interpret_unary(unary, formula),
 		}
@@ -246,40 +237,27 @@ impl InterpreterPrivateT for Interpreter {
 	fn interpret_dice(&self, dice: &Dice, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
 		match dice {
 			Dice::Normal(normal, modifiers, tooltip) => self.interpret_normal_dice(normal, modifiers, &tooltip, formula),
+			// Dice::Fate(fate, modifiers, tooltip) => self.interpret_fate_dice(fate, modifiers, &tooltip, formula),
+			// Dice::Computed(computed, modifiers, tooltip) => self.interpret_computed_dice(computed, modifiers, &tooltip, formula),
 			_ => Err(InterpretError::Unkown),
 		}
 	}
 	fn interpret_normal_dice(&self, normal: &Normal, modifiers: &Vec<Modifier>, tooltip: &Option<InlineComment>, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
-		let random_range = | low: i32, high: i32 | -> Result<i32, InterpretError> {
-			use stdweb::{
-				Value,
-				unstable::TryFrom,
-			};
-			match js! { return Math.random(); } {
-				Value::Number(num) => {
-					let rand = match f64::try_from(num) {
-						Ok(random_float) => random_float,
-						Err(_e) => return Err(InterpretError::RandomNumberGenerator),
-					};
-					Ok((low as f64 + (rand * (high-1) as f64)).ceil() as i32)
-				},
-				_ => Err(InterpretError::RandomNumberGenerator),
-			}
-		};
-		let rand_range = | low: i32, high: i32 | -> i32 {
+		let random_range = | low: i32, high: i32 | -> Integer {
 			use js_sys::Math::random;
-			(low as f64 + random() * (high-1) as f64).ceil() as i32
+			Integer::new((low as f64 + random() * (high-1) as f64).ceil() as i32)
+		};
+		let interpret_modifiers = | modifiers: &Vec<Modifier> | -> () {
+
 		};
 
 		formula.push_str("(");
 		let mut result = 0;
 		let sides = normal.sides.value();
 		for dice in 0..normal.count.value() {
-			let roll_value = random_range(1, sides)?;
-			formula.push_number_roll(
-				&Integer::new(roll_value)
-			);
-			result += roll_value;
+			let roll_value = random_range(1, sides);
+			formula.push_number_roll(&roll_value);
+			result += roll_value.value();
 		}
 		formula.push_str(")");
 		Ok(Number::Integer(Integer::new(result)))
