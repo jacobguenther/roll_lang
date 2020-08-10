@@ -2,6 +2,7 @@
 
 import('./styles.css');
 import('./result.css');
+import('./grammer.css');
 
 const rust = import('./pkg');
 
