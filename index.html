@@ -47,16 +47,19 @@
 				<ul class="bullet-list">
 					<li>Success rolls</li>
 					<li>Critical Success and Fail Rolls</li>
-					<li>Exploding Dice</li>
-					<li>Compounding Dice</li>
+					<li class="feature-completed">Exploding Dice</li>
+					<li class="feature-completed">Compounding Dice</li>
+					<li class="feature-completed">Penetrating Dice</li>
 					<li>Drop highest and/or lowest dice</li>
 					<li>Keep highest and/or lowest dice</li>
-					<li>Reroll dice on condition</li>
+					<li class="feature-completed">Reroll dice on condition</li>
+					<li class="feature-completed">/r as shortcut for /roll</li>
 				</ul>
 			</li>
 			<li>Fate Dice</li>
 			<li>Computed Dice Sides and/or Count</li>
-			<li>Dice Tooltips</li>
+			<li class="feature-completed">Dice Tooltips</li>
+			<li>roll queries</li>
 			<li>Better Error Messages</li>
 	</article>
 
@@ -164,7 +167,7 @@
 
 				<li class="production">&lt;explicit_roll&gt; ::=
 					<ul class="rules">
-						<li class="production-rule">"/roll" &lt;expression&gt; ["\"]</li>
+						<li class="production-rule">("/roll" | "/r") &lt;expression&gt; ["\"]</li>
 					</ul>
 				</li>
 
@@ -202,7 +205,7 @@
 					</ul>
 				</li>
 
-				<li class="production">&lt;atom&gt;
+				<li class="production">&lt;atom&gt; ::=
 					<ul class="rules">
 						<li class="production-rule">[&lt;inline_comment&gt;] &lt;function&gt; [&lt;inline_comment&gt;]</li>
 						<li class="production-rule">| [&lt;inline_comment&gt;] &lt;dice&gt; [&lt;inline_comment&gt;]</li>
@@ -289,8 +292,8 @@
 
 				<li class="production">&lt;computed&gt; ::=
 					<ul class="rules">
-						<li class="production-rule">&lt;integer&gt;] "d" "(" &lt;expression&gt; ")"</li>
-						<li class="production-rule">| "(" &lt;expression&gt; ")"  "d"     &lt;integer&gt;</li>
+						<li class="production-rule">[(&lt;integer&gt; |  &lt;roll_query&gt;)] "d" "(" &lt;expression&gt; ")"</li>
+						<li class="production-rule">| "(" &lt;expression&gt; ")"  "d" (&lt;integer&gt; |  &lt;roll_query&gt;)</li>
 						<li class="production-rule">| ["(" &lt;expression&gt; ")"] "d" "(" &lt;expression&gt; ")"</li>
 					</ul>
 				</li>

@@ -29,7 +29,9 @@ ul {
 	width: 550px;
 }
 
-
+.feature-completed {
+	text-decoration: line-through;
+}
 
 #input-container {
 	grid-column-gap: 10px;
