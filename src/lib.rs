@@ -20,9 +20,6 @@ use interpreter::{
 	InterpreterT,
 };
 
-#[macro_use]
-extern crate stdweb;
-
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -48,7 +45,7 @@ pub fn run(source: &str) -> String {
 		if true {
 			let mut lexer = Lexer::new(source);
 			while let Some(lexeme) = lexer.next() {
-				out = format!("{}{:?}", out, lexeme);
+				out = format!("{}<br>{:?}", out, lexeme);
 			}
 		}
 		
