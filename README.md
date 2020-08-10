@@ -1,6 +1,6 @@
 # Roll Lang
 
-Roll Lang is a domain specific language for interpreting common RPG and tabletop game dice rolls and math operations. Roll Lang is primarily written in Rust and is meant to be compiled to WebAssembly for client side use in the browser. You can check out the [demo page(comming soon)]() to find out more.
+Roll Lang is a domain specific language for interpreting common RPG and tabletop game dice rolls and math operations. Roll Lang is primarily written in Rust and is meant to be compiled to WebAssembly for client side use in the browser. You can check out the [demo page](https://jacobguenther.github.io/roll_lang_demo/) to find out more.
 
 ## Build Dependencies
 
