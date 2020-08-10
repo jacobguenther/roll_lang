@@ -36,6 +36,12 @@
 .basic-roll {
 
 }
+.roll-counted {
+
+}
+.roll-not-counted {
+	color: gray;
+}
 .success-roll {
 	color: greenyellow;
 }
