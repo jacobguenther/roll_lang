@@ -17,13 +17,11 @@ pub enum Node {
 #[derive(Debug, Clone)]
 pub struct StringLiteral {
 	s: String,
-	previous_size: usize,
 }
 impl Default for StringLiteral {
 	fn default() -> StringLiteral {
 		StringLiteral {
 			s: String::new(),
-			previous_size: 0,
 		}
 	}
 }
@@ -31,14 +29,12 @@ impl StringLiteral {
 	pub fn new(s: &str) -> StringLiteral {
 		StringLiteral {
 			s: s.to_owned(),
-			previous_size: 0,
 		}
 	}
 	pub fn str(&self) -> &str {
 		&self.s
 	}
 	pub fn append(&mut self, s: &str) {
-		self.previous_size = self.s.len();
 		self.s.push_str(s);
 	}
 }
@@ -69,15 +65,15 @@ pub enum Power {
 #[derive(Debug, Clone)]
 pub enum Unary {
 	Minus(Option<InlineComment>, Box<Unary>),
-	Atom(Atom),
+	Atom(Option<InlineComment>, Atom, Option<InlineComment>),
 }
 #[derive(Debug, Clone)]
 pub enum Atom {
-	Number(Option<InlineComment>, Number, Option<InlineComment>),
-	Dice(Option<InlineComment>, Dice, Option<InlineComment>),
-	Function(Option<InlineComment>, Function, Option<InlineComment>),
-	RollQuery(Option<InlineComment>, RollQuery, Option<InlineComment>),
-	Expression(Option<InlineComment>, Box<Expression>, Option<InlineComment>),
+	Number(Number),
+	Dice(Dice),
+	Function(Function),
+	RollQuery(RollQuery),
+	ParenthesesExpression(Box<Expression>),
 }
 
 
@@ -101,9 +97,9 @@ impl InlineComment {
 
 #[derive(Debug, Clone)]
 pub enum Dice {
-	Normal(Normal, Vec<Modifier>, Option<InlineComment>),
-	Fate(Fate, Vec<Modifier>, Option<InlineComment>),
-	Computed(Computed, Vec<Modifier>, Option<InlineComment>),
+	Normal(Normal, Modifiers, Option<InlineComment>),
+	Fate(Fate, Modifiers, Option<InlineComment>),
+	Computed(Computed, Modifiers, Option<InlineComment>),
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -121,11 +117,57 @@ pub struct Computed {
 	pub sides: Box<Expression>,
 }
 
+#[derive(Debug, Clone)]
+pub struct Modifiers {
+	pub expanding: Option<Expanding>,
+	pub reroll_modifiers: Vec<Reroll>,
+	pub post_modifiers: Vec<PostModifier>,
+}
+impl Modifiers {
+	pub fn new() -> Self {
+		Modifiers {
+			expanding: None,
+			reroll_modifiers: Vec::new(),
+			post_modifiers: Vec::new(),
+		}
+	}
+}
+
 #[derive(Debug, Copy, Clone)]
 pub enum Modifier {
-	Exploding(Comparison, Option<Integer>),
-	Compounding(Comparison, Option<Integer>),
-	Reroll(Comparison, Integer),
+	Reroll(Reroll),
+	Expanding(Expanding),
+	PostModifier(PostModifier),
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct Reroll {
+	pub comparison: Comparison,
+	pub comparison_point: Integer,
+}
+pub trait RerollT {
+	fn new(comparison: Comparison, comparison_point: Integer) -> Self;
+}
+impl RerollT for Reroll {
+	fn new(comparison: Comparison, comparison_point: Integer) -> Self {
+		Self {
+			comparison: comparison,
+			comparison_point: comparison_point,
+		}
+	}
+}
+#[derive(Debug, Copy, Clone)]
+pub enum Expanding {
+	Exploding(Exploding),
+	Compounding(Compounding),
+	Penetrating(Penetrating),
+}
+pub type Exploding = Reroll;
+pub type Compounding = Reroll;
+pub type Penetrating = Reroll;
+
+#[derive(Debug, Copy, Clone)]
+pub enum PostModifier {
 	KeepHighest(Integer),
 	KeepLowest(Integer),
 	DropHighest(Integer),
