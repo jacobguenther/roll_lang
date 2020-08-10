@@ -13,9 +13,6 @@ use super::parser::{
 	ParseError,
 };
 
-use std::convert::TryInto;
-
-
 #[derive(Debug, Clone)]
 pub enum InterpretError {
 	LexError,
@@ -54,9 +51,12 @@ pub trait InterpreterPrivateT {
 
 	fn interpret_atom(&self, atom: &Atom, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 	fn interpret_dice(&self, dice: &Dice, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
-	fn interpret_normal_dice(&self, normal: &Normal, modifiers: &Vec<Modifier>, tooltip: &Option<InlineComment>, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 	fn interpret_function(&self, function: &Function, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 	fn interpret_roll_query(&self, roll_query: &RollQuery, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
+
+	fn interpret_normal_dice(&self, normal: &Normal, modifiers: &Modifiers, tooltip: &Option<InlineComment>, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
+	fn random_range(low: i32, high: i32) -> Integer;
+	fn apply_modifiers(&self, roll: &Integer, sides: i32, modifiers: &Modifiers) -> Vec<NumberRoll>;
 
 	fn interpret_comment(&self, option_comment: &Option<InlineComment>, formula: &mut FormulaFragments);
 }
@@ -195,41 +195,33 @@ impl InterpreterPrivateT for Interpreter {
 				formula.push_str("-");
 				Ok(-self.interpret_unary(u, formula)?)
 			},
-			Unary::Atom(atom) => self.interpret_atom(atom, formula),
+			Unary::Atom(comment_before, atom, comment_after) => {
+				self.interpret_comment(comment_before, formula);
+				let result = self.interpret_atom(atom, formula)?;
+				self.interpret_comment(comment_after, formula);
+				Ok(result)
+			}
 		}
 	}
 	fn interpret_atom(&self, atom: &Atom, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
 		match atom {
-			Atom::Number(comment_before, number, comment_after) => {
-				self.interpret_comment(comment_before, formula);
+			Atom::Number(number) => {
 				formula.push_str(&String::from(*number));
-				self.interpret_comment(comment_after, formula);
 				Ok(*number)
 			},
-			Atom::Dice(comment_before, dice, comment_after) => {
-				self.interpret_comment(comment_before, formula);
-				let dice_result = self.interpret_dice(dice, formula)?;
-				self.interpret_comment(comment_after, formula);
-				Ok(dice_result)
+			Atom::Dice(dice) => {
+				self.interpret_dice(dice, formula)
 			},
-			Atom::Function(comment_before, function, comment_after) => {
-				self.interpret_comment(comment_before, formula);
-				let function_result = self.interpret_function(function, formula)?;
-				self.interpret_comment(comment_after, formula);
-				Ok(function_result)
+			Atom::Function(function) => {
+				self.interpret_function(function, formula)
 			},
-			Atom::RollQuery(comment_before, roll_query, comment_after) => {
-				self.interpret_comment(comment_before, formula);
-				let roll_query_result = self.interpret_roll_query(roll_query, formula)?;
-				self.interpret_comment(comment_after, formula);
-				Ok(roll_query_result)
+			Atom::RollQuery(roll_query) => {
+				self.interpret_roll_query(roll_query, formula)
 			},
-			Atom::Expression(comment_before, expression, comment_after) => {
-				self.interpret_comment(comment_before, formula);
+			Atom::ParenthesesExpression(expression) => {
 				formula.push_str("(");
 				let expression_output = self.interpret_expression(expression, formula)?;
 				formula.push_str(")");
-				self.interpret_comment(comment_after, formula);
 				Ok(expression_output)
 			}
 		}
@@ -242,27 +234,6 @@ impl InterpreterPrivateT for Interpreter {
 			_ => Err(InterpretError::Unkown),
 		}
 	}
-	fn interpret_normal_dice(&self, normal: &Normal, modifiers: &Vec<Modifier>, tooltip: &Option<InlineComment>, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
-		let random_range = | low: i32, high: i32 | -> Integer {
-			use js_sys::Math::random;
-			Integer::new((low as f64 + random() * (high-1) as f64).ceil() as i32)
-		};
-		let interpret_modifiers = | modifiers: &Vec<Modifier> | -> () {
-
-		};
-
-		formula.push_str("(");
-		let mut result = 0;
-		let sides = normal.sides.value();
-		for dice in 0..normal.count.value() {
-			let roll_value = random_range(1, sides);
-			formula.push_number_roll(&roll_value);
-			result += roll_value.value();
-		}
-		formula.push_str(")");
-		Ok(Number::Integer(Integer::new(result)))
-	}
-
 	fn interpret_function(&self, function: &Function, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
 		let interpret_function_helper = |function_name: &str, expression: &Expression, formula: &mut FormulaFragments| -> Result<Number, InterpretError> {
 			formula.push_str(function_name);
@@ -293,6 +264,99 @@ impl InterpreterPrivateT for Interpreter {
 	fn interpret_roll_query(&self, _roll_query: &RollQuery, _formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
 		Err(InterpretError::Unkown)
 	}
+
+
+	fn interpret_normal_dice(&self, normal: &Normal, modifiers: &Modifiers, tooltip: &Option<InlineComment>, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
+		formula.push_str("(");
+
+		let sides = normal.sides.value();
+		let mut rolls = Vec::<NumberRoll>::new();
+		let mut result = 0;
+		for _dice in 0..normal.count.value() {
+			let roll = Interpreter::random_range(1, sides);
+
+			let modified_rolls = self.apply_modifiers(&roll, sides, modifiers);
+			let modified_result = modified_rolls.sum_counted_rolls();
+			result += modified_result.value();
+
+			match modifiers.expanding {
+				Some(Expanding::Compounding(_)) => {
+					rolls.push(NumberRoll::Counted(modified_result));
+					continue;
+				},
+				_ => (),
+			}
+
+			let mut penetration = 0;
+			for modified_roll in &modified_rolls {
+				match modifiers.expanding {
+					Some(Expanding::Penetrating(_)) => {
+						match modified_roll {
+							NumberRoll::Counted(num) => {
+								rolls.push(NumberRoll::Counted(
+									Integer::new(num.value() - penetration).clamp_min(1)
+								));
+								penetration += 1;
+								continue;
+							},
+							_ => (),
+						}
+					},
+					_ => (),
+				}
+				rolls.push(*modified_roll);
+			}
+		}
+
+		for roll in rolls {
+			formula.push_number_roll(&roll);
+		}
+
+		match tooltip {
+			Some(comment) => formula.push_tooltip(comment.comment()),
+			None => (),
+		}
+
+		formula.push_str(")");
+		Ok(Number::Integer(Integer::new(result)))
+	}
+	fn random_range(low: i32, high: i32) -> Integer {
+		use js_sys::Math::random;
+		Integer::new((low as f64 + random() * (high-1) as f64).ceil() as i32)
+	}
+	fn apply_modifiers(&self, roll: &Integer, sides: i32, modifiers: &Modifiers) -> Vec<NumberRoll>{
+		let mut rolls = Vec::new();
+
+		let mut rerolled = false;
+		for reroll_modifier in &modifiers.reroll_modifiers {
+			if roll.comparison(&reroll_modifier.comparison, &reroll_modifier.comparison_point) {
+				rolls.push(NumberRoll::NotCounted(*roll));
+				let new_roll = Interpreter::random_range(1, sides);
+				rolls.append(&mut self.apply_modifiers(&new_roll, sides, modifiers));
+				rerolled=true;
+				break;
+			}
+		}
+		if !rerolled {
+			rolls.push(NumberRoll::Counted(*roll));
+		}
+
+		match modifiers.expanding {
+			Some(expanding) => match expanding {
+				Expanding::Compounding(exploding) |
+				Expanding::Penetrating(exploding) |
+				Expanding::Exploding(exploding) => {
+					if roll.comparison(&exploding.comparison, &exploding.comparison_point) {
+						let new_roll = Interpreter::random_range(1, sides);
+						rolls.append(&mut self.apply_modifiers(&new_roll, sides, modifiers));
+					}
+				},
+			}
+			None => (),
+		}
+		return rolls.clone();
+	}
+
 	fn interpret_comment(&self, option_comment: &Option<InlineComment>, formula: &mut FormulaFragments) {
 		match option_comment {
 			Some(comment) => formula.push_str(&format!("[{}]", comment.comment())),
