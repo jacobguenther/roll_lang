@@ -1,6 +1,7 @@
 // File: ast/number.rs
 
 use std::ops::{Add, Sub, Mul, Div, Neg};
+use super::Comparison;
 
 #[derive(Debug, Copy, Clone)]
 pub enum Number {
@@ -16,13 +17,13 @@ impl Number {
 	}
 	pub fn ceil(&self) -> Number {
 		match self {
-			Number::Integer(int) => self.clone(),
+			Number::Integer(_) => self.clone(),
 			Number::Float(float) => Number::Float(Float::new(float.value().ceil())),	
 		}
 	}
 	pub fn round(&self) -> Number {
 		match self {
-			Number::Integer(int) => self.clone(),
+			Number::Integer(_) => self.clone(),
 			Number::Float(float) => Number::Float(Float::new(float.value().round())),	
 		}
 	}
@@ -150,6 +151,26 @@ impl Integer {
 	}
 	pub fn value(&self) -> i32 {
 		self.i
+	}
+	pub fn comparison(&self, comparison: &Comparison, rhs: &Integer) -> bool {
+		let lhs_value = self.i;
+		let rhs_value = rhs.i;
+		match comparison {
+			Comparison::LessThan => lhs_value < rhs_value,
+			Comparison::GreaterThan => lhs_value > rhs_value,
+			Comparison::LessThanEqual => lhs_value <= rhs_value,
+			Comparison::GreaterThanEqual => lhs_value >= rhs_value,
+			Comparison::Equal => lhs_value == rhs_value,
+		}
+	}
+	pub fn clamp_min(&self, min: i32) -> Integer {
+		Integer::new(
+			if self.i < min {
+				min
+			} else {
+				self.i
+			}
+		)
 	}
 }
 impl Add for Integer {
