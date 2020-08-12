@@ -1,0 +1,133 @@
+
+body, nav,
+article, header, footer, section,
+p, span,
+form, input, label, textarea,
+ul, li,
+br, hr,
+h1, h2, h3, h4, h5, h6
+{
+	padding: 0 0 0 0;
+	margin: 0 0 0 0;
+}
+div {
+	display: inline-block;
+}
+ul {
+	list-style-type: none;
+}
+
+#page-container,
+#input-container
+{
+	display: grid;
+	justify-content: center;
+	justify-items: center;
+	align-items: center;
+}
+
+/* smartphones, portrait iPhone, portrait 480x320 phones (Android) */
+@media (max-width:479px)  {
+	#page-container .grid-item {
+		width: 310px;
+	}
+	#input-container {
+		grid-template-columns: auto;
+		grid-template-areas:
+			"input-label"
+			"input-textarea"
+			"input-submit";
+	}
+}
+/* smartphones, Android phones, landscape iPhone */
+@media (min-width:480px)  { 
+	#page-container .grid-item {
+		width: 450px;
+	}
+	#input-container {
+		grid-template-columns: auto auto;
+		grid-template-areas:
+			"input-label input-textarea"
+			"input-submit input-submit";
+	}
+}
+/* portrait tablets, portrait iPad, e-readers (Nook/Kindle), landscape 800x480 phones (Android) */
+@media (min-width:600px)  {
+	#page-container .grid-item {
+		width: 550x;
+	}
+}
+/* tablet, landscape iPad, lo-res laptops ands desktops */
+@media (min-width:801px)  {
+	#page-container .grid-item {
+		width: 780px;
+	}
+}
+/* big landscape tablets, laptops, and desktops */
+@media (min-width:1025px) {
+	#page-container .grid-item {
+		width: 800px;
+	}
+}
+/* hi-res laptops and desktops */
+@media (min-width:1281px) {
+	#page-container .grid-item {
+		width: 800px;
+	}
+}
+
+#input-container {
+	grid-column-gap: 10px;
+
+	grid-template-columns: auto auto auto;
+	grid-template-areas:
+		"input-label input-textarea input-submit";
+}
+
+#input-container #input-label {
+	grid-area: input-label;
+}
+#input-container #input-textarea {
+	grid-area: input-textarea;
+	resize: vertical;
+}
+#input-container #input-textarea:focus {
+	border: 3px solid #555;
+}
+#input-container #input-submit {
+	grid-area: input-submit;
+}
+
+
+#roll-lang-form {
+	border: 2px solid black;
+}
+#history-section {
+	background-color: lightblue;
+	padding: 5px 5px 5px 5px;
+}
+#history {
+	list-style-type: none;
+}
+#history li:nth-child(even) {
+	background: lightgreen;
+	margin-top: 5px;
+	margin-bottom: 5px;
+}
+
+
+.feature-completed {
+	text-decoration: line-through;
+}
+.roll-example, .roll-example-invalid {
+	background-color: lightblue;
+	border-radius: 4px;
+	border: 3px solid black;
+}
+.roll-example-invalid {
+	background-color: lightcoral;
+}
+.bullet-list {
+	padding-left: 25px;
+	list-style-type: disc;
+}

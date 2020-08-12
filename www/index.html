@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<title>Roll Lang</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="description" content="Roll Lang an open source dice roller for tabletop games." />
+	<meta name="keyword" content="Dice Roller RPG Tabletop" />
+
+	<meta property="og:title" content="Roll Lang" />
+	<meta property="og:url" content="https://jacobguenther.github.io/roll_lang_demo/" />
+	<meta property="og:type" content="website" />
+	<meta property="og:description" content="An open source dice roller for tabletop games." />
+	<meta property="og:locale" content="en_US" />
+</head>
+<body id="page-container">
+	<header class="grid-item">
+		<h1>Roll Lang</h1>
+		<p>An open source RPG dice roller. This project is currently in early development next time you are here there
+			should be more features.
+		</p>
+		<noscript>This webpage requires javascript and WebAssembly to run. Please enable javascript or if your browser
+			does not support WebAssembly consider using Firefox, Chrome, Edge or Safari.
+		</noscript>
+	</header>
+
+	<form id="roll-lang-form" class="grid-item" action="javascript:void(0);" onsubmit="RollLang.run()">
+		<section id="history-section">
+			<h2>History</h2>
+			<ul id="history">
+			</ul>
+		</section>
+		<hr>
+		<div id="input-container">
+			<label id="input-label" for="input-textarea">Input</label>
+			<textarea id="input-textarea"
+				name="input-textarea"
+				placeholder="Attack roll is /roll 1d20 + [BAB]3 + [STR]3 \."
+				cols="40"
+				rows="2"></textarea>
+			<input id="input-submit" type="submit" value="Run"></input>
+		</div>
+		<hr>
+		<input type="button" value="Clear History" onclick="RollLang.clearHistory()"></input>
+	</form>
+
+	<article class="grid-item">
+		<header>
+			<h2>About</h2>
+		</header>
+		<p>Find the source code and report bugs for this project on <a href="https://github.com/jacobguenther/roll_lang">GitHub</a>.</p>
+		<p>Donate to this project on <a href="">Patreaon</a>(comming soon).</p>
+		<h3>Planned Features</h3>
+		<ul class="bullet-list">
+			<li>Dice Modifiers
+				<ul class="bullet-list">
+					<li>Success rolls</li>
+					<li>Critical Success and Fail Rolls</li>
+					<li class="feature-completed">Exploding Dice</li>
+					<li class="feature-completed">Compounding Dice</li>
+					<li class="feature-completed">Penetrating Dice</li>
+					<li>Drop highest and/or lowest dice</li>
+					<li>Keep highest and/or lowest dice</li>
+					<li class="feature-completed">Reroll dice on condition</li>
+				</ul>
+			</li>
+			<li>Dice Groups</li>
+			<li class="feature-completed">/r as shortcut for /roll</li>
+			<li>Fate Dice</li>
+			<li>Computed Dice Sides and/or Count</li>
+			<li class="feature-completed">Dice Tooltips</li>
+			<li>roll queries</li>
+			<li class="feature-completed">Make this page work well on phones</li>
+			<li class="feature-completed">Add guide to this page for dice modifiers</li>
+			<li>Better Error Messages</li>
+	</article>
+
+	<hr class="grid-item">
+
+	<article class="grid-item">
+		<header>
+			<h2>Help</h2>
+			<nav>
+				<ul>
+					<li><a href="#quick-guide">Quick Guide</a></li>
+					<li><a href="#advanced-features">Advanced Features</a></li>
+					<li><a href="#formal-grammer">Formal Grammer(EBNF)</a></li>
+				</ul>
+			</nav>
+		</header>
+		<section id="quick-guide">
+			<h3>Quick Guide</h3>
+			<nav>
+			<ul>
+				<li><a href="#overview">Overview</a></li>
+				<li><a href="#rolling">Rolling</a></li>
+				<li><a href="#text">Text</a></li>
+				<li><a href="#inline-rolls">Inline Rolls</a></li>
+				<li><a href="#inline-comments">Inline Comments</a></li>
+				<li><a href="#dice">Dice</a></li>
+				<li><a href="#math-operations">Math Operations</a></li>
+			</ul>
+			</nav>
+
+			<h4 id="overview">Overview</h4>
+			<p>Roll Lang is meant to facilitate in calculating the value of tabletop rollplaying game dice rolls. With 
+				it you can roll large numbers of dice, use common math operations to apply modifiers, and display text
+				to give context to your rolls.
+			</p>
+			<h4 id="rolling">Rolling</h4>
+			<p>In order for Roll Lang to under stand when to interpret your roll use the <span class="roll-example">/roll</span>
+				keyword or the shorthand <span class="roll-example">/r</span>. For example if you wanted to roll 1 20 sided dice. You would type <span class="roll-example">/roll 1d20</span>.
+			</p>
+			<h4 id="text">Text</h4>
+			<p>It is often helpful to give your roll some context so that others know what the numbers mean.
+				You can always put text before the <span class="roll-example">/roll</span> keyword and it will be
+				displayed the way you typed it but Roll Lang might be confused if you put ceirtain text after your roll
+				for example if you entered
+				<span class="roll-example-invalid">I'm rolling 1d20 plus my modifier /roll 1d20+3 +3 is my modifier.</span>
+				Roll Lang would roll 1d20 and add 6. You can let Roll Lang know you are done with your roll by using a
+				backslash <span class="roll-example">\</span> after your roll like so
+				<span class="roll-example">I'm rolling 1d20 plus my modifier /roll 1d20+3 \ +3 is my modifier.</span>
+			</p>
+			<h4 id="inline-rolls">Inline Rolls</h4>
+			<p>If you want Roll Lang to print only the result of your roll instead of using the "/roll" keyword you can
+				wrap your roll with <span class="roll-example">[[</span> and <span class="roll-example">]]</span>. You
+				can still see the formula by hovering your mouse over the result.
+			</p>
+			<h4 id="inline-comments">Inline Comments</h4>
+			<p>You can put comments inside your roll by using <span class="roll-example">[</span>  and
+				<span class="roll-example">]</span>. Anything between these will not be interpreted by Roll Lang and
+				will be printed in the formula. <span class="roll-example">/roll 1d20 + [strength modfier]3</span> would
+				display <span class="roll-example">(12)+[strength modifier]3=15</span>. Inline comments can also be used
+				in inline rolls.
+			</p>
+			<h4 id="dice">Dice</h4>
+			<p>Roll Lang supports dice with at least 1 side. To roll a dice use <span class="roll-example">dN</span>
+				where N is the number of sides. You can also roll more than one dice and sum the result using
+				<span class="roll-example">XdN</span> where X is the number of dice.
+			</p>
+			<h4 id="math-operations">Math Operations</h4>
+			<p>Roll Lang supports all of the comman math operators. They are listed below from lowest to highest.</p>
+			<ul class="bullet-list">
+				<li>Addition<span class="roll-example">+</span> and Subtraction<span class="roll-example">-</span></li>
+				<li>Multiplication<span class="roll-example">*</span> and Division<span class="roll-example">/</span></li>
+				<li>Power<span class="roll-example">^</span> or <span class="roll-example">**</span></li>
+				<li>Unary Minus<span class="roll-example">-</span></li>
+				<li>Parentheses<span class="roll-example">(</span> and <span class="roll-example">)</span></li>
+			</ul>
+			<p>Roll Lang also supports a hand full of other math functions.</p>
+			<ul class="bullet-list">
+				<li>Absolute Value <span class="roll-example">abs(</span> expression <span class="roll-example">)</span></li>
+				<li>Floor <span class="roll-example">floor(</span> expression <span class="roll-example">)</span></li>
+				<li>Ceil <span class="roll-example">ceil(</span> expression <span class="roll-example">)</span></li>
+				<li>Round  <span class="roll-example">round(</span> expression <span class="roll-example">)</span></li>
+			</ul>
+		</section>
+		<hr>
+		<section id="advanced-features">
+			<h3>Advanced Features</h3>
+			<nav>
+			<ul>
+				<li><a href="dice-modifiers">Dice Modifiers</a></li>
+			</ul>
+			</nav>
+			<h4 id="dice-modifiers">Dice Modifiers</h4>
+			<p>Dice modifiers change how the roll is preformed or how it is displayed. Not all dice modifiers can be
+				used on the same roll. You can only apply one of exploding, compounding, or penetrating to a roll and it must be the
+				first modifier added.</p>
+			<ul>
+				<li>
+					<h5>Exploding Dice</h5>
+					<p>This modifier will roll an additional dice each time the condition for exploding is met by
+						default the condition is the max roll the dice can preform for a d12 that would be 12. To make a
+						roll an exploding roll add an <span class="roll-example">!</span> directly after a roll like so
+						<span class="roll-example">4d10!</span></p>
+					<p>By adding a comparison(>, >=, &lt;, &lt;=, or =) and a number after ! you can specify when the
+						dice should explode.</p>
+				</li>
+				<li>
+					<h5>Compounding Dice</h5>
+					<p>Compounding dice is similar to exploding dice but the exploded dice are added together and
+						treated as a single roll.</p>
+					<p>To use this modifier add <span class="roll-example">!!</span> after a roll like so
+						<span class="roll-example">4d10!!</span>.
+					<p>You can also add a comparison and a number after <span class="roll-example">!!</span> to specify
+						when the dice should explode.</p>
+				</li>
+				<li>
+					<h5>Penetrating Dice</h5>
+					<p>Penetrating dice is similar to exploding dice but each successive exploded dice is reduced by 1.</p>
+					<p>To use this modifier add <span class="roll-example">!p</span> after a roll like so
+						<span class="roll-example">4d10!p</span>.
+					<p>You can also add a comparison and a number after <span class="roll-example">!p</span> to specify
+						when the dice should explode.</p>
+				</li>
+			</ul>
+
+			<h5>Rerolls</h5>
+			<p>The reroll modifier can be used on its own or with any other modifier. To use the reroll modifier add
+				<span class="roll-example">rX</span> where X is the number that should be rerolled. You can also use it
+				with a comparison between <span class="roll-example">r</span> and <span class="roll-example">X</span>.
+				You can also use multiple reroll modifiers like so <span class="roll-example">1d20r1r>17</span>. This
+				will reroll a d20 until its roll value is 1, 18, 19, or 20. Note that 17 is not included. If you want to
+				include 17 use greater-than or equal <span class="roll-example">&gt;=</span>.
+			</p>
+		</section>
+		<hr>
+		<section id="formal-grammer">
+			<h3>Formal Grammer(<a href="https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form">EBNF</a>)</h3>
+			<ul id="productions">
+				<li class="production">&lt;roll> ::=
+					<ul class="rules">
+						<li class="production-rule">&lt;explicit_roll></li>
+						<li class="production-rule">| &lt;inline_roll></li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;explicit_roll&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">("/roll" | "/r") &lt;expression&gt; ["\"]</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;inline_roll&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">"[[" &lt;expression&gt; "]]"</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;expression&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">&lt;expression&gt; ("+" | "-") &lt;mul_div&gt;</li>
+						<li class="production-rule">| &lt;mul_div&gt;</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;mul_div&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">&lt;mul_div&gt; ("*" | "/") &lt;power&gt;</li>
+						<li class="production-rule">| &lt;power&gt;</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;power&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">&lt;unary&gt; ("**" | "^") &lt;power&gt;</li>
+						<li class="production-rule">| &lt;unary&gt;</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;unary&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">[&lt;inline_comment&gt;] "-" &lt;unary&gt;</li>
+						<li class="production-rule">| &lt;atom&gt;</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;atom&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">[&lt;inline_comment&gt;] &lt;function&gt; [&lt;inline_comment&gt;]</li>
+						<li class="production-rule">| [&lt;inline_comment&gt;] &lt;dice&gt; [&lt;inline_comment&gt;]</li>
+						<li class="production-rule">| [&lt;inline_comment&gt;] &lt;number&gt; [&lt;inline_comment&gt;]</li>
+						<li class="production-rule">| [&lt;inline_comment&gt;] &lt;roll_query&gt; [&lt;inline_comment&gt;]</li>
+						<li class="production-rule">| [&lt;inline_comment&gt;] "(" &lt;expression&gt; ")" [&lt;inline_comment&gt;]</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;function&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">&lt;fucntion_name&gt; "(" &lt;expression&gt; ")"</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;function_name&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">"abs"</li>
+						<li class="production-rule">| "ceil"</li>
+						<li class="production-rule">| "floor"</li>
+						<li class="production-rule">| "round"</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;number&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">&lt;integer&gt;</li>
+						<li class="production-rule">| &lt;float&gt;</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;integer&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">{"0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"}-</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;float&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">&lt;integer&gt; "." &lt;integer&gt;</li>
+						<li class="production-rule"></li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;roll_query&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">"?{" &lt;any&gt; ["|" &lt;expression&gt;] "}"</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;inline_comment&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">"[" &lt;any&gt;+ "]"</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;dice&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">(&lt;normal&gt; | &lt;fate&gt; | &lt;computed&gt;) [&lt;modifiers&gt;] [&lt;inline_comment&gt;]</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;modifiers&gt; :=
+					<ul class="rules">
+						<li class="production-rule">[&lt;exploding&gt; | &lt;compounding&gt;]</li>
+						<li class="production-rule">[(&lt;high&gt; [&lt;low&gt;] | &lt;low&gt; [&lt;high&gt;])]</li>
+						<li class="production-rule">[&lt;critical&gt;]</li>
+						<li class="production-rule">[&lt;successes&gt;]</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;normal&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">[&lt;integer&gt; | &lt;roll_query&gt;] "d" (&lt;integer&gt; | &lt;roll_query&gt;)</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;fate&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">([&lt;integer&gt;] | &lt;roll_query&gt;) "dF"</li>
+						<li class="production-rule"></li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;computed&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">[(&lt;integer&gt; |  &lt;roll_query&gt;)] "d" "(" &lt;expression&gt; ")"</li>
+						<li class="production-rule">| "(" &lt;expression&gt; ")"  "d" (&lt;integer&gt; |  &lt;roll_query&gt;)</li>
+						<li class="production-rule">| ["(" &lt;expression&gt; ")"] "d" "(" &lt;expression&gt; ")"</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;exploding&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">"!" [[&lt;comparison_operator&gt;] &lt;integer&gt;]</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;compounding&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">"!!" [[&lt;comparison_operator&gt;] &lt;integer&gt;]</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;high&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">("dh" | "k" | "kh") &lt;integer&gt;</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;low&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">("d" | "dl" | "kl") &lt;integer&gt;</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;reroll&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">{"r" [&lt;comparison_operator&gt;] (&lt;integer&gt; | &lt;roll_query&gt;)}-</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;successes&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">{&lt;comparison_operator&gt; &lt;integer&gt;}-</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;critical&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">{("cs" | "cf") [&lt;comparison_operator&gt;] (&lt;integer&gt; | &lt;roll_query&gt;)}-</li>
+					</ul>
+				</li>
+
+				<li class="production">&lt;comparison_operator&gt; ::=
+					<ul class="rules">
+						<li class="production-rule">"="</li>
+						<li class="production-rule">| "&lt;"</li>
+						<li class="production-rule">| "&lt;="</li>
+						<li class="production-rule">| "&gt;"</li>
+						<li class="production-rule">| "&gt;="</li>
+					</ul>
+				</li>
+			  </ul>
+		</section>
+	</article>
+
+	<footer class="grid-item">
+
+	</footer>
+	</body>
+</html>

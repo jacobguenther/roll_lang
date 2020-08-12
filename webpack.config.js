@@ -5,9 +5,9 @@ const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 module.exports = {
-	mode: "development",
+	mode: "development", // "production" | "none"
 	entry: {
-		main: './index.js'
+		main: './www/index.js'
 	},
 	output: {
 		path: path.resolve(__dirname, 'dist'),
@@ -18,7 +18,8 @@ module.exports = {
 	plugins: [
 		new HtmlWebpackPlugin({
 			title: 'Roll Lang',
-			template: 'index.html',
+			filename: './index.html',
+			template: './www/index.html',
 			scriptLoading: 'defer',
 			minify: {
 				collapseWhitespace: true,
