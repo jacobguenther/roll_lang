@@ -14,11 +14,11 @@
     "webpack-cli": "^3.3.12",
     "webpack-dev-server": "^3.11.0"
   },
-  "name": "roll_lang",
+  "name": "Roll_Lang",
   "version": "1.0.0",
   "main": "index.js",
   "keywords": [],
   "author": "Jacob Guenther",
   "license": "BSD 3-Cluase",
-  "description": ""
+  "description": "An open source dice roller for tabletop games."
 }
