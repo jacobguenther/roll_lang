@@ -9,36 +9,10 @@ pub type Root = Vec<Node>;
 
 #[derive(Debug, Clone)]
 pub enum Node {
-	StringLiteral(StringLiteral),
+	StringLiteral(String),
 	Roll(Roll),
 	ParseError(ParseError),
 }
-
-#[derive(Debug, Clone)]
-pub struct StringLiteral {
-	s: String,
-}
-impl Default for StringLiteral {
-	fn default() -> StringLiteral {
-		StringLiteral {
-			s: String::new(),
-		}
-	}
-}
-impl StringLiteral {
-	pub fn new(s: &str) -> StringLiteral {
-		StringLiteral {
-			s: s.to_owned(),
-		}
-	}
-	pub fn str(&self) -> &str {
-		&self.s
-	}
-	pub fn append(&mut self, s: &str) {
-		self.s.push_str(s);
-	}
-}
-
 #[derive(Debug, Clone)]
 pub enum Roll {
 	ExplicitRoll(Expression),
@@ -50,7 +24,6 @@ pub enum Expression {
 	Subtract(Box<Expression>, MulDiv),
 	MulDiv(MulDiv),
 }
-
 #[derive(Debug, Clone)]
 pub enum MulDiv {
 	Multiply(Box<MulDiv>, Power),
@@ -64,8 +37,8 @@ pub enum Power {
 }
 #[derive(Debug, Clone)]
 pub enum Unary {
-	Minus(Option<InlineComment>, Box<Unary>),
-	Atom(Option<InlineComment>, Atom, Option<InlineComment>),
+	Minus(Option<String>, Box<Unary>),
+	Atom(Option<String>, Atom, Option<String>),
 }
 #[derive(Debug, Clone)]
 pub enum Atom {
@@ -76,30 +49,11 @@ pub enum Atom {
 	ParenthesesExpression(Box<Expression>),
 }
 
-
-#[derive(Debug, Clone)]
-pub struct InlineComment {
-	comment: String,
-}
-impl InlineComment {
-	pub fn new() -> InlineComment {
-		InlineComment {
-			comment: String::new(),
-		}
-	}
-	pub fn append(&mut self, s: &str) {
-		self.comment.push_str(s);
-	}
-	pub fn comment(&self) -> &str {
-		&self.comment
-	}
-}
-
 #[derive(Debug, Clone)]
 pub enum Dice {
-	Normal(Normal, Modifiers, Option<InlineComment>),
-	Fate(Fate, Modifiers, Option<InlineComment>),
-	Computed(Computed, Modifiers, Option<InlineComment>),
+	Normal(Normal, Modifiers, Option<String>),
+	Fate(Fate, Modifiers, Option<String>),
+	Computed(Computed, Modifiers, Option<String>),
 }
 
 #[derive(Debug, Copy, Clone)]

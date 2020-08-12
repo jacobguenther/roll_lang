@@ -19,7 +19,7 @@ pub enum InterpretError {
 	ParseError(ParseError),
 	OperatorError(OperatorError),
 
-	RandomNumberGenerator,
+	DiceWithFewerThanOneSides,
 
 	Unkown,
 }
@@ -34,7 +34,7 @@ pub trait InterpreterT {
 }
 pub trait InterpreterPrivateT {
 	fn interpret_parse_error(&self, parse_error: &ParseError) -> InterpretError;
-	fn interpret_string_literal(&self, string_literal: &StringLiteral) -> OutputFragment;
+	fn interpret_string_literal(&self, string_literal: &str) -> OutputFragment;
 	fn interpret_roll(&self, roll: &Roll) -> Result<OutputFragment, InterpretError>;
 
 	fn interpret_expression(&self, string_literal: &Expression, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
@@ -54,11 +54,11 @@ pub trait InterpreterPrivateT {
 	fn interpret_function(&self, function: &Function, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 	fn interpret_roll_query(&self, roll_query: &RollQuery, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 
-	fn interpret_normal_dice(&self, normal: &Normal, modifiers: &Modifiers, tooltip: &Option<InlineComment>, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
+	fn interpret_normal_dice(&self, normal: &Normal, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 	fn random_range(low: i32, high: i32) -> Integer;
 	fn apply_modifiers(&self, roll: &Integer, sides: i32, modifiers: &Modifiers) -> Vec<NumberRoll>;
 
-	fn interpret_comment(&self, option_comment: &Option<InlineComment>, formula: &mut FormulaFragments);
+	fn interpret_comment(&self, option_comment: &Option<String>, formula: &mut FormulaFragments);
 }
 impl InterpreterT for Interpreter {
 	fn new(source: &str) -> Interpreter {
@@ -72,7 +72,7 @@ impl InterpreterT for Interpreter {
 		for node in &self.ast {
 			let result = match node {
 				Node::ParseError(parse_error) => Err(self.interpret_parse_error(&parse_error)),
-				Node::StringLiteral(string_literal) => Ok(self.interpret_string_literal(&&string_literal)),
+				Node::StringLiteral(string_literal) => Ok(self.interpret_string_literal(&string_literal)),
 				Node::Roll(roll) => self.interpret_roll(&roll),
 			};
 			match result {
@@ -90,8 +90,8 @@ impl InterpreterPrivateT for Interpreter {
 	fn interpret_parse_error(&self, parse_error: &ParseError) -> InterpretError {
 		InterpretError::ParseError(parse_error.clone())
 	}
-	fn interpret_string_literal(&self, string_literal: &StringLiteral) -> OutputFragment {
-		OutputFragment::StringLit(string_literal.str().to_owned())
+	fn interpret_string_literal(&self, string_literal: &str) -> OutputFragment {
+		OutputFragment::StringLit(string_literal.to_owned())
 	}
 
 	// <roll> ::=
@@ -209,15 +209,9 @@ impl InterpreterPrivateT for Interpreter {
 				formula.push_str(&String::from(*number));
 				Ok(*number)
 			},
-			Atom::Dice(dice) => {
-				self.interpret_dice(dice, formula)
-			},
-			Atom::Function(function) => {
-				self.interpret_function(function, formula)
-			},
-			Atom::RollQuery(roll_query) => {
-				self.interpret_roll_query(roll_query, formula)
-			},
+			Atom::Dice(dice) => self.interpret_dice(dice, formula),
+			Atom::Function(function) => self.interpret_function(function, formula),
+			Atom::RollQuery(roll_query) => self.interpret_roll_query(roll_query, formula),
 			Atom::ParenthesesExpression(expression) => {
 				formula.push_str("(");
 				let expression_output = self.interpret_expression(expression, formula)?;
@@ -266,10 +260,13 @@ impl InterpreterPrivateT for Interpreter {
 	}
 
 
-	fn interpret_normal_dice(&self, normal: &Normal, modifiers: &Modifiers, tooltip: &Option<InlineComment>, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
+	fn interpret_normal_dice(&self, normal: &Normal, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
 		formula.push_str("(");
 
 		let sides = normal.sides.value();
+		if sides < 1 {
+			return Err(InterpretError::DiceWithFewerThanOneSides);
+		}
 		let mut rolls = Vec::<NumberRoll>::new();
 		let mut result = 0;
 		for _dice in 0..normal.count.value() {
@@ -279,6 +276,8 @@ impl InterpreterPrivateT for Interpreter {
 			let modified_result = modified_rolls.sum_counted_rolls();
 			result += modified_result.value();
 
+			// if compounding combine dice into single roll
+			// continue to next roll
 			match modifiers.expanding {
 				Some(Expanding::Compounding(_)) => {
 					rolls.push(NumberRoll::Counted(modified_result));
@@ -287,9 +286,11 @@ impl InterpreterPrivateT for Interpreter {
 				_ => (),
 			}
 
+			
 			let mut penetration = 0;
 			for modified_roll in &modified_rolls {
 				match modifiers.expanding {
+					// if penetrating reduce concecutive dice rolls by 1
 					Some(Expanding::Penetrating(_)) => {
 						match modified_roll {
 							NumberRoll::Counted(num) => {
@@ -308,12 +309,13 @@ impl InterpreterPrivateT for Interpreter {
 			}
 		}
 
+		// Add all rolls to formula
 		for roll in rolls {
 			formula.push_number_roll(&roll);
 		}
 
 		match tooltip {
-			Some(comment) => formula.push_tooltip(comment.comment()),
+			Some(comment) => formula.push_tooltip(comment),
 			None => (),
 		}
 
@@ -322,7 +324,7 @@ impl InterpreterPrivateT for Interpreter {
 	}
 	fn random_range(low: i32, high: i32) -> Integer {
 		use js_sys::Math::random;
-		Integer::new((low as f64 + random() * (high-1) as f64).ceil() as i32)
+		Integer::new(low + (random() * high as f64).floor() as i32)
 	}
 	fn apply_modifiers(&self, roll: &Integer, sides: i32, modifiers: &Modifiers) -> Vec<NumberRoll>{
 		let mut rolls = Vec::new();
@@ -357,9 +359,9 @@ impl InterpreterPrivateT for Interpreter {
 		return rolls.clone();
 	}
 
-	fn interpret_comment(&self, option_comment: &Option<InlineComment>, formula: &mut FormulaFragments) {
+	fn interpret_comment(&self, option_comment: &Option<String>, formula: &mut FormulaFragments) {
 		match option_comment {
-			Some(comment) => formula.push_str(&format!("[{}]", comment.comment())),
+			Some(comment) => formula.push_str(&format!("[{}]", comment)),
 			None => (),
 		}
 	}

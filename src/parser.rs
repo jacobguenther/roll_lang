@@ -3,9 +3,11 @@
 use super::lexer::{
 	Lexer,
 	LexerT,
-	Lexeme,
-	Token,
-	TokenT,
+	token::{
+		Token,
+		TokenT,
+		Lexeme,
+	}
 };
 
 use super::ast::{
@@ -20,8 +22,8 @@ pub trait ParserT {
 trait ParserPrivateT {
 	fn parse_start(&mut self);
 
-	fn parse_string_literal(&mut self) -> StringLiteral;
-	fn parse_comment(&mut self) -> Option<InlineComment>;
+	fn parse_string_literal(&mut self) -> String;
+	fn parse_comment(&mut self) -> Option<String>;
 
 	fn parse_roll(&mut self) -> Result<Roll, ParseError>;
 	fn parse_expression(&mut self) -> Result<Expression, ParseError>;
@@ -98,9 +100,7 @@ impl Default for State {
 	}
 }
 pub struct Parser {
-	state: State,
-	root: Root,
-	
+	state: State,	
 	lexemes: Vec<Lexeme>,
 	current_index: usize,
 }
@@ -108,33 +108,33 @@ impl ParserT for Parser {
 	fn new(source: &str) -> Parser {
 		Parser {
 			state: State::default(),
-			root: Vec::new(),
 			lexemes: Lexer::new(source).collect(),
 			current_index: 0,
 		}
 	}
 	fn parse(&mut self) -> Root {
+		let mut root = Root::new();
 		loop {
 			match self.state {
 				State::Start => self.parse_start(),
 				State::StringLiteral => {
-					let literal = self.parse_string_literal();
-					self.root.push(Node::StringLiteral(literal));
+					let string_literal = self.parse_string_literal();
+					root.push(Node::StringLiteral(string_literal));
 				},
 				State::Roll => match self.parse_roll() {
 					Ok(roll) => {
-						self.root.push(Node::Roll(roll));
+						root.push(Node::Roll(roll));
 						self.state = State::Start;
 					},
 					Err(e) => {
-						self.root.push(Node::ParseError(e.clone()));
+						root.push(Node::ParseError(e.clone()));
 						self.state = State::Done;
 					},
 				},
 				State::Done => break,
 			};
 		}
-		self.root.clone()
+		root
 	}
 }
 impl ParserPrivateT for Parser {
@@ -148,8 +148,8 @@ impl ParserPrivateT for Parser {
 		};
 	}
 
-	fn parse_string_literal(&mut self) -> StringLiteral {
-		let mut literal = StringLiteral::default();
+	fn parse_string_literal(&mut self) -> String {
+		let mut literal = String::new();
 		loop {
 			if self.current().is_err() {
 				self.state = State::Done;
@@ -158,16 +158,16 @@ impl ParserPrivateT for Parser {
 				self.state = State::Roll;
 				break;
 			} else {
-				literal.append(self.current().unwrap().source());
+				literal.push_str(self.current().unwrap().source());
 				self.step_lexemes();
 			}
 		}
 		literal
 	}
-	fn parse_comment(&mut self) -> Option<InlineComment> {
+	fn parse_comment(&mut self) -> Option<String> {
 		let _start_index = self.current_index;
 		self.match_current_to_punctuation("[").ok()?;
-		let mut comment = InlineComment::new();
+		let mut comment = String::new();
 		loop {
 			match self.match_current_to_punctuation("]") {
 				Ok(_token) => {
@@ -175,7 +175,7 @@ impl ParserPrivateT for Parser {
 					break;
 				},
 				Err(_parse_error) => {
-					comment.append(self.current().ok()?.source());	
+					comment.push_str(self.current().ok()?.source());	
 					self.step_lexemes();
 				}
 			};
