@@ -55,11 +55,15 @@ pub fn run(source: &str) -> String {
 			out = format!("{}<br><br>{:?}", out, ast);
 		}
 		
-		let interpreter = Interpreter::new(source);
-		format!("{}<br><br>{}",
-			out,
-			interpreter.interpret().as_html()
-		)
+		if false {
+			let interpreter = Interpreter::new(source);
+			format!("{}<br><br>{}",
+				out,
+				interpreter.interpret().as_html()
+			)
+		} else {
+			out
+		}
 	} else {
 		Interpreter::new(source)
 			.interpret()
