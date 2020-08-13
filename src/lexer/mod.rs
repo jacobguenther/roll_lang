@@ -151,8 +151,8 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 			self.add_one(lexeme);
 			*lexeme = lexeme.into(&LexemeType::Operator);
 			if !self.at_end()
-				&& (c == "*" && self.current_char().unwrap() == "*")
-				|| (c == "!" && self.current_char().unwrap() == "!")
+				&& ((c == "*" && self.current_char().unwrap() == "*")
+				|| (c == "!" && self.current_char().unwrap() == "!" || self.current_char().unwrap() == "p"))
 			{
 				self.add_one(lexeme);	
 			}
