@@ -350,7 +350,8 @@ impl InterpreterPrivateT for Interpreter {
 
 		let mut rerolled = false;
 		for reroll_modifier in &modifiers.reroll_modifiers {
-			if roll.comparison(&reroll_modifier.comparison, &reroll_modifier.comparison_point) {
+			let comparison_point = reroll_modifier.comparison_point.unwrap_or(Integer::new(sides));
+			if roll.comparison(&reroll_modifier.comparison, &comparison_point) {
 				rolls.push(NumberRoll::NotCounted(*roll));
 				let new_roll = Interpreter::random_range(1, sides);
 				rolls.append(&mut self.apply_exploding_and_reroll_modifiers(&new_roll, sides, modifiers));
@@ -367,7 +368,8 @@ impl InterpreterPrivateT for Interpreter {
 				Expanding::Compounding(exploding) |
 				Expanding::Penetrating(exploding) |
 				Expanding::Exploding(exploding) => {
-					if roll.comparison(&exploding.comparison, &exploding.comparison_point) {
+					let comparison_point = exploding.comparison_point.unwrap_or(Integer::new(sides));
+					if roll.comparison(&exploding.comparison, &comparison_point) {
 						let new_roll = Interpreter::random_range(1, sides);
 						rolls.append(&mut self.apply_exploding_and_reroll_modifiers(&new_roll, sides, modifiers));
 					}

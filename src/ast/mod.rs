@@ -97,13 +97,13 @@ pub enum Modifier {
 #[derive(Debug, Copy, Clone)]
 pub struct Reroll {
 	pub comparison: Comparison,
-	pub comparison_point: Integer,
+	pub comparison_point: Option<Integer>,
 }
 pub trait RerollT {
-	fn new(comparison: Comparison, comparison_point: Integer) -> Self;
+	fn new(comparison: Comparison, comparison_point: Option<Integer>) -> Self;
 }
 impl RerollT for Reroll {
-	fn new(comparison: Comparison, comparison_point: Integer) -> Self {
+	fn new(comparison: Comparison, comparison_point: Option<Integer>) -> Self {
 		Self {
 			comparison: comparison,
 			comparison_point: comparison_point,
