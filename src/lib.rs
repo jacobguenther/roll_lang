@@ -39,7 +39,7 @@ pub fn init_panic_hook() {
 
 #[wasm_bindgen]
 pub fn run(source: &str) -> String {
-	if false {
+	if true {
 		let mut out = String::new();
 
 		if true {
@@ -55,7 +55,7 @@ pub fn run(source: &str) -> String {
 			out = format!("{}<br><br>{:?}", out, ast);
 		}
 		
-		if false {
+		if true {
 			let interpreter = Interpreter::new(source);
 			format!("{}<br><br>{}",
 				out,
