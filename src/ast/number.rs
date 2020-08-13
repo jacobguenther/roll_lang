@@ -2,6 +2,13 @@
 
 use std::ops::{Add, Sub, Mul, Div, Neg};
 use super::Comparison;
+use super::{
+	Expression,
+	MulDiv,
+	Power,
+	Unary,
+	Atom,
+};
 
 #[derive(Debug, Copy, Clone)]
 pub enum Number {
@@ -12,19 +19,19 @@ impl Number {
 	pub fn floor(&self) -> Number {
 		match self {
 			Number::Integer(_) => self.clone(),
-			Number::Float(float) => Number::Float(Float::new(float.value().floor())),	
+			Number::Float(float) => Number::Integer(Integer::new(float.value().floor() as i32)),	
 		}
 	}
 	pub fn ceil(&self) -> Number {
 		match self {
 			Number::Integer(_) => self.clone(),
-			Number::Float(float) => Number::Float(Float::new(float.value().ceil())),	
+			Number::Float(float) => Number::Integer(Integer::new(float.value().ceil() as i32)),	
 		}
 	}
 	pub fn round(&self) -> Number {
 		match self {
 			Number::Integer(_) => self.clone(),
-			Number::Float(float) => Number::Float(Float::new(float.value().round())),	
+			Number::Float(float) => Number::Integer(Integer::new(float.value().round() as i32)),	
 		}
 	}
 	pub fn abs(&self) -> Number {
@@ -170,6 +177,22 @@ impl Integer {
 			} else {
 				self.i
 			}
+		)
+	}
+	pub fn as_expression(&self) -> Expression {
+		let new_int = Integer::new(self.i);
+		Expression::MulDiv(
+			MulDiv::Power(
+				Power::Unary(
+					Unary::Atom(
+						None,
+						Atom::Number(
+							Number::Integer(new_int)
+						),
+						None
+					)
+				)
+			)
 		)
 	}
 }
