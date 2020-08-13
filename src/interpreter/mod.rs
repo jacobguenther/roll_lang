@@ -20,6 +20,8 @@ pub enum InterpretError {
 	OperatorError(OperatorError),
 
 	DiceWithFewerThanOneSides,
+	DiceCountMustBeAnInteger,
+	DiceSidesMustBeAnInteger,
 
 	Unkown,
 }
@@ -55,8 +57,10 @@ pub trait InterpreterPrivateT {
 	fn interpret_roll_query(&self, roll_query: &RollQuery, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 
 	fn interpret_normal_dice(&self, normal: &Normal, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
+	fn interpret_computed_dice(&self, normal: &Computed, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
+
 	fn random_range(low: i32, high: i32) -> Integer;
-	fn apply_modifiers(&self, roll: &Integer, sides: i32, modifiers: &Modifiers) -> Vec<NumberRoll>;
+	fn apply_exploding_and_reroll_modifiers(&self, roll: &Integer, sides: i32, modifiers: &Modifiers) -> Vec<NumberRoll>;
 
 	fn interpret_comment(&self, option_comment: &Option<String>, formula: &mut FormulaFragments);
 }
@@ -224,7 +228,7 @@ impl InterpreterPrivateT for Interpreter {
 		match dice {
 			Dice::Normal(normal, modifiers, tooltip) => self.interpret_normal_dice(normal, modifiers, &tooltip, formula),
 			// Dice::Fate(fate, modifiers, tooltip) => self.interpret_fate_dice(fate, modifiers, &tooltip, formula),
-			// Dice::Computed(computed, modifiers, tooltip) => self.interpret_computed_dice(computed, modifiers, &tooltip, formula),
+			Dice::Computed(computed, modifiers, tooltip) => self.interpret_computed_dice(computed, modifiers, &tooltip, formula),
 			_ => Err(InterpretError::Unkown),
 		}
 	}
@@ -272,7 +276,7 @@ impl InterpreterPrivateT for Interpreter {
 		for _dice in 0..normal.count.value() {
 			let roll = Interpreter::random_range(1, sides);
 
-			let modified_rolls = self.apply_modifiers(&roll, sides, modifiers);
+			let modified_rolls = self.apply_exploding_and_reroll_modifiers(&roll, sides, modifiers);
 			let modified_result = modified_rolls.sum_counted_rolls();
 			result += modified_result.value();
 
@@ -322,11 +326,26 @@ impl InterpreterPrivateT for Interpreter {
 		formula.push_str(")");
 		Ok(Number::Integer(Integer::new(result)))
 	}
+
+	fn interpret_computed_dice(&self, computed: &Computed, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
+		let mut count_formula = Vec::new();
+		let count = self.interpret_expression(&computed.count, &mut count_formula)?;
+		let mut sides_formula = Vec::new();
+		let sides = self.interpret_expression(&computed.sides, &mut sides_formula)?;
+		let normal = match (count, sides) {
+			(Number::Integer(c), Number::Integer(s)) => Normal{count: c, sides: s},
+			(Number::Float(_c), Number::Integer(_s)) => return Err(InterpretError::DiceCountMustBeAnInteger),
+			(Number::Integer(_c), Number::Float(_s)) => return Err(InterpretError::DiceSidesMustBeAnInteger),
+			(Number::Float(_c), Number::Float(_s)) => return Err(InterpretError::DiceCountMustBeAnInteger),
+		};
+		self.interpret_normal_dice(&normal, modifiers, tooltip, formula)
+	}
+
 	fn random_range(low: i32, high: i32) -> Integer {
 		use js_sys::Math::random;
 		Integer::new(low + (random() * high as f64).floor() as i32)
 	}
-	fn apply_modifiers(&self, roll: &Integer, sides: i32, modifiers: &Modifiers) -> Vec<NumberRoll>{
+	fn apply_exploding_and_reroll_modifiers(&self, roll: &Integer, sides: i32, modifiers: &Modifiers) -> Vec<NumberRoll>{
 		let mut rolls = Vec::new();
 
 		let mut rerolled = false;
@@ -334,7 +353,7 @@ impl InterpreterPrivateT for Interpreter {
 			if roll.comparison(&reroll_modifier.comparison, &reroll_modifier.comparison_point) {
 				rolls.push(NumberRoll::NotCounted(*roll));
 				let new_roll = Interpreter::random_range(1, sides);
-				rolls.append(&mut self.apply_modifiers(&new_roll, sides, modifiers));
+				rolls.append(&mut self.apply_exploding_and_reroll_modifiers(&new_roll, sides, modifiers));
 				rerolled=true;
 				break;
 			}
@@ -350,7 +369,7 @@ impl InterpreterPrivateT for Interpreter {
 				Expanding::Exploding(exploding) => {
 					if roll.comparison(&exploding.comparison, &exploding.comparison_point) {
 						let new_roll = Interpreter::random_range(1, sides);
-						rolls.append(&mut self.apply_modifiers(&new_roll, sides, modifiers));
+						rolls.append(&mut self.apply_exploding_and_reroll_modifiers(&new_roll, sides, modifiers));
 					}
 				},
 			}
