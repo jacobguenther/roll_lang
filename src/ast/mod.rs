@@ -163,4 +163,22 @@ impl RollQuery {
 	pub fn append_prompt(&mut self, s: &str) {
 		self.prompt.push_str(s);
 	}
+	pub fn as_expression(&self) -> Expression {
+		Expression::MulDiv(
+			MulDiv::Power(
+				Power::Unary(
+					Unary::Atom(
+						None,
+						Atom::RollQuery(
+							RollQuery {
+								prompt: self.prompt.clone(),
+								default: self.default.clone(),
+							}
+						),
+						None
+					)
+				)
+			)
+		)
+	}
 }
