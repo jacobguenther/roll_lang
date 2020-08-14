@@ -123,7 +123,6 @@ function appendHistory(source, result) {
 }
 function getSourceFromHistory(i) {
 	const historyEntry = history.children[i];
-	console.log(i, history.children, historyEntry);
 	if (historyEntry === undefined) {
 		return undefined;
 	}
@@ -135,7 +134,6 @@ function handleKeyDown(event) {
 		event.preventDefault();
 	} else if (event.keyCode === 38) { // up
 		let source = getSourceFromHistory(currentSelectedHistoryElement-1);
-		console.log(history, source);
 		if (source === undefined) {
 			sourceInputField.value = '';
 			currentSelectedHistoryElement = history.childElementCount;
