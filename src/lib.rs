@@ -39,7 +39,7 @@ pub fn init_panic_hook() {
 
 #[wasm_bindgen]
 pub fn run(source: &str) -> String {
-	if true {
+	if false {
 		let mut out = String::new();
 
 		if true {
