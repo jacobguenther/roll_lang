@@ -20,13 +20,14 @@ module.exports = {
 			title: 'Roll Lang',
 			filename: './index.html',
 			template: './www/index.html',
+			favicon: './www/favicon.png',
 			scriptLoading: 'defer',
-			minify: {
-				collapseWhitespace: true,
-				removeComments: true,
-				removeEmptyAttributes: true,
-				removeRedundantAttributes: true,
-			}
+			// minify: {
+			// 	collapseWhitespace: true,
+			// 	removeComments: true,
+			// 	removeEmptyAttributes: true,
+			// 	removeRedundantAttributes: true,
+			// }
 		}),
 		new MiniCssExtractPlugin(),
 		new WasmPackPlugin({
