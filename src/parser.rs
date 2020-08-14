@@ -509,7 +509,10 @@ impl ParserPrivateT for Parser {
 		let start_index = self.current_index;
 		let count = match self.parse_integer() {
 			Ok(integer) => integer,
-			Err(_parse_error) => Integer::new(1),
+			Err(_parse_error) => {
+				self.current_index = start_index;
+				Integer::new(1)
+			}
 		};
 		match self.match_current_to_literal("d") {
 			Ok(_token) => (),
