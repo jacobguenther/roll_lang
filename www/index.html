@@ -6,7 +6,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<meta name="description" content="Roll Lang an open source dice roller for tabletop games." />
 	<meta name="keyword" content="Dice Roller RPG Tabletop" />
-
+	
 	<meta property="og:title" content="Roll Lang" />
 	<meta property="og:url" content="https://jacobguenther.github.io/roll_lang_demo/" />
 	<meta property="og:type" content="website" />
@@ -16,30 +16,54 @@
 <body id="page-container">
 	<header class="grid-item">
 		<h1>Roll Lang</h1>
-		<noscript>This webpage requires javascript and WebAssembly to run. Please enable javascript or if your browser
+		<noscript>This webpage requires javascript and WebAssembly to run. Please enable javascript and if your browser
 			does not support WebAssembly consider using Firefox, Chrome, Edge or Safari.
 		</noscript>
 	</header>
 
-	<form id="roll-lang-form" class="grid-item" action="javascript:void(0);" onsubmit="RollLang.run()">
-		<section id="history-section">
-			<h2>History</h2>
+	<div id="tabs" class="grid-item">
+		<nav>
+			<ul id="tabs-list">
+				<li id="tab-name-history" class="tab-item" onclick="RollLang.selectTab('history');">History</li>
+				<li id="tab-name-character-sheets" class="tab-item" onclick="RollLang.selectTab('character-sheets');">Character Sheets</li>
+				<li id="tab-name-macros" class="tab-item" onclick="RollLang.selectTab('macros');">Macros</li>
+				<li id="tab-name-tables" class="tab-item" onclick="RollLang.selectTab('tables');">Tables</li>
+			</ul>
+		</nav>
+
+		<section id="history-section" class="tab-contents">
+			<button id="clear-history" onclick="RollLang.clearHistory()">Clear History</button>
+			<hr />
 			<ul id="history">
 			</ul>
+			<form id="roll-lang-form" action="javascript:void(0);" onsubmit="RollLang.run()">
+				<hr />
+				<div id="input-container">
+					<label id="input-label" for="input-textarea">Input</label>
+					<textarea id="input-textarea"
+						name="input-textarea"
+						placeholder="Attack roll is /roll 1d20 + [BAB]3 + [STR]3 \."
+						cols="40"
+						rows="2"
+						onfocusin="RollLang.inputFocusIn()",
+						onfocusout="RollLang.inputFocusOut()"></textarea>
+					<input id="input-submit" type="submit" value="Run"></input>
+				</div>
+			</form>
 		</section>
-		<hr>
-		<div id="input-container">
-			<label id="input-label" for="input-textarea">Input</label>
-			<textarea id="input-textarea"
-				name="input-textarea"
-				placeholder="Attack roll is /roll 1d20 + [BAB]3 + [STR]3 \."
-				cols="40"
-				rows="2"></textarea>
-			<input id="input-submit" type="submit" value="Run"></input>
-		</div>
-		<hr>
-		<input type="button" value="Clear History" onclick="RollLang.clearHistory()"></input>
-	</form>
+
+		<section id="character-sheets-section" class="tab-contents">
+			<p>Character Sheets are Under Construction</p>
+		</section>
+
+		<section id="macros-section" class="tab-contents">
+			<p>Macros are Under Construction</p>
+		</section>
+
+		<section id="tables-section" class="tab-contents">
+			<p>Tables are Under Construction</p>
+		</section>
+	</div>
 
 	<article class="grid-item">
 		<header>
@@ -49,14 +73,21 @@
 			it you can roll large numbers of dice, mix in common math operations with your rolls, and display text
 			to give your rolls context.
 		</p>
-		<p>Find the source code and report bugs for this project on <a href="https://github.com/jacobguenther/roll_lang">GitHub</a>.</p>
+		<h3>Contribute</h3>
+		<p>Find the source code and report bugs for this project on
+			<a href="https://github.com/jacobguenther/roll_lang">GitHub</a>.
+		</p>
 		<p>Donate to this project on <a href="https://www.patreon.com/roll_lang">Patreaon</a></p>
 
 		<h3>Planned Features</h3>
-		<p>You can make feature requests on github under <a href="https://github.com/jacobguenther/roll_lang/issues">issues</a></p>
-		<p>A <span class="feature-completed">strike through</span> indicates a completed feature.</p>
+		<p>You can make feature requests on github under
+			<a href="https://github.com/jacobguenther/roll_lang/issues">issues</a>
+		</p>
+		<p>A <span class="feature-completed">strike through</span> indicates a recently completed
+			feature.
+		</p>
 		<ul class="bullet-list">
-			<li><h3>Dice Modifiers</h3>
+			<li><h4>Dice Modifiers</h4>
 				<ul class="bullet-list">
 					<li class="feature-completed">Reroll dice on condition</li>
 					<li class="feature-completed">Exploding Dice</li>
@@ -85,11 +116,11 @@
 			<li>Support <span class="roll-example">if else-if else</span> statements for conditional rolls.</li>
 			<li>Better Error Messages</li>
 			<li>Make a Rust crate so other developers can easily use Roll Lang in their project.</li>
-			<li><h3>History and Persistence</h3>
+			<li><h4>History and Persistence</h4>
 				<ul class="bullet-list">
-					<li>Use arrow keys to go back in history</li>
-					<li>Scrolbar for history section</li>
-					<li>Enter key to run current input</li>
+					<li class="feature-completed">Use arrow keys to go back in history</li>
+					<li class="feature-completed">Scrolbar for history section</li>
+					<li class="feature-completed">Enter key to run current input</li>
 					<li>Save previous rolls abstract syntax tree for faster rolls</li>
 					<li>Optionally save macros and history as cookies</li>
 				</ul>
@@ -118,13 +149,16 @@
 				<li><a href="#inline-rolls">Inline Rolls</a></li>
 				<li><a href="#inline-comments">Inline Comments</a></li>
 				<li><a href="#dice">Dice</a></li>
+				<li><a href="#computed-dice">Computed Dice</a></li>
+				<li><a href="#dice-tooltips">Dice Tooltips</a></li>
 				<li><a href="#math-operations">Math Operations</a></li>
 			</ul>
 			</nav>
 
 			<h4 id="rolling">Rolling</h4>
 			<p>In order for Roll Lang to under stand when to interpret your roll use the <span class="roll-example">/roll</span>
-				keyword or the shorthand <span class="roll-example">/r</span>. For example if you wanted to roll 1 20 sided dice. You would type <span class="roll-example">/roll 1d20</span>.
+				keyword or the shorthand <span class="roll-example">/r</span>. For example if you wanted to roll 1 20
+				sided dice. You would type <span class="roll-example">/roll 1d20</span>.
 			</p>
 			<h4 id="text">Text</h4>
 			<p>It is often helpful to give your roll some context so that others know what the numbers mean.
@@ -164,6 +198,13 @@
 			</ul>
 			<p>Where N and X are an integer or *roll query. You can even have dice rolls in your expressions for computed dice.</p>
 			<p>*roll queries are not supported yet.</p>
+			<h4 id="dice-tooltips">Dice Tooltips</h4>
+			<p>Using the same format as an inline comment you can add a tooltip to a roll. Enter the tooltip directly
+				after the dice roll with no spaces like so <span class="roll-example">/r d12[great sword]</span>. The
+				tooltip will display when your mouse hovers over the section of the formula that was computed for the
+				dice. Try it out
+				<span class="roll-example">(<span class="tooltipped">11<span class="tooltiptext">great sword</span></span>)</span>.
+			</p>
 			<h4 id="math-operations">Math Operations</h4>
 			<p>Roll Lang supports all of the comman math operators. They are listed below from lowest to highest precedence.</p>
 			<ul class="bullet-list">
@@ -186,13 +227,15 @@
 			<h3>Advanced Features</h3>
 			<nav>
 			<ul>
-				<li><a href="dice-modifiers">Dice Modifiers</a></li>
+				<li><a href="#dice-modifiers">Dice Modifiers</a></li>
 			</ul>
 			</nav>
 			<h4 id="dice-modifiers">Dice Modifiers</h4>
 			<p>Dice modifiers change how the roll is preformed or how it is displayed. Not all dice modifiers can be
-				used on the same roll. You can only apply one of exploding, compounding, or penetrating to a roll and it must be the
-				first modifier added.</p>
+				used on the same roll. You can only apply one of <a href="#exploding">exploding</a>,
+				<a href="#compounding">compounding</a>, or <a href="#penetrating">penetrating</a> to a roll and it must be
+				the first modifier added.</p>
+			<p>Currently <a href="#dice-tooltips">dice tooltips</a> must come after the modifiers.</p>
 			<ul>
 				<li>
 					<h5>Comparisons</h5>
@@ -238,8 +281,9 @@
 				<span class="roll-example">rX</span> where X is the number that should be rerolled. You can also use it
 				with a comparison between <span class="roll-example">r</span> and <span class="roll-example">X</span>.
 				You can also use multiple reroll modifiers like so <span class="roll-example">1d20r1r>17</span>. This
-				will reroll a d20 until its roll value is 1, 18, 19, or 20. Note that 17 is not included. If you want to
-				include 17 use greater-than or equal <span class="roll-example">&gt;=</span>.
+				will reroll a d20 until its roll value is not 1, 18, 19, or 20. Note that 17 is not included. If you
+				want to include 17 use greater-than or equal <span class="roll-example">&gt;=</span> in place of
+				<span class="roll-example">=</span>.
 			</p>
 		</section>
 		<hr>
