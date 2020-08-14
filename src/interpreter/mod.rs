@@ -23,6 +23,8 @@ pub enum InterpretError {
 	DiceCountMustBeAnInteger,
 	DiceSidesMustBeAnInteger,
 
+	InfiniteRerollsDetected,
+
 	Unkown,
 }
 
@@ -60,6 +62,7 @@ pub trait InterpreterPrivateT {
 	fn interpret_computed_dice(&self, normal: &Computed, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 
 	fn random_range(low: i32, high: i32) -> Integer;
+	fn validate_modifiers(&self, modifiers: &Modifiers, sides: i32) -> Result<(), InterpretError>;
 	fn apply_exploding_and_reroll_modifiers(&self, roll: &Integer, sides: i32, modifiers: &Modifiers) -> Vec<NumberRoll>;
 
 	fn interpret_comment(&self, option_comment: &Option<String>, formula: &mut FormulaFragments);
@@ -263,7 +266,6 @@ impl InterpreterPrivateT for Interpreter {
 		Err(InterpretError::Unkown)
 	}
 
-
 	fn interpret_normal_dice(&self, normal: &Normal, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
 		formula.push_str("(");
 
@@ -271,6 +273,9 @@ impl InterpreterPrivateT for Interpreter {
 		if sides < 1 {
 			return Err(InterpretError::DiceWithFewerThanOneSides);
 		}
+
+		self.validate_modifiers(modifiers, sides)?;
+
 		let mut rolls = Vec::<NumberRoll>::new();
 		let mut result = 0;
 		for _dice in 0..normal.count.value() {
@@ -345,6 +350,47 @@ impl InterpreterPrivateT for Interpreter {
 		use js_sys::Math::random;
 		Integer::new(low + (random() * high as f64).floor() as i32)
 	}
+	fn validate_modifiers(&self, modifiers: &Modifiers, sides: i32) -> Result<(), InterpretError> {
+		let add_rerolls_for = | comparison: &Comparison, point: i32 | -> Vec<i32> {
+			match comparison {
+				Comparison::LessThan => (1..point).collect(),
+				Comparison::GreaterThan => ((point+1)..(sides+1)).collect(),
+				Comparison::LessThanEqual => (1..(point+1)).collect(),
+				Comparison::GreaterThanEqual => (point..(sides+1)).collect(),
+				Comparison::Equal => vec!(point),
+			}
+		};
+
+		let mut reroll_on = Vec::<i32>::new();
+		match modifiers.expanding {
+			Some(Expanding::Exploding(Exploding{comparison, comparison_point}))
+			| Some(Expanding::Compounding(Exploding{comparison, comparison_point}))
+			| Some(Expanding::Penetrating(Exploding{comparison, comparison_point})) => {
+				let point = comparison_point.unwrap_or(Integer::new(sides)).value();
+				reroll_on.append(&mut add_rerolls_for(&comparison, point));
+			},
+			_ => (),
+		}
+		for reroll_modifier in &modifiers.reroll_modifiers {
+			let point = reroll_modifier.comparison_point.unwrap_or(Integer::new(sides)).value();
+			reroll_on.append(&mut add_rerolls_for(&reroll_modifier.comparison, point));
+		}
+		reroll_on.sort();
+		reroll_on.dedup();
+		let mut reroll_on_all = true;
+		for i in 1..(sides+1) {
+			if reroll_on.iter().find(|&&x| x == i as i32).is_none() {
+				reroll_on_all = false;
+				break;
+			}
+		}
+
+		if reroll_on_all {
+			return Err(InterpretError::InfiniteRerollsDetected);
+		}
+		Ok(())
+	}
+
 	fn apply_exploding_and_reroll_modifiers(&self, roll: &Integer, sides: i32, modifiers: &Modifiers) -> Vec<NumberRoll>{
 		let mut rolls = Vec::new();
 
