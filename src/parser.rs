@@ -18,6 +18,7 @@ use super::ast::{
 pub trait ParserT {
 	fn new(source: &str) -> Parser;
 	fn parse(&mut self) -> Root;
+	fn parse_expression_string(source: &str) -> Result<Expression, ParseError>;
 }
 trait ParserPrivateT {
 	fn parse_start(&mut self);
@@ -137,6 +138,12 @@ impl ParserT for Parser {
 		}
 		root
 	}
+	fn parse_expression_string(source: &str) -> Result<Expression, ParseError> {
+		let mut parser = Parser::new(source);
+		parser.state = State::Roll;
+		parser.parse_expression()
+	}
+
 }
 impl ParserPrivateT for Parser {
 	fn parse_start(&mut self) {
@@ -450,28 +457,21 @@ impl ParserPrivateT for Parser {
 			}
 		}
 		let mut roll_query = RollQuery::new();
-		let mut expect_end = false;
+		let mut prompt_complete = false;
 		loop {
 			match self.match_current_to_punctuation_skip_whitespace("|") {
-				Ok(_token) => {
-					roll_query.default = match self.parse_expression().ok() {
-						Some(expr) => Some(Box::new(expr)),
-						None => None,
-					};
-					expect_end = true;
-				},
-				Err(_parse_error) => {
-					roll_query.append_prompt(&self.current()?.token().source());
+				Ok(_token) => prompt_complete = true,
+				Err(_parse_error) => if !prompt_complete {
+					roll_query.prompt.push_str(&self.current()?.token().source());
+					self.step_lexemes();
+				} else {
+					roll_query.default.push_str(&self.current()?.token().source());
 					self.step_lexemes();
 				}
 			}
 			match self.match_current_to_punctuation_skip_whitespace("}") {
 				Ok(_token) => break,
-				Err(_parse_error) => {
-					if expect_end {
-						return Err(ParseError::ExpectedPunctuation("}".to_owned()));
-					}
-				},
+				Err(_parse_error) => (),
 			}
 		}
 		Ok(roll_query)

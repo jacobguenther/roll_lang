@@ -151,17 +151,14 @@ pub enum Function {
 #[derive(Debug, Clone)]
 pub struct RollQuery {
 	pub prompt: String,
-	pub default: Option<Box<Expression>>,
+	pub default: String,
 }
 impl RollQuery {
 	pub fn new() -> RollQuery {
 		RollQuery {
 			prompt: String::new(),
-			default: None,
+			default: String::new(),
 		}
-	}
-	pub fn append_prompt(&mut self, s: &str) {
-		self.prompt.push_str(s);
 	}
 	pub fn as_expression(&self) -> Expression {
 		Expression::MulDiv(
