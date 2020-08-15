@@ -13,6 +13,11 @@ use super::parser::{
 	ParseError,
 };
 
+use std::collections::HashMap;
+
+use web_sys::Window;
+
+
 #[derive(Debug, Clone)]
 pub enum InterpretError {
 	LexError,
@@ -25,41 +30,43 @@ pub enum InterpretError {
 
 	InfiniteRerollsDetected,
 
+	ExpectedSomeInputInRollQueryPrompt,
+
 	Unkown,
 }
 
 pub struct Interpreter {
 	source: String,
-	ast: Root,
+	roll_queries: HashMap<String, Expression>,
 }
 pub trait InterpreterT {
 	fn new(source: &str) -> Interpreter;
-	fn interpret(&self) -> Output;
+	fn interpret(&mut self) -> Output;
 }
 pub trait InterpreterPrivateT {
 	fn interpret_parse_error(&self, parse_error: &ParseError) -> InterpretError;
 	fn interpret_string_literal(&self, string_literal: &str) -> OutputFragment;
-	fn interpret_roll(&self, roll: &Roll) -> Result<OutputFragment, InterpretError>;
+	fn interpret_roll(&mut self, roll: &Roll) -> Result<OutputFragment, InterpretError>;
 
-	fn interpret_expression(&self, string_literal: &Expression, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
-	fn interpret_add(&self, lhs: &Expression, rhs: &MulDiv, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
-	fn interpret_subtract(&self, lhs: &Expression, rhs: &MulDiv, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
+	fn interpret_expression(&mut self, string_literal: &Expression, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
+	fn interpret_add(&mut self, lhs: &Expression, rhs: &MulDiv, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
+	fn interpret_subtract(&mut self, lhs: &Expression, rhs: &MulDiv, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 
-	fn interpret_mul_div(&self, mul_div: &MulDiv, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
-	fn interpret_multiply(&self, lhs: &MulDiv, rhs: &Power, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
-	fn interpret_divide(&self, lhs: &MulDiv, rhs: &Power, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
+	fn interpret_mul_div(&mut self, mul_div: &MulDiv, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
+	fn interpret_multiply(&mut self, lhs: &MulDiv, rhs: &Power, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
+	fn interpret_divide(&mut self, lhs: &MulDiv, rhs: &Power, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 
-	fn interpret_power(&self, power: &Power, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
+	fn interpret_power(&mut self, power: &Power, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 
-	fn interpret_unary(&self, unary: &Unary, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
+	fn interpret_unary(&mut self, unary: &Unary, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 
-	fn interpret_atom(&self, atom: &Atom, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
-	fn interpret_dice(&self, dice: &Dice, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
-	fn interpret_function(&self, function: &Function, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
-	fn interpret_roll_query(&self, roll_query: &RollQuery, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
+	fn interpret_atom(&mut self, atom: &Atom, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
+	fn interpret_dice(&mut self, dice: &Dice, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
+	fn interpret_function(&mut self, function: &Function, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
+	fn interpret_roll_query(&mut self, roll_query: &RollQuery, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 
-	fn interpret_normal_dice(&self, normal: &Normal, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
-	fn interpret_computed_dice(&self, normal: &Computed, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
+	fn interpret_normal_dice(&mut self, normal: &Normal, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
+	fn interpret_computed_dice(&mut self, normal: &Computed, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 
 	fn random_range(low: i32, high: i32) -> Integer;
 	fn validate_modifiers(&self, modifiers: &Modifiers, sides: i32) -> Result<(), InterpretError>;
@@ -71,12 +78,13 @@ impl InterpreterT for Interpreter {
 	fn new(source: &str) -> Interpreter {
 		Interpreter {
 			source: source.to_owned(),
-			ast: Parser::new(source).parse(),
+			roll_queries: HashMap::new(),
 		}
 	}
-	fn interpret(&self) -> Output {
+	fn interpret(&mut self) -> Output {
 		let mut output = Output::new(&self.source);
-		for node in &self.ast {
+		let ast = Parser::new(&self.source).parse();
+		for node in &ast {
 			let result = match node {
 				Node::ParseError(parse_error) => Err(self.interpret_parse_error(&parse_error)),
 				Node::StringLiteral(string_literal) => Ok(self.interpret_string_literal(&string_literal)),
@@ -108,7 +116,7 @@ impl InterpreterPrivateT for Interpreter {
 	//    "/roll" <expression> ["\"]
 	// <inline_roll> ::=
 	//    "[[" <expression> "]]"
-	fn interpret_roll(&self, roll: &Roll) -> Result<OutputFragment, InterpretError> {
+	fn interpret_roll(&mut self, roll: &Roll) -> Result<OutputFragment, InterpretError> {
 		let mut formula = FormulaFragments::new();
 		Ok(OutputFragment::Roll(match roll {
 			Roll::ExplicitRoll(expression) => {
@@ -131,20 +139,20 @@ impl InterpreterPrivateT for Interpreter {
 
 	// <expression> ::=
 	//    <expression> {("+" | "-") <mul_div>}
-	fn interpret_expression(&self, expression: &Expression, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
+	fn interpret_expression(&mut self, expression: &Expression, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
 		match expression {
 			Expression::Add(lhs, rhs) => self.interpret_add(lhs, rhs, formula),
 			Expression::Subtract(lhs, rhs) => self.interpret_subtract(lhs, rhs, formula),
 			Expression::MulDiv(mul_div) => self.interpret_mul_div(mul_div, formula),
 		}
 	}
-	fn interpret_add(&self, lhs: &Expression, rhs: &MulDiv, formula: &mut FormulaFragments)  -> Result<Number, InterpretError> {
+	fn interpret_add(&mut self, lhs: &Expression, rhs: &MulDiv, formula: &mut FormulaFragments)  -> Result<Number, InterpretError> {
 		let lhs = self.interpret_expression(lhs, formula)?;
 		formula.push_str("+");
 		let rhs = self.interpret_mul_div(rhs, formula)?;
 		Ok(lhs + rhs)
 	}
-	fn interpret_subtract(&self, lhs: &Expression, rhs: &MulDiv, formula: &mut FormulaFragments)  -> Result<Number, InterpretError> {
+	fn interpret_subtract(&mut self, lhs: &Expression, rhs: &MulDiv, formula: &mut FormulaFragments)  -> Result<Number, InterpretError> {
 		let lhs = self.interpret_expression(lhs, formula)?;
 		formula.push_str("-");
 		let rhs = self.interpret_mul_div(rhs, formula)?;
@@ -153,7 +161,7 @@ impl InterpreterPrivateT for Interpreter {
 
 	// <mul_div> ::=
 	//    <mul_div> {("*" | "/") <power>}
-	fn interpret_mul_div(&self, mul_div: &MulDiv, formula: &mut FormulaFragments)  -> Result<Number, InterpretError> {
+	fn interpret_mul_div(&mut self, mul_div: &MulDiv, formula: &mut FormulaFragments)  -> Result<Number, InterpretError> {
 		match mul_div {
 			MulDiv::Multiply(lhs, rhs) => self.interpret_multiply(lhs, rhs, formula),
 			MulDiv::Divide(lhs, rhs) => self.interpret_divide(lhs, rhs, formula),
@@ -161,13 +169,13 @@ impl InterpreterPrivateT for Interpreter {
 		}
 	}
 
-	fn interpret_multiply(&self, lhs: &MulDiv, rhs: &Power, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
+	fn interpret_multiply(&mut self, lhs: &MulDiv, rhs: &Power, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
 		let lhs = self.interpret_mul_div(lhs, formula)?;
 		formula.push_str("*");
 		let rhs = self.interpret_power(rhs, formula)?;
 		Ok(lhs * rhs)
 	}
-	fn interpret_divide(&self, lhs: &MulDiv, rhs: &Power, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
+	fn interpret_divide(&mut self, lhs: &MulDiv, rhs: &Power, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
 		let lhs = self.interpret_mul_div(lhs, formula)?;
 		formula.push_str("/");
 		let rhs = self.interpret_power(rhs, formula)?;
@@ -180,7 +188,7 @@ impl InterpreterPrivateT for Interpreter {
 	// <power> ::=
 	//      <unary> ("**" | "^") <power>
 	//    | <unary>
-	fn interpret_power(&self, power: &Power, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
+	fn interpret_power(&mut self, power: &Power, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
 		match power {
 			Power::Pow(u, p) => {
 				let base = self.interpret_unary(u, formula)?;
@@ -195,7 +203,7 @@ impl InterpreterPrivateT for Interpreter {
 	// <unary> ::=
 	//      [<inline>] "-" <unary> =
 	//    | <atom>
-	fn interpret_unary(&self, unary: &Unary, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
+	fn interpret_unary(&mut self, unary: &Unary, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
 		match unary {
 			Unary::Minus(comment, u) => {
 				self.interpret_comment(comment, formula);
@@ -210,7 +218,7 @@ impl InterpreterPrivateT for Interpreter {
 			}
 		}
 	}
-	fn interpret_atom(&self, atom: &Atom, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
+	fn interpret_atom(&mut self, atom: &Atom, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
 		match atom {
 			Atom::Number(number) => {
 				formula.push_str(&String::from(*number));
@@ -227,7 +235,7 @@ impl InterpreterPrivateT for Interpreter {
 			}
 		}
 	}
-	fn interpret_dice(&self, dice: &Dice, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
+	fn interpret_dice(&mut self, dice: &Dice, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
 		match dice {
 			Dice::Normal(normal, modifiers, tooltip) => self.interpret_normal_dice(normal, modifiers, &tooltip, formula),
 			// Dice::Fate(fate, modifiers, tooltip) => self.interpret_fate_dice(fate, modifiers, &tooltip, formula),
@@ -235,8 +243,8 @@ impl InterpreterPrivateT for Interpreter {
 			_ => Err(InterpretError::Unkown),
 		}
 	}
-	fn interpret_function(&self, function: &Function, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
-		let interpret_function_helper = |function_name: &str, expression: &Expression, formula: &mut FormulaFragments| -> Result<Number, InterpretError> {
+	fn interpret_function(&mut self, function: &Function, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
+		let mut interpret_function_helper = |function_name: &str, expression: &Expression, formula: &mut FormulaFragments| -> Result<Number, InterpretError> {
 			formula.push_str(function_name);
 			formula.push_str("(");
 			let expression_output = self.interpret_expression(expression, formula)?;
@@ -262,11 +270,27 @@ impl InterpreterPrivateT for Interpreter {
 			},
 		})
 	}
-	fn interpret_roll_query(&self, _roll_query: &RollQuery, _formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
-		Err(InterpretError::Unkown)
+	fn interpret_roll_query(&mut self, roll_query: &RollQuery, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
+		let expression = if self.roll_queries.contains_key(&roll_query.prompt) {
+			self.roll_queries.get(&roll_query.prompt).unwrap().clone()
+		} else {
+			let prompt_result = web_sys::window().unwrap().prompt_with_message_and_default(&roll_query.prompt, &roll_query.default);
+			let user_input = match prompt_result {
+				Ok(Some(input)) => input,
+				_ => return Err(InterpretError::ExpectedSomeInputInRollQueryPrompt),
+			};
+			let expression = match Parser::parse_expression_string(&user_input) {
+				Ok(expression) => expression,
+				Err(parse_error) => return Err(InterpretError::ParseError(parse_error)),
+			};
+			super::log(&format!("{:?}", expression));
+			self.roll_queries.insert(roll_query.prompt.clone(), expression.clone());
+			expression
+		};
+		self.interpret_expression(&expression, formula)
 	}
 
-	fn interpret_normal_dice(&self, normal: &Normal, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
+	fn interpret_normal_dice(&mut self, normal: &Normal, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
 		formula.push_str("(");
 
 		let sides = normal.sides.value();
@@ -332,7 +356,7 @@ impl InterpreterPrivateT for Interpreter {
 		Ok(Number::Integer(Integer::new(result)))
 	}
 
-	fn interpret_computed_dice(&self, computed: &Computed, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
+	fn interpret_computed_dice(&mut self, computed: &Computed, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
 		let mut count_formula = Vec::new();
 		let count = self.interpret_expression(&computed.count, &mut count_formula)?;
 		let mut sides_formula = Vec::new();
