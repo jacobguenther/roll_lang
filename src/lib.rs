@@ -29,6 +29,10 @@ extern "C" {
 
 	#[wasm_bindgen(js_namespace = Math, js_name = random)]
 	fn random() -> i32;
+
+
+	#[wasm_bindgen(js_namespace = window, js_name = prompt)]
+	fn prompt(message: &str, default: &str) -> String;
 }
 
 
@@ -39,7 +43,7 @@ pub fn init_panic_hook() {
 
 #[wasm_bindgen]
 pub fn run(source: &str) -> String {
-	if false {
+	if true {
 		let mut out = String::new();
 
 		if true {
@@ -56,7 +60,7 @@ pub fn run(source: &str) -> String {
 		}
 		
 		if true {
-			let interpreter = Interpreter::new(source);
+			let mut interpreter = Interpreter::new(source);
 			format!("{}<br><br>{}",
 				out,
 				interpreter.interpret().as_html()
