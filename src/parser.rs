@@ -192,7 +192,7 @@ impl ParserPrivateT for Parser {
 			match self.match_current_to_punctuation("\\") {
 				Ok(_token) => (),
 				Err(_parse_error) => {
-					self.step_lexemes_skip_whitespace();
+					self.skip_whitespace();
 					let _res = self.match_current_to_punctuation("\\");
 				},
 			};
