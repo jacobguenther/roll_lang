@@ -226,7 +226,7 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 	}
 	fn is_punctuation(s: &str) -> bool {
 		match s {
-			"[" | "]" | "(" | ")" | "{" | "}" | "\\" | "." | "?" | "|" => true,
+			"[" | "]" | "(" | ")" | "{" | "}" | "\\" | "." | "?" | "|" | "#" => true,
 			_ => false,
 		}
 	}

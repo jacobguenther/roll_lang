@@ -11,8 +11,18 @@ pub type Root = Vec<Node>;
 pub enum Node {
 	StringLiteral(String),
 	Roll(Roll),
+	Macro(Macro),
 	ParseError(ParseError),
 }
+#[derive(Debug, Clone)]
+pub struct Macro {
+	pub name: String,
+}
+// #[derive(Debug, Clone)]
+// pub struct ExpressionMacro {
+// 	pub name: String,
+// 	pub expression: Box<Expression>,
+// }
 #[derive(Debug, Clone)]
 pub enum Roll {
 	ExplicitRoll(Expression),

@@ -25,6 +25,7 @@ trait ParserPrivateT {
 
 	fn parse_string_literal(&mut self) -> String;
 	fn parse_comment(&mut self) -> Option<String>;
+	fn parse_macro(&mut self) -> Result<Macro, ParseError>;
 
 	fn parse_roll(&mut self) -> Result<Roll, ParseError>;
 	fn parse_expression(&mut self) -> Result<Expression, ParseError>;
@@ -120,6 +121,13 @@ impl ParserT for Parser {
 			match self.state {
 				State::Start => self.parse_start(),
 				State::StringLiteral => {
+					match self.parse_macro() {
+						Ok(my_macro) => {
+							root.push(Node::Macro(my_macro));
+							continue;
+						},
+						Err(_parse_error) => (),
+					}
 					let string_literal = self.parse_string_literal();
 					root.push(Node::StringLiteral(string_literal));
 				},
@@ -165,6 +173,8 @@ impl ParserPrivateT for Parser {
 			} else if self.is_roll() || self.is_inline_roll() {
 				self.state = State::Roll;
 				break;
+			} else if self.current().unwrap().token().source() == "#" {
+				break;
 			} else {
 				literal.push_str(self.current().unwrap().source());
 				self.step_lexemes();
@@ -191,6 +201,37 @@ impl ParserPrivateT for Parser {
 		Some(comment)
 	}
 
+	fn parse_macro(&mut self) -> Result<Macro, ParseError> {
+		let start_index = self.current_index;
+		self.skip_whitespace();
+		self.match_current_to_punctuation("#")?;
+		match self.match_current_to_punctuation("{") {
+			Ok(_token) => {
+				let mut macro_name = String::new();
+				loop {
+					match self.match_current_to_punctuation("}") {
+						Ok(_token) => break,
+						Err(_parse_error) => {
+							macro_name.push_str(&self.current()?.token().source());
+							self.step_lexemes();
+						},
+					}
+				}
+				return Ok(Macro { name: macro_name });
+			},
+			Err(_parse_error) => {
+				match self.current()?.clone() {
+					Lexeme::Literal(token) => {
+						self.step_lexemes();
+						return Ok(Macro { name: token.source().to_string() });
+					},
+					_ => (),
+				};
+			},
+		};
+		Err(ParseError::DoesNotMatch)
+
+	}
 	fn parse_roll(&mut self) -> Result<Roll, ParseError> {
 		if self.is_roll() {
 			self.step_lexemes();

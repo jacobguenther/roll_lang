@@ -32,6 +32,9 @@ pub enum InterpretError {
 
 	ExpectedSomeInputInRollQueryPrompt,
 
+	NoMacroNamed(String),
+	ErrorInMacro(String, Box<InterpretError>),
+
 	Unkown,
 }
 
@@ -47,6 +50,7 @@ pub trait InterpreterPrivateT {
 	fn interpret_parse_error(&self, parse_error: &ParseError) -> InterpretError;
 	fn interpret_string_literal(&self, string_literal: &str) -> OutputFragment;
 	fn interpret_roll(&mut self, roll: &Roll) -> Result<OutputFragment, InterpretError>;
+	fn interpret_macro(&mut self, my_macro: &Macro) -> Result<Vec<OutputFragment>, InterpretError>;
 
 	fn interpret_expression(&mut self, string_literal: &Expression, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 	fn interpret_add(&mut self, lhs: &Expression, rhs: &MulDiv, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
@@ -85,13 +89,17 @@ impl InterpreterT for Interpreter {
 		let mut output = Output::new(&self.source);
 		let ast = Parser::new(&self.source).parse();
 		for node in &ast {
-			let result = match node {
+			let mut result = match node {
 				Node::ParseError(parse_error) => Err(self.interpret_parse_error(&parse_error)),
-				Node::StringLiteral(string_literal) => Ok(self.interpret_string_literal(&string_literal)),
-				Node::Roll(roll) => self.interpret_roll(&roll),
+				Node::StringLiteral(string_literal) => Ok(vec!(self.interpret_string_literal(&string_literal))),
+				Node::Roll(roll) => match self.interpret_roll(&roll) {
+					Ok(fragment) => Ok(vec!(fragment)),
+					Err(error) => Err(error),
+				},
+				Node::Macro(my_macro) => self.interpret_macro(&my_macro),
 			};
 			match result {
-				Ok(fragment) => output.fragments.push(fragment),
+				Ok(mut fragments) => output.fragments.append(&mut fragments),
 				Err(interpret_error) => {
 					output.error = Some(interpret_error);
 					break;
@@ -134,6 +142,30 @@ impl InterpreterPrivateT for Interpreter {
 				})
 			}
 		}))
+	}
+	fn interpret_macro(&mut self, my_macro: &Macro) -> Result<Vec<OutputFragment>, InterpretError> {
+		super::log("interpreting macro");
+		let name = my_macro.name.clone();
+		let source = super::macro_source(&my_macro.name);
+	
+		super::log(&format!("{} = {:?}", name, source));
+
+		let (output, interpreter) = match source {
+			Some(s) => {
+				let mut interpreter = Interpreter::new(&s);
+				interpreter.roll_queries = self.roll_queries.clone();
+				let output = interpreter.interpret();
+				(output, interpreter)
+			}
+			None => return Err(InterpretError::NoMacroNamed(name.clone())),
+		};
+
+		if output.error.is_some() {
+			Err(InterpretError::ErrorInMacro(name.clone(), Box::new(output.error.unwrap())))
+		} else {
+			self.roll_queries = interpreter.roll_queries.clone();
+			Ok(output.fragments.clone())
+		}
 	}
 
 
@@ -283,7 +315,7 @@ impl InterpreterPrivateT for Interpreter {
 				Ok(expression) => expression,
 				Err(parse_error) => return Err(InterpretError::ParseError(parse_error)),
 			};
-			super::log(&format!("{:?}", expression));
+
 			self.roll_queries.insert(roll_query.prompt.clone(), expression.clone());
 			expression
 		};
