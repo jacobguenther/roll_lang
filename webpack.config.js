@@ -1,8 +1,8 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 const webpack = require('webpack');
 const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 module.exports = {
 	mode: "development", // "production" | "none"
@@ -20,30 +20,26 @@ module.exports = {
 			title: 'Roll Lang',
 			filename: './index.html',
 			template: './www/index.html',
-			favicon: './www/favicon.png',
 			scriptLoading: 'defer',
-			// minify: {
-			// 	collapseWhitespace: true,
-			// 	removeComments: true,
-			// 	removeEmptyAttributes: true,
-			// 	removeRedundantAttributes: true,
-			// }
 		}),
-		new MiniCssExtractPlugin(),
+        new CopyWebpackPlugin({
+            patterns: [
+                { from: 'www/css', to: 'css' },
+				{ from: 'www/html', to: 'pages' },
+				{ from: 'www/assets', to: 'assets' },
+			]
+        }),
+		new webpack.ProvidePlugin({
+			TextDecoder: ['text-encoding', 'TextDecoder'],
+			TextEncoder: ['text-encoding', 'TextEncoder']
+		}),
 		new WasmPackPlugin({
 			crateDirectory: path.resolve(__dirname, "."),
-		}),
-		new webpack.ProvidePlugin({
-		  TextDecoder: ['text-encoding', 'TextDecoder'],
-		  TextEncoder: ['text-encoding', 'TextEncoder']
 		})
 	],
 	module: {
 		rules: [
-			{
-				test: /\.css$/i,
-				use: [MiniCssExtractPlugin.loader, 'css-loader'],
-			},
+
 		],
 	},
 };
