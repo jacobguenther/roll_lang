@@ -1,74 +1,47 @@
 // File: index.js
 
-import('./styles.css');
-import('./tabs.css');
-import('./result.css');
-import('./grammer.css');
+import('./js/slider.js');
+const Tabs = require('./js/tabs.js').Tabs;
+let tabs = new Tabs();
+
+// import('./css/styles.css');
+// import('./css/tabs.css');
+
+// import('./css/history.css');
+// import('./css/result.css');
+
+// import('./css/character-sheet.css');
+
+// import('./css/macros.css');
+
+// import('./css/tables.css');
+
+// import('./css/guide.css');
+// import('./css/grammer.css');
 
 const rust = import('./../pkg');
 
-const sourceInputField = document.getElementById('input-textarea');
-const history = document.getElementById('history');
-let historyIDCounter = 0;
-let currentSelectedHistoryElement = 0;
-
-class Tab {
-	constructor(name) {
-		this.name = name;
-		this.tabID = 'tab-name-' + name;
-		this.contentsID = name + '-section';
-	}
-	get tab() {
-		return document.getElementById(this.tabID);
-	}
-	get contents() {
-		return document.getElementById(this.contentsID);
-	}
-	clone() {
-		return new Tab(this.name);
-	}
-	setActive(settingAs) {
-		if (settingAs) {
-			this.tab.classList.add('active-tab');
-			this.contents.classList.add('active-tab-contents');
-		} else {
-			this.tab.classList.remove('active-tab');
-			this.contents.classList.remove('active-tab-contents');
-		}
-	}
-}
-const historyTab = new Tab('history');
-const characterSheetTab = new Tab('character-sheets');
-const macrosTab = new Tab('macros');
-const tablesTab = new Tab('tables');
-
-historyTab.setActive(true);
-let currentSelectedTab = historyTab;
 
 module.exports = {
-	run: function() {
+	init: function() {
 		rust.then((interpreter) => {
-			const source = readSource();
-			sourceInputField.value = '';
-			if (source.length > 0) {
-				let t0 = performance.now();
-				const result = interpreter.run(source);
-				let t1 = performance.now();
-				console.log(`Call to interpreter.run() took ${t1 - t0} milliseconds.`);
-				appendHistory(source, result);
-				currentSelectedHistoryElement = history.childElementCount;
-			}
+			interpreter.init();
 		})
-		.catch(console.error);
+	},
+
+	run: function() {
+		const source = readSource();
+		sourceInputField.value = '';
+
+		runSource(source);
 
 		return false;
 	},
-	inputFocusIn: function() {
-		sourceInputField.addEventListener('keydown', handleKeyDown);
+
+	selectTab: function(tabName) {
+		tabs.selectTab(tabName);
 	},
-	inputFocusOut: function() {
-		sourceInputField.removeEventListener('keydown', handleKeyDown);
-	},
+
 	clearHistory: function() {
 		while (history.firstChild) {
 			history.removeChild(history.lastChild);
@@ -79,23 +52,70 @@ module.exports = {
 		let entry = document.getElementById(id);
 		history.removeChild(entry);
 	},
-	selectTab: function(tabName) {
-		currentSelectedTab.setActive(false);
-		if (tabName === historyTab.name) {
-			historyTab.setActive(true);
-			currentSelectedTab = historyTab;
-		} else if (tabName === characterSheetTab.name) {
-			characterSheetTab.setActive(true);
-			currentSelectedTab = characterSheetTab;
-		} else if (tabName === macrosTab.name) {
-			macrosTab.setActive(true);
-			currentSelectedTab = macrosTab;
-		} else if (tabName === tablesTab.name) {
-			tablesTab.setActive(true);
-			currentSelectedTab = tablesTab;
-		}
-	}
+	inputFocusIn: function() {
+		sourceInputField.addEventListener('keydown', handleKeyDown);
+	},
+	inputFocusOut: function() {
+		sourceInputField.removeEventListener('keydown', handleKeyDown);
+	},
+
+
+	handleMacroUpdateCreate: function() {
+		rust.then((interpreter) => {
+			interpreter.handle_macro_update_create();
+		})
+		.catch(console.error);
+	},
+	handleMacroDelete: function(name) {
+		rust.then((interpreter) => {
+			interpreter.handle_macro_delete(name);
+		})
+		.catch(console.error);
+	},
+
+	handleMacroSelect: function(name) {
+		rust.then((interpreter) => {
+			interpreter.handle_macro_select(name);
+		})
+		.catch(console.error);
+	},
+	handleMacroChangeInBar: function(name) {
+		rust.then((interpreter) => {
+			interpreter.handle_macro_change_in_bar(name);
+		})
+		.catch(console.error);
+	},
+
+	handleMacroTest: function() {
+		const macroSource = macroSourceElement.value;
+		runSource(macroSource);
+	},
+	runMacro: function(name) {
+		rust.then((interpreter) => {
+			const source = interpreter.macro_source(name);
+			runSource(source);
+		})
+		.catch(console.error);
+	},
 }
+
+const macroNameElement = document.getElementById('create-macro-name');
+const macroSourceElement = document.getElementById('create-macro-text');
+
+function runSource(source) {
+	rust.then((interpreter) => {
+		if (source.length > 0) {
+			let t0 = performance.now();
+			const result = interpreter.run(source);
+			let t1 = performance.now();
+			console.log(`Call to interpreter.run() took ${t1 - t0} milliseconds.`);
+			appendHistory(source, result);
+			currentSelectedHistoryElement = history.childElementCount;
+		}
+	})
+	.catch(console.error);
+}
+
 
 function readSource() {
 	return sourceInputField.value;
@@ -130,9 +150,14 @@ function getSourceFromHistory(i) {
 }
 function handleKeyDown(event) {
 	if (event.keyCode === 13) { // enter
-		module.exports.run();
 		event.preventDefault();
+		module.exports.run();
 	} else if (event.keyCode === 38) { // up
+		event.preventDefault();
+		if (currentSelectedHistoryElement < 1) {
+			return;
+		}
+
 		let source = getSourceFromHistory(currentSelectedHistoryElement-1);
 		if (source === undefined) {
 			sourceInputField.value = '';
@@ -142,6 +167,7 @@ function handleKeyDown(event) {
 			sourceInputField.value = source;
 		}
 	} else if (event.keyCode == '40') { // down
+		event.preventDefault();
 		let source = getSourceFromHistory(currentSelectedHistoryElement+1);
 		if (source === undefined) {
 			sourceInputField.value = '';
@@ -152,3 +178,14 @@ function handleKeyDown(event) {
 		}
 	}
 }
+
+
+
+
+
+
+const sourceInputField = document.getElementById('input-textarea');
+const history = document.getElementById('history');
+let historyIDCounter = 0;
+let currentSelectedHistoryElement = 0;
+

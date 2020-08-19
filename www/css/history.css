@@ -1,0 +1,82 @@
+#history-section {
+	overflow: hidden;
+	width: 100%;
+	justify-content: center;
+	justify-items: center;
+	align-items: stretch;
+
+	grid-template-columns: 100%;
+	grid-template-rows: auto 1fr auto auto;
+	grid-template-areas:
+		"history-controls"
+		"history-wrapper"
+		"break"
+		"input";
+}
+#history-controls {
+	grid-area: history-controls;
+	width: 100%;
+	justify-self: left;
+}
+#macros-bar {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+}
+#history-controls button {
+	margin: 5px;
+}
+#history-wrapper {
+	grid-area: history-wrapper;
+	width: 100%;
+	overflow: hidden;
+
+	display: grid;
+	align-content: end;
+
+	grid-template-columns: 100%;
+	grid-template-rows: auto;
+	grid-template-areas: "history";
+}
+#history {
+	grid-area: history;
+	width: 100%;
+
+	overflow-y: scroll;
+	display: grid;
+	grid-template-columns: 100%;
+}
+#history li {
+	width: 97%;
+	padding: 5px;
+}
+#history li:nth-child(even) {
+	background: lightgreen;
+}
+
+#history-break {
+	grid-area: break;
+	width: 100%;
+}
+
+
+#input-container {
+	grid-area: input;
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+
+	padding-top: 5px;
+	padding-bottom: 5px;
+}
+#input-textarea {
+	resize: vertical;
+}
+#input-textarea:focus {
+	border: 3px solid #555;
+}
+#input-submit {
+	padding: 5px 10px;
+}

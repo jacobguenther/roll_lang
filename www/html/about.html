@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<title>Roll Lang - About</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="description" content="About page for Roll Lang an open source dice roller. It includes a list of planned features and links to resources." />
+	<meta name="keyword" content="about dice roller rpg tabletop" />
+	<meta name="author" content="Jacob Guenther" />
+	<meta name="referrer" content="no-referrer" />
+	<meta name="robots" content="index follow" />
+
+	<meta property="og:title" content="Roll Lang" />
+	<meta property="og:url" content="https://jacobguenther.github.io/roll_lang_demo/about" />
+	<meta property="og:image" content="https://jacobguenther.github.io/roll_lang_demo/favicon.png" />
+	<meta property="og:type" content="article" />
+	<meta property="og:description" content="About page for Roll Lang an open source dice roller. It includes a list of planned features and links to resources." />
+	<meta property="og:locale" content="en_US" />
+
+	<link rel="preload" as="style" href="../css/about.css" />
+	<link rel="preload" as="image" href="../assets/favicon.png" />
+
+	<link rel="stylesheet" type="text/css" href="../css/about.css" />
+	<link rel="icon" type="image/png" href="../assets/favicon.png" />
+</head>
+<body>
+	<script>0</script>
+	<header id="header-bar" class="grid-item">
+		<nav>
+			<ul id="main-nav-list">
+				<li><h1><a href="/">Roll Lang</a></h1></li>
+				<li><a href="help.html">Help</a></li>
+			</ul>
+		</nav>
+	</header>
+
+	<article class="grid-item">
+		<header>
+			<h2>About</h2>
+		</header>
+		<p>Roll Lang is meant to facilitate in calculating the value of tabletop rollplaying game dice rolls. With 
+			it you can roll large numbers of dice, mix in common math operations with your rolls, and display text
+			to give your rolls context.
+		</p>
+		<h3>Contribute</h3>
+		<p>Find the source code and report bugs for this project on
+			<a href="https://github.com/jacobguenther/roll_lang">GitHub</a>.
+		</p>
+		<p>Donate to this project on <a href="https://www.patreon.com/roll_lang">Patreaon</a></p>
+
+		<h3>Planned Features</h3>
+		<p>You can make feature requests on github under
+			<a href="https://github.com/jacobguenther/roll_lang/issues">issues</a>
+		</p>
+		<p>A <span class="feature-completed">strike through</span> indicates a recently completed
+			feature.
+		</p>
+		<ul class="bullet-list">
+			<li><h4>Dice Modifiers</h4>
+				<ul class="bullet-list">
+					<li class="feature-completed">Reroll dice on condition</li>
+					<li class="feature-completed">Exploding Dice</li>
+					<li class="feature-completed">Penetrating Dice</li>
+					<li class="feature-completed">Compounding Dice</li>
+					<li class="feature-completed">Support expoding dice on Computed Dice</li>
+					<li>Support multiple comparison points for exploding type modifiers</li>
+					<li>Tooltips for Compounding Dice</li>
+					<li>Success rolls</li>
+					<li>Critical Success and Fail Rolls</li>
+					<li>Drop highest and/or lowest dice</li>
+					<li>Keep highest and/or lowest dice</li>
+				</ul>
+			</li>
+			<li class="feature-completed">Make this page work well on phones</li>
+			<li class="feature-completed">Add guide to this page for dice modifiers</li>
+			<li class="feature-completed">/r as shortcut for /roll</li>
+			<li class="feature-completed">Dice Tooltips</li>
+			<li class="feature-completed">Computed Dice Sides and/or Count</li>
+			<li>Fate Dice</li>
+			<li>Dice Groups</li>
+			<li class="feature-completed">Roll queries</li>
+			<li>Macros</li>
+			<li>Use Javascript's crypto.getRandomValues function for dice rolls.</li>
+			<li>Add a useful <span class="roll-example">/help</span> keyword</li>
+			<li>Support <span class="roll-example">if else-if else</span> statements for conditional rolls.</li>
+			<li>Better Error Messages</li>
+			<li>Make a Rust crate so other developers can easily use Roll Lang in their project.</li>
+			<li><h4>History and Persistence</h4>
+				<ul class="bullet-list">
+					<li class="feature-completed">Use arrow keys to go back in history</li>
+					<li class="feature-completed">Scrolbar for history section</li>
+					<li class="feature-completed">Enter key to run current input</li>
+					<li>Save previous rolls abstract syntax tree for faster rolls</li>
+					<li>Optionally save macros and history as cookies</li>
+				</ul>
+			</li>
+		</ul>
+	</article>
+</body>
+</html>
