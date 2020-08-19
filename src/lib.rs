@@ -6,6 +6,7 @@ pub mod lexer;
 pub mod parser;
 pub mod ast;
 pub mod interpreter;
+pub mod macros;
 
 use lexer::{
 	Lexer,
@@ -19,8 +20,18 @@ use interpreter::{
 	Interpreter,
 	InterpreterT,
 };
+use macros::{
+	*
+};
 
 use wasm_bindgen::prelude::*;
+
+use lazy_static::lazy_static;
+use std::sync::Mutex;
+
+lazy_static! {
+	static ref ARRAY: Mutex<Macros> = Mutex::new(Macros::init());
+}
 
 #[wasm_bindgen]
 extern "C" {
@@ -43,34 +54,35 @@ pub fn init_panic_hook() {
 
 #[wasm_bindgen]
 pub fn run(source: &str) -> String {
-	if true {
-		let mut out = String::new();
+	Interpreter::new(source)
+		.interpret()
+		.as_html()
+}
 
-		if true {
-			let mut lexer = Lexer::new(source);
-			while let Some(lexeme) = lexer.next() {
-				out = format!("{}<br>{:?}", out, lexeme);
-			}
-		}
-		
-		if true {
-			let mut parser = Parser::new(source);
-			let ast = parser.parse();
-			out = format!("{}<br><br>{:?}", out, ast);
-		}
-		
-		if true {
-			let mut interpreter = Interpreter::new(source);
-			format!("{}<br><br>{}",
-				out,
-				interpreter.interpret().as_html()
-			)
-		} else {
-			out
-		}
-	} else {
-		Interpreter::new(source)
-			.interpret()
-			.as_html()
-	}
+ 
+#[wasm_bindgen]
+pub fn init() {
+	ARRAY.lock().unwrap();
+}
+#[wasm_bindgen]
+pub fn handle_macro_update_create() {
+	ARRAY.lock().unwrap().handle_macro_update_create();
+}
+#[wasm_bindgen]
+pub fn handle_macro_delete(name: &str) {
+	ARRAY.lock().unwrap().handle_macro_delete(name);
+}
+
+#[wasm_bindgen]
+pub fn handle_macro_select(name: &str) {
+	ARRAY.lock().unwrap().handle_macro_select(name);
+}
+#[wasm_bindgen]
+pub fn handle_macro_change_in_bar(name: &str) {
+	ARRAY.lock().unwrap().handle_macro_change_in_bar(name);
+}
+
+#[wasm_bindgen]
+pub fn macro_source(name: &str) -> Option<String> {
+	ARRAY.lock().unwrap().source(name)
 }
