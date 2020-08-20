@@ -342,12 +342,14 @@ impl Web {
 		None
 	}
 	fn add_macro_cookie(name: &str, data: &MacroData) {
+		let time = "Mon, 01 Jan 2024 00:00:00 GMT";
 		let _result = Web::html_document()
 			.set_cookie(
-				&format!("macro:{}={}:{}; SameSite=Strict",
+				&format!("macro:{}={}:{}; SameSite=Strict; expires={};",
 					name,
 					Web::in_bar_2_string(data.in_bar),
-					data.source
+					data.source,
+					time
 				)
 			);
 	}
