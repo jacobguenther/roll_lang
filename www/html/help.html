@@ -135,6 +135,7 @@
 			<nav>
 				<ul>
 					<li><a href="#roll-queries">Roll Queries</a></li>
+					<li><a href="#macros">Macros</a></li>
 					<li><a href="#dice-modifiers">Dice Modifiers</a></li>
 				</ul>
 			</nav>
@@ -146,6 +147,23 @@
 				roll queries with the same prompt. The default should be a valid expression but doesn't have to be. Roll
 				queries can be used in most places.
 			</p>
+			<h4 id="macros">Macros</h4>
+			<p>Macros are useful when you have actions that you preform regularly. A macro is a shortcut for some input.</P>
+			<p>To use a macro from the input box enter <span class="roll-example">#macro-name</span>. If your macro's name contains spaces enter <span class="roll-example">#{macro name}</span></p>
+			<p>To create a macro go to the macros tab.</p>
+			<img src="/assets/macros_tab_help.png" alt="Red box around the macros tab. The 3rd tab from the right in the sidebar." />
+			<p>Enter the name for your macro and the text your macro is a shortcut for.</p>
+			<p>The name can be any sequence of characters not containing <span class="roll-example-invalid">}</span>.</p>
+			<p>The text of your macro can be any text that you would put in the input box under the history tab.</p>
+			<p>The checkbox "Add to macros bar" indicates weather there should be a shortcut to your macro just below the "clear history" button
+				on the history tab.
+			</p>
+			<p>When you select "test macro" what ever is currently in the "macro" box will be run. You can see the results in the history tab.</p>
+			<p>The "create/update" button will save the macro. You can see all saved macros in the list below.</p>
+			<p>To edit an existing macro click on its name in the list. You will see the contents of "Macro Name" and "Macro" change to reflect the macro you selected.</p>
+			<p>Currently Macros are saved as cookies. Make sure your browser does not delete cookies each time it is closed if you want to use your macros next time.</p>
+			<img src="/assets/macros_help.png" alt="The macros tab. Three macros are in the list. A macro named both is calling macros named attack and damage." />
+
 			<h4 id="dice-modifiers">Dice Modifiers</h4>
 			<p>Dice modifiers change how the roll is preformed or how it is displayed. Not all dice modifiers can be
 				used on the same roll. You can only apply one of <a href="#exploding">exploding</a>,
