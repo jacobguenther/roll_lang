@@ -229,6 +229,7 @@ impl ParserPrivateT for Parser {
 				};
 			},
 		};
+		self.current_index = start_index;
 		Err(ParseError::DoesNotMatch)
 
 	}

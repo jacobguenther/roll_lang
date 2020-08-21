@@ -15,9 +15,6 @@ use super::parser::{
 
 use std::collections::HashMap;
 
-use web_sys::Window;
-
-
 #[derive(Debug, Clone)]
 pub enum InterpretError {
 	LexError,
@@ -68,6 +65,7 @@ pub trait InterpreterPrivateT {
 	fn interpret_dice(&mut self, dice: &Dice, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 	fn interpret_function(&mut self, function: &Function, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 	fn interpret_roll_query(&mut self, roll_query: &RollQuery, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
+	fn prompt(&self, message: &str, default: &str) -> Result<String, InterpretError>;
 
 	fn interpret_normal_dice(&mut self, normal: &Normal, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 	fn interpret_computed_dice(&mut self, normal: &Computed, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
@@ -75,6 +73,7 @@ pub trait InterpreterPrivateT {
 	fn random_range(low: i32, high: i32) -> Integer;
 	fn validate_modifiers(&self, modifiers: &Modifiers, sides: i32) -> Result<(), InterpretError>;
 	fn apply_exploding_and_reroll_modifiers(&self, roll: &Integer, sides: i32, modifiers: &Modifiers) -> Vec<NumberRoll>;
+	fn apply_drop_keep_modifiers(&self, rolls: &Vec<NumberRoll>, modifiers: &Modifiers) -> Vec<NumberRoll>;
 
 	fn interpret_comment(&self, option_comment: &Option<String>, formula: &mut FormulaFragments);
 }
@@ -89,7 +88,7 @@ impl InterpreterT for Interpreter {
 		let mut output = Output::new(&self.source);
 		let ast = Parser::new(&self.source).parse();
 		for node in &ast {
-			let mut result = match node {
+			let result = match node {
 				Node::ParseError(parse_error) => Err(self.interpret_parse_error(&parse_error)),
 				Node::StringLiteral(string_literal) => Ok(vec!(self.interpret_string_literal(&string_literal))),
 				Node::Roll(roll) => match self.interpret_roll(&roll) {
@@ -144,11 +143,12 @@ impl InterpreterPrivateT for Interpreter {
 		}))
 	}
 	fn interpret_macro(&mut self, my_macro: &Macro) -> Result<Vec<OutputFragment>, InterpretError> {
-		super::log("interpreting macro");
 		let name = my_macro.name.clone();
-		let source = super::macro_source(&my_macro.name);
-	
-		super::log(&format!("{} = {:?}", name, source));
+
+		#[cfg(feature = "web")]
+		let source = super::wasm_interface::macro_source(&my_macro.name);
+		#[cfg(not(feature = "web"))]
+		let source: Option<String> = None; // FIX ME
 
 		let (output, interpreter) = match source {
 			Some(s) => {
@@ -306,11 +306,7 @@ impl InterpreterPrivateT for Interpreter {
 		let expression = if self.roll_queries.contains_key(&roll_query.prompt) {
 			self.roll_queries.get(&roll_query.prompt).unwrap().clone()
 		} else {
-			let prompt_result = web_sys::window().unwrap().prompt_with_message_and_default(&roll_query.prompt, &roll_query.default);
-			let user_input = match prompt_result {
-				Ok(Some(input)) => input,
-				_ => return Err(InterpretError::ExpectedSomeInputInRollQueryPrompt),
-			};
+			let user_input = self.prompt(&roll_query.prompt, &roll_query.default)?;
 			let expression = match Parser::parse_expression_string(&user_input) {
 				Ok(expression) => expression,
 				Err(parse_error) => return Err(InterpretError::ParseError(parse_error)),
@@ -320,6 +316,19 @@ impl InterpreterPrivateT for Interpreter {
 			expression
 		};
 		self.interpret_expression(&expression, formula)
+	}
+	
+	#[allow(unused_variables)]
+	fn prompt(&self, message: &str, default: &str) -> Result<String, InterpretError> {
+		#[cfg(feature = "web")]
+		let prompt_result = web_sys::window().unwrap().prompt_with_message_and_default(message, default);
+		#[cfg(not(feature = "web"))] // FIX ME
+		let prompt_result: Result<Option<String>, InterpretError>  = Err(InterpretError::ExpectedSomeInputInRollQueryPrompt);
+
+		match prompt_result {
+			Ok(Some(input)) => Ok(input.to_string()),
+			_ => Err(InterpretError::ExpectedSomeInputInRollQueryPrompt),
+		}
 	}
 
 	fn interpret_normal_dice(&mut self, normal: &Normal, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
@@ -403,7 +412,12 @@ impl InterpreterPrivateT for Interpreter {
 	}
 
 	fn random_range(low: i32, high: i32) -> Integer {
+		#[cfg(feature = "web")]
 		use js_sys::Math::random;
+		#[cfg(not(feature = "web"))] // FIX ME
+		let random = | | -> f64 {
+			0.0
+		};
 		Integer::new(low + (random() * high as f64).floor() as i32)
 	}
 	fn validate_modifiers(&self, modifiers: &Modifiers, sides: i32) -> Result<(), InterpretError> {
@@ -480,6 +494,10 @@ impl InterpreterPrivateT for Interpreter {
 			None => (),
 		}
 		return rolls.clone();
+	}
+	fn apply_drop_keep_modifiers(&self, _rolls: &Vec<NumberRoll>, _modifiers: &Modifiers) -> Vec<NumberRoll> {
+		
+		vec!()
 	}
 
 	fn interpret_comment(&self, option_comment: &Option<String>, formula: &mut FormulaFragments) {

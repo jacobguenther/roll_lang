@@ -39,7 +39,7 @@ pub trait MacrosT {
 }
 impl MacrosT for Macros {
 	fn init() -> Macros {
-		let mut macros = Web::macros_from_cookies();
+		let macros = Web::macros_from_cookies();
 		for (name, data) in &macros {
 			Web::add_macro_to_table(name, data.in_bar);
 			if data.in_bar {
@@ -289,12 +289,12 @@ impl Web {
 		let table = Web::macros_table();
 		let _result = table.append_child(&row);
 	}
-	fn update_macro_table_row(name: &str, in_bar: bool) {
-		let checkbox = Web::document()
-			.get_element_by_id(&ID::row_check_box(name)).unwrap()
-			.dyn_ref::<HtmlInputElement>().unwrap()
-			.set_checked(in_bar);
-	}
+	// fn update_macro_table_row(name: &str, in_bar: bool) {
+	// 	Web::document()
+	// 		.get_element_by_id(&ID::row_check_box(name)).unwrap()
+	// 		.dyn_ref::<HtmlInputElement>().unwrap()
+	// 		.set_checked(in_bar);
+	// }
 	fn remove_macro_from_bar(name: &str) {
 		Web::document()
 			.get_element_by_id(&ID::bar_element(name)).unwrap()
@@ -306,41 +306,41 @@ impl Web {
 			.remove();
 	}
 
-	fn macro_cookie(name: &str) -> Option<MacroData> {
-		let raw_cookies = Web::html_document().cookie().unwrap();
-		for cookie in raw_cookies.split(";") {
-			let mut key_value = cookie.split("=");
-			let (key, source) = match key_value.next() {
-				Some(key) => match key_value.next() {
-					Some(value) => (key, value),
-					_ => continue,
-				},
-				_ => continue,
-			};
+	// fn macro_cookie(name: &str) -> Option<MacroData> {
+	// 	let raw_cookies = Web::html_document().cookie().unwrap();
+	// 	for cookie in raw_cookies.split(";") {
+	// 		let mut key_value = cookie.split("=");
+	// 		let (key, source) = match key_value.next() {
+	// 			Some(key) => match key_value.next() {
+	// 				Some(value) => (key, value),
+	// 				_ => continue,
+	// 			},
+	// 			_ => continue,
+	// 		};
 
-			let mut cookie_types = key.split(":");
-			match cookie_types.next() {
-				Some("macro") | Some(" macro") => match cookie_types.next() {
-					Some("InBar") => match cookie_types.next() {
-						Some(c_name) => if c_name == name {
-							return Some(MacroData::new(true, source));
-						},
-						_ => continue,
-					},
-					Some("OutOfBar") => match cookie_types.next() {
-						Some(c_name) => if c_name == name {
-							return Some(MacroData::new(false, source));
-						},
-						_ => continue,
-					},
-					_ => continue,
-				},
-				_ => continue,
-			};
-		}
+	// 		let mut cookie_types = key.split(":");
+	// 		match cookie_types.next() {
+	// 			Some("macro") | Some(" macro") => match cookie_types.next() {
+	// 				Some("InBar") => match cookie_types.next() {
+	// 					Some(c_name) => if c_name == name {
+	// 						return Some(MacroData::new(true, source));
+	// 					},
+	// 					_ => continue,
+	// 				},
+	// 				Some("OutOfBar") => match cookie_types.next() {
+	// 					Some(c_name) => if c_name == name {
+	// 						return Some(MacroData::new(false, source));
+	// 					},
+	// 					_ => continue,
+	// 				},
+	// 				_ => continue,
+	// 			},
+	// 			_ => continue,
+	// 		};
+	// 	}
 
-		None
-	}
+	// 	None
+	// }
 	fn add_macro_cookie(name: &str, data: &MacroData) {
 		let time = "Mon, 01 Jan 2024 00:00:00 GMT";
 		let _result = Web::html_document()

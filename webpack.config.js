@@ -35,6 +35,7 @@ module.exports = {
 		}),
 		new WasmPackPlugin({
 			crateDirectory: path.resolve(__dirname, "."),
+			outName: "roll_lang",
 		})
 	],
 	module: {
