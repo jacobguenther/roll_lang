@@ -6,8 +6,8 @@ use super::lexer::{
 	token::{
 		Token,
 		TokenT,
-		Lexeme,
-	}
+	},
+	lexeme::Lexeme,
 };
 
 use super::ast::{
