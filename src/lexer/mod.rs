@@ -1,23 +1,29 @@
 // File: lexer/mod.rs
 
+pub mod lexeme;
 pub mod token;
+
+use lexeme::*;
 use token::*;
 
 use unicode_segmentation::UnicodeSegmentation;
-
-#[derive(Debug, Copy, Clone, PartialEq)]
-enum State {
-	Start,
-	Whitespace,
-	Literal,
-	Digit,
-	Done,
-}
 
 pub struct Lexer<'a> {
 	graphemes: Vec<&'a str>,
 	state: State,
 	current_index: usize,
+}
+pub trait LexerT {
+    fn new<'b>(source: &'b str) -> Lexer<'b>;
+}
+impl<'a> LexerT for Lexer<'a> {
+    fn new<'b>(source: &'b str) -> Lexer<'b> {
+		Lexer {
+			graphemes: UnicodeSegmentation::graphemes(source, true).collect(),
+			state: State::Start,
+			current_index: 0,
+        }
+    }
 }
 impl<'a> Iterator for Lexer<'a> {
 	type Item = Lexeme;
@@ -42,18 +48,16 @@ impl<'a> Iterator for Lexer<'a> {
 		return Some(lexeme);
 	}
 }
-pub trait LexerT {
-    fn new<'b>(source: &'b str) -> Lexer<'b>;
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+enum State {
+	Start,
+	Whitespace,
+	Literal,
+	Digit,
+	Done,
 }
-impl<'a> LexerT for Lexer<'a> {
-    fn new<'b>(source: &'b str) -> Lexer<'b> {
-		Lexer {
-			graphemes: UnicodeSegmentation::graphemes(source, true).collect(),
-			state: State::Start,
-			current_index: 0,
-        }
-    }
-}
+
 trait LexerPrivateT {
 	fn current_char(&self) -> Option<String>;
 	fn at_end(&self) -> bool;
