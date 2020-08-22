@@ -5,35 +5,14 @@ authors = ["jacob <jacobrwguenther@protonmail.com>"]
 edition = "2018"
 repository = "https://github.com/jacobguenther/roll_lang"
 
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 3
+
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["lib"]
 
 [dependencies]
 unicode-segmentation = "1.6.0"
-
-
-
-[dependencies.lazy_static]
-version = "1.4.0"
-
-[dependencies.wasm-bindgen]
-version = "0.2.67"
-optional = true
-
-[dependencies.console_error_panic_hook]
-version = "0.1.6"
-optional = true
-
-[dependencies.web-sys]
-version = "0.3"
-features = [ "Window", "Document", "HtmlDocument", "Element", "HtmlTextAreaElement", "HtmlInputElement"]
-optional = true
-
-[dependencies.js-sys]
-version = "0.3.44"
-optional = true
-
-[features]
-default = ["web"]
-
-web = ["wasm-bindgen", "console_error_panic_hook", "web-sys", "js-sys"]
