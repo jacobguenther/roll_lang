@@ -32,19 +32,26 @@ pub enum InterpretError {
 
 	ExpectedSomeInputInRollQueryPrompt,
 
+	InterpreterConstructedWithoutMacros,
 	NoMacroNamed(String),
 	ErrorInMacro(String, Box<InterpretError>),
 
 	Unkown,
 }
 
-pub struct Interpreter<'m> {
-	source: String,
+pub struct Interpreter<'s, 'm> {
+	source: &'s str,
 	roll_queries: HashMap<String, Expression>,
-	macros: &'m Macros,
+	macros: Option<&'m Macros>,
+	rand: fn() -> f64,
 }
 pub trait InterpreterT {
-	fn new<'a>(source: &str, macros: &'a Macros) -> Interpreter<'a>;
+	fn new<'a, 'b>(source: &'a str,
+		roll_queries: HashMap<String, Expression>,
+		macros: Option<&'b Macros>,
+		rand: fn()->f64
+	
+	) -> Interpreter<'a, 'b>;
 	fn interpret(&mut self) -> Output;
 }
 pub trait InterpreterPrivateT {
@@ -74,24 +81,30 @@ pub trait InterpreterPrivateT {
 	fn interpret_normal_dice(&mut self, normal: &Normal, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 	fn interpret_computed_dice(&mut self, normal: &Computed, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 
-	fn random_range(low: i32, high: i32) -> Integer;
+	fn random_range(&self, low: i32, high: i32) -> Integer;
 	fn validate_modifiers(&self, modifiers: &Modifiers, sides: i32) -> Result<(), InterpretError>;
 	fn apply_exploding_and_reroll_modifiers(&self, roll: &Integer, sides: i32, modifiers: &Modifiers) -> Vec<NumberRoll>;
 	fn apply_drop_keep_modifiers(&self, rolls: &Vec<NumberRoll>, modifiers: &Modifiers) -> Vec<NumberRoll>;
 
 	fn interpret_comment(&self, option_comment: &Option<String>, formula: &mut FormulaFragments);
 }
-impl<'m> InterpreterT for Interpreter<'m> {
-	fn new<'a>(source: &str, macros: &'a Macros) -> Interpreter<'a> {
+impl<'s, 'm> InterpreterT for Interpreter<'s, 'm> {
+	fn new<'a, 'b>(
+		source: &'a str,
+		roll_queries: HashMap<String,
+		Expression>, macros: Option<&'b Macros>,
+		rand: fn()->f64) -> Interpreter<'a, 'b>
+	{
 		Interpreter {
-			source: source.to_owned(),
-			roll_queries: HashMap::new(),
+			source: source,
+			roll_queries: roll_queries,
 			macros: macros,
+			rand: rand,
 		}
 	}
 	fn interpret(&mut self) -> Output {
 		let mut output = Output::new(&self.source);
-		let ast = Parser::new(&self.source).parse();
+		let ast = Parser::new(self.source).parse();
 		for node in &ast {
 			let result = match node {
 				Node::ParseError(parse_error) => Err(self.interpret_parse_error(&parse_error)),
@@ -114,7 +127,7 @@ impl<'m> InterpreterT for Interpreter<'m> {
 	}
 }
 
-impl<'m> InterpreterPrivateT for Interpreter<'m> {
+impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 	fn interpret_parse_error(&self, parse_error: &ParseError) -> InterpretError {
 		InterpretError::ParseError(parse_error.clone())
 	}
@@ -135,39 +148,39 @@ impl<'m> InterpreterPrivateT for Interpreter<'m> {
 			Roll::ExplicitRoll(expression) => {
 				let result = self.interpret_expression(expression, &mut formula)?;
 				RollType::ExplicitRoll(ExpressionOutput {
-					formula_fragments: formula.clone(),
+					formula_fragments: formula,
 					result: result
 				})
 			},
 			Roll::InlineRoll(expression) => {
 				let result = self.interpret_expression(expression, &mut formula)?;
 				RollType::InlineRoll(ExpressionOutput {
-					formula_fragments: formula.clone(),
+					formula_fragments: formula,
 					result: result
 				})
 			}
 		}))
 	}
 	fn interpret_macro(&mut self, my_macro: &Macro) -> Result<Vec<OutputFragment>, InterpretError> {
-		let name = my_macro.name.clone();
-
-		let macro_data = self.macros.get(&my_macro.name);
+		let macro_data = match self.macros {
+			Some(container) => container.get(&my_macro.name),
+			None => return Err(InterpretError::InterpreterConstructedWithoutMacros),
+		};
 
 		let (output, interpreter) = match macro_data {
 			Some(data) => {
-				let mut interpreter = Interpreter::new(&data.source, self.macros);
-				interpreter.roll_queries = self.roll_queries.clone();
+				let mut interpreter = Interpreter::new(&data.source, self.roll_queries.clone(), self.macros, self.rand);
 				let output = interpreter.interpret();
 				(output, interpreter)
 			}
-			None => return Err(InterpretError::NoMacroNamed(name.clone())),
+			None => return Err(InterpretError::NoMacroNamed(my_macro.name.to_owned())),
 		};
 
 		if output.error.is_some() {
-			Err(InterpretError::ErrorInMacro(name.clone(), Box::new(output.error.unwrap())))
+			Err(InterpretError::ErrorInMacro(my_macro.name.to_owned(), Box::new(output.error.unwrap())))
 		} else {
 			self.roll_queries = interpreter.roll_queries.clone();
-			Ok(output.fragments.clone())
+			Ok(output.fragments)
 		}
 	}
 
@@ -329,7 +342,7 @@ impl<'m> InterpreterPrivateT for Interpreter<'m> {
 		let prompt_result: Result<Option<String>, InterpretError>  = Err(InterpretError::ExpectedSomeInputInRollQueryPrompt);
 
 		match prompt_result {
-			Ok(Some(input)) => Ok(input.to_string()),
+			Ok(Some(input)) => Ok(input.to_owned()),
 			_ => Err(InterpretError::ExpectedSomeInputInRollQueryPrompt),
 		}
 	}
@@ -347,7 +360,7 @@ impl<'m> InterpreterPrivateT for Interpreter<'m> {
 		let mut rolls = Vec::<NumberRoll>::new();
 		let mut result = 0;
 		for _dice in 0..normal.count.value() {
-			let roll = Interpreter::random_range(1, sides);
+			let roll = self.random_range(1, sides);
 
 			let modified_rolls = self.apply_exploding_and_reroll_modifiers(&roll, sides, modifiers);
 			let modified_result = modified_rolls.sum_counted_rolls();
@@ -414,14 +427,8 @@ impl<'m> InterpreterPrivateT for Interpreter<'m> {
 		self.interpret_normal_dice(&normal, modifiers, tooltip, formula)
 	}
 
-	fn random_range(low: i32, high: i32) -> Integer {
-		#[cfg(feature = "web")]
-		use js_sys::Math::random;
-		#[cfg(not(feature = "web"))] // FIX ME
-		let random = | | -> f64 {
-			0.0
-		};
-		Integer::new(low + (random() * high as f64).floor() as i32)
+	fn random_range(&self, low: i32, high: i32) -> Integer {
+		Integer::new(low + ((self.rand)() * high as f64).floor() as i32)
 	}
 	fn validate_modifiers(&self, modifiers: &Modifiers, sides: i32) -> Result<(), InterpretError> {
 		let add_rerolls_for = | comparison: &Comparison, point: i32 | -> Vec<i32> {
@@ -472,7 +479,7 @@ impl<'m> InterpreterPrivateT for Interpreter<'m> {
 			let comparison_point = reroll_modifier.comparison_point.unwrap_or(Integer::new(sides));
 			if roll.comparison(&reroll_modifier.comparison, &comparison_point) {
 				rolls.push(NumberRoll::NotCounted(*roll));
-				let new_roll = Interpreter::random_range(1, sides);
+				let new_roll = self.random_range(1, sides);
 				rolls.append(&mut self.apply_exploding_and_reroll_modifiers(&new_roll, sides, modifiers));
 				rerolled=true;
 				break;
@@ -489,14 +496,14 @@ impl<'m> InterpreterPrivateT for Interpreter<'m> {
 				Expanding::Exploding(exploding) => {
 					let comparison_point = exploding.comparison_point.unwrap_or(Integer::new(sides));
 					if roll.comparison(&exploding.comparison, &comparison_point) {
-						let new_roll = Interpreter::random_range(1, sides);
+						let new_roll = self.random_range(1, sides);
 						rolls.append(&mut self.apply_exploding_and_reroll_modifiers(&new_roll, sides, modifiers));
 					}
 				},
 			}
 			None => (),
 		}
-		return rolls.clone();
+		rolls
 	}
 	fn apply_drop_keep_modifiers(&self, _rolls: &Vec<NumberRoll>, _modifiers: &Modifiers) -> Vec<NumberRoll> {
 		
