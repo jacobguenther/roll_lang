@@ -13,9 +13,14 @@ use wasm_bindgen::prelude::*;
 use lazy_static::lazy_static;
 use std::sync::Mutex;
 
+lazy_static! {
+	static ref ARRAY: Mutex<Macros> = Mutex::new(Macros::init());
+}
+
 #[wasm_bindgen]
 pub fn run(source: &str) -> String {
-	Interpreter::new(source)
+	let macros = ARRAY.lock().unwrap().clone();
+	Interpreter::new(source, &macros)
 		.interpret()
 		.as_html()
 }
@@ -25,9 +30,6 @@ pub fn init_panic_hook() {
 	console_error_panic_hook::set_once();
 }
 
-lazy_static! {
-	static ref ARRAY: Mutex<Macros> = Mutex::new(Macros::init());
-}
 #[wasm_bindgen]
 pub fn init() {
 	init_panic_hook();
