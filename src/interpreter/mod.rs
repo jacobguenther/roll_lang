@@ -12,6 +12,7 @@ use super::parser::{
 	ParserT,
 	ParseError,
 };
+use super::macros::Macros;
 
 use std::collections::HashMap;
 
@@ -35,12 +36,13 @@ pub enum InterpretError {
 	Unkown,
 }
 
-pub struct Interpreter {
+pub struct Interpreter<'m> {
 	source: String,
 	roll_queries: HashMap<String, Expression>,
+	macros: &'m Macros,
 }
 pub trait InterpreterT {
-	fn new(source: &str) -> Interpreter;
+	fn new<'a>(source: &str, macros: &'a Macros) -> Interpreter<'a>;
 	fn interpret(&mut self) -> Output;
 }
 pub trait InterpreterPrivateT {
@@ -77,11 +79,12 @@ pub trait InterpreterPrivateT {
 
 	fn interpret_comment(&self, option_comment: &Option<String>, formula: &mut FormulaFragments);
 }
-impl InterpreterT for Interpreter {
-	fn new(source: &str) -> Interpreter {
+impl<'m> InterpreterT for Interpreter<'m> {
+	fn new<'a>(source: &str, macros: &'a Macros) -> Interpreter<'a> {
 		Interpreter {
 			source: source.to_owned(),
 			roll_queries: HashMap::new(),
+			macros: macros,
 		}
 	}
 	fn interpret(&mut self) -> Output {
@@ -108,7 +111,8 @@ impl InterpreterT for Interpreter {
 		output
 	}
 }
-impl InterpreterPrivateT for Interpreter {
+
+impl<'m> InterpreterPrivateT for Interpreter<'m> {
 	fn interpret_parse_error(&self, parse_error: &ParseError) -> InterpretError {
 		InterpretError::ParseError(parse_error.clone())
 	}
@@ -145,14 +149,11 @@ impl InterpreterPrivateT for Interpreter {
 	fn interpret_macro(&mut self, my_macro: &Macro) -> Result<Vec<OutputFragment>, InterpretError> {
 		let name = my_macro.name.clone();
 
-		#[cfg(feature = "web")]
-		let source = super::wasm_interface::macro_source(&my_macro.name);
-		#[cfg(not(feature = "web"))]
-		let source: Option<String> = None; // FIX ME
+		let macro_data = self.macros.get(&my_macro.name);
 
-		let (output, interpreter) = match source {
-			Some(s) => {
-				let mut interpreter = Interpreter::new(&s);
+		let (output, interpreter) = match macro_data {
+			Some(data) => {
+				let mut interpreter = Interpreter::new(&data.source, self.macros);
 				interpreter.roll_queries = self.roll_queries.clone();
 				let output = interpreter.interpret();
 				(output, interpreter)
@@ -507,4 +508,3 @@ impl InterpreterPrivateT for Interpreter {
 		}
 	}
 }
-
