@@ -47,11 +47,11 @@ pub mod tests {
 			&HashMap::new());
 		helper(
 			"/r 20*2 is my attack roll",
-			"20*2=40 is my attack roll", // FIX ME
+			"20*2=40 is my attack roll",
 			&HashMap::new());
 		helper(
 			"/r 20*2\\ is my attack roll",
-			"20*2=40 is my attack roll", // FIX ME
+			"20*2=40 is my attack roll",
 			&HashMap::new());
 	}
 }
