@@ -1,9 +1,15 @@
 [package]
 name = "roll_lang"
 version = "0.1.0"
-authors = ["jacob <jacobrwguenther@protonmail.com>"]
+authors = ["Jacob Guenther <jacobrwguenther@protonmail.com>"]
 edition = "2018"
-repository = "https://github.com/jacobguenther/roll_lang"
+description = "An interpreter for a modified version of dice notation."
+readme = "README.md"
+repository = "https://github.com/jacobguenther/RollLang"
+license = "GPL-3.0"
+license-file = "LICENSE.md"
+keywords = ["Dice", "Notation"]
+catagories = ["game-development", "parser-implementations", "text-processing"]
 
 [profile.dev]
 opt-level = 0
