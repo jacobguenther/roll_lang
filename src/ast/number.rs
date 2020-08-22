@@ -9,11 +9,20 @@ use super::{
 	Unary,
 	Atom,
 };
+use std::fmt;
 
 #[derive(Debug, Copy, Clone)]
 pub enum Number {
 	Integer(Integer),
 	Float(Float),
+}
+impl fmt::Display for Number {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		match self {
+			Number::Integer(int) => write!(f, "{}", int.value()),
+			Number::Float(float) => write!(f, "{}", float.value()),
+		}
+    }
 }
 impl Number {
 	pub fn floor(&self) -> Number {
