@@ -36,6 +36,22 @@ pub mod tests {
 		helper("文字 hello", "文字 hello", &HashMap::new());
 
 		// whitespaces
-		helper("attack is [[20+1]] and damage is [[10]]", "attack is 20+1=21 and damage is 10=10", &HashMap::new());
+		helper(
+			"[[ 20 + 4 * 2 ]]",
+			"20+4*2=28",
+			&HashMap::new());
+		// trailing whitespaces
+		helper(
+			"attack is [[20+1]] and damage is /r 10 \\ take that!",
+			"attack is 20+1=21 and damage is 10=10 take that!",
+			&HashMap::new());
+		helper(
+			"/r 20*2 is my attack roll",
+			"20*2=40 is my attack roll", // FIX ME
+			&HashMap::new());
+		helper(
+			"/r 20*2\\ is my attack roll",
+			"20*2=40 is my attack roll", // FIX ME
+			&HashMap::new());
 	}
 }

@@ -102,6 +102,7 @@ impl Default for State {
 		State::Start
 	}
 }
+#[derive(Debug)]
 pub struct Parser {
 	state: State,	
 	lexemes: Vec<Lexeme>,
@@ -204,7 +205,13 @@ impl ParserPrivateT for Parser {
 	fn parse_macro(&mut self) -> Result<Macro, ParseError> {
 		let start_index = self.current_index;
 		self.skip_whitespace();
-		self.match_current_to_punctuation("#")?;
+		match self.match_current_to_punctuation("#") {
+			Ok(_token) => (),
+			Err(parse_error) => {
+				self.current_index = start_index;
+				return Err(parse_error);
+			}
+		};
 		match self.match_current_to_punctuation("{") {
 			Ok(_token) => {
 				let mut macro_name = String::new();
@@ -213,7 +220,6 @@ impl ParserPrivateT for Parser {
 						Ok(_token) => break,
 						Err(_parse_error) => {
 							macro_name.push_str(&self.current()?.token().source());
-							self.step_lexemes();
 						},
 					}
 				}
@@ -241,8 +247,12 @@ impl ParserPrivateT for Parser {
 			match self.match_current_to_punctuation("\\") {
 				Ok(_token) => (),
 				Err(_parse_error) => {
+					let start_index = self.current_index;
 					self.skip_whitespace();
-					let _res = self.match_current_to_punctuation("\\");
+					match self.match_current_to_punctuation("\\") {
+						Err(_) => self.current_index = start_index-1,
+						_ => (),
+					}
 				},
 			};
 			Ok(Roll::ExplicitRoll(expression))
@@ -259,19 +269,24 @@ impl ParserPrivateT for Parser {
 		self.skip_whitespace();
 		let mut expression = Expression::MulDiv(self.parse_mul_div()?);
 		loop {
-			let start_index = self.current_index;
+			let start_index = self.current_index;		
+			self.skip_whitespace();
 			let is_add = match self.current() {
 				Ok(lexeme) => match lexeme {
 					Lexeme::Operator(token) => match token.source() {
 						"+" => true,
 						"-" => false,
-						_ => break, // wrong operator
+						_ => {
+							self.current_index = start_index;
+							break // wrong operator
+						}
 					},
 					_ => break, // not an operator
 				},
 				Err(_e) => break, // probably at EOF
 			};
 			self.step_lexemes_skip_whitespace();
+
 			let next_mul_div = match self.parse_mul_div() {
 				Ok(next) => next,
 				Err(_e) => {
@@ -290,12 +305,16 @@ impl ParserPrivateT for Parser {
 		let mut mul_div = MulDiv::Power(self.parse_power()?);
 		loop {
 			let start_index = self.current_index;
+			self.skip_whitespace();
 			let is_multiply = match self.current() {
 				Ok(lexeme) => match lexeme {
 					Lexeme::Operator(token) => match token.source() {
 						"*" => true,
 						"/" => false,
-						_ => break,
+						_ => {
+							self.current_index = start_index;
+							break // wrong operator
+						}
 					},
 					_ => break,
 				},
@@ -324,7 +343,7 @@ impl ParserPrivateT for Parser {
 				Lexeme::Operator(token) => match token.source() {
 					"**" | "^" => {
 						let start_index = self.current_index;
-						self.step_lexemes_skip_whitespace();
+						self.step_lexemes();
 						match self.parse_power() {
 							Ok(power) => return Ok(Power::Pow(lhs, Box::new(power))),
 							Err(_parse_error) => self.current_index = start_index,
@@ -439,12 +458,15 @@ impl ParserPrivateT for Parser {
 
 	fn parse_number(&mut self) -> Result<Number, ParseError> {
 		let start_index = self.current_index;
+		self.skip_whitespace();
 		match self.parse_float() {
 			Ok(float) => return Ok(Number::Float(float)),
 			Err(_e) => self.current_index = start_index,
 		};
 		match self.parse_integer() {
-			Ok(int) => Ok(Number::Integer(int)),
+			Ok(int) => {
+				Ok(Number::Integer(int))
+			},
 			Err(_e) => Err(ParseError::DoesNotMatch),
 		}
 	}
@@ -480,7 +502,7 @@ impl ParserPrivateT for Parser {
 	fn parse_integer(&mut self) -> Result<Integer, ParseError> {
 		match self.current()?.clone() {
 			Lexeme::Number(integer_token) => {
-				self.step_lexemes_skip_whitespace();
+				self.step_lexemes();
 				Ok(Integer::new(integer_token.source().parse().unwrap()))
 			},
 			_ => Err(ParseError::DoesNotMatch)
