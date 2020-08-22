@@ -17,54 +17,6 @@ impl Output {
 			error: None,
 		}
 	}
-	pub fn as_html(&self) -> String {
-		let mut out = String::new();
-		for fragment in &self.fragments {
-			match fragment {
-				OutputFragment::StringLit(s) => {
-					out = format!("{}{}",
-						out,
-						s
-					);
-				},
-				OutputFragment::Roll(roll_type) => match roll_type {
-					RollType::ExplicitRoll(expression_output) => {
-						out = format!("{}\
-								<div class=\"formula\">{}=\
-								</div>\
-								<div class=\"result\">{}\
-								</div>",
-							out,
-							expression_output.formula_fragments.as_html(),
-							String::from(expression_output.result)
-						);
-					},
-					RollType::InlineRoll(expression_output) => {
-						let result_string = String::from(expression_output.result);
-						out = format!("{}\
-								<div class=\"result tooltipped\">{}\
-									<div class=\"tooltiptext\">\
-										<div class=\"formula\">{}=\
-										</div>\
-										<div class=\"result\">{}\
-										</div>\
-									</div>\
-								</div>",
-							out,
-							result_string,
-							expression_output.formula_fragments.as_html(),
-							result_string,
-						);
-					}
-				}
-			}
-		}
-		match &self.error {
-			Some(e) => out = format!("{} Error::{:?}", out, e.clone()),
-			None => (),
-		}
-		out
-	}
 }
 
 #[derive(Debug, Clone)]
@@ -89,7 +41,6 @@ pub(super) trait FormulaFragmentsT {
 	fn push_number_roll(&mut self, roll: &NumberRoll);
 	fn push_success_fail_roll(&mut self, roll: &SuccessFail);
 	fn push_tooltip(&mut self, tooltip: &str);
-	fn as_html(&self) -> String;
 }
 impl FormulaFragmentsT for FormulaFragments {
 	fn push_str(&mut self, s: &str) {
@@ -120,13 +71,6 @@ impl FormulaFragmentsT for FormulaFragments {
 			_ => (),
 		}
 	}
-	fn as_html(&self) -> String {
-		let mut html = String::new();
-		for fragment in self {
-			html = format!("{}{}", html, fragment.as_html());
-		}
-		html
-	}
 }
 #[derive(Debug, Clone)]
 pub enum FormulaFragment {
@@ -134,51 +78,6 @@ pub enum FormulaFragment {
 	// first roll, rest of rolls, tooltip
 	NumberRolls(NumberRoll, NumberRolls, Option<String>),
 	SuccessFailRolls(SuccessFail, SuccessFailRolls, Option<String>),
-}
-impl FormulaFragment {
-	fn as_html(&self) -> String {
-		let mut html = String::new();
-		match self {
-			FormulaFragment::Basic(string) => html.push_str(&string),
-			FormulaFragment::NumberRolls(first_roll, rolls, tooltip) => {
-				match tooltip {
-					Some(_) => html.push_str("<div class=\"tooltipped\">"),
-					None => (),
-				}
-				let format_basic_roll = |roll: &NumberRoll| -> String {
-					match roll {
-						NumberRoll::Counted(integer) => format!("<div class=\"roll-counted\">{}</div>", integer.value()),
-						NumberRoll::NotCounted(integer) => format!("<div class=\"roll-not-counted\">{}</div>", integer.value())
-					}
-				};
-
-				html.push_str(&format_basic_roll(first_roll));
-				for roll in rolls {
-					html.push_str(&format!("+{}", format_basic_roll(roll)));
-				}
-				match tooltip {
-					Some(comment) => html.push_str(&format!("<div class=\"tooltiptext\">{}</div></div>", comment)),
-					None => (),
-				}
-			},
-			FormulaFragment::SuccessFailRolls(first_roll, rolls, _tooltip) => {
-				let format_success_fail_roll = |success_fail: &SuccessFail| -> String {
-					let (class, value) = match success_fail {
-						SuccessFail::Success(roll) => ("success-roll", roll.value()),
-						SuccessFail::Fail(roll) => ("fail-roll", roll.value()),
-						SuccessFail::CriticalSuccess(roll) => ("critical-success-roll", roll.value()),
-						SuccessFail::CriticalFail(roll) => ("critical-fail-roll", roll.value()),
-					};
-					format!("<div class=\"{}\">{}</div>", class,  value)
-				};
-				html.push_str(&format_success_fail_roll(first_roll));
-				for roll in rolls {
-					html.push_str(&format_success_fail_roll(roll));
-				}
-			},
-		}
-		html
-	}
 }
 
 pub type NumberRolls = Vec<NumberRoll>;
@@ -197,13 +96,15 @@ impl NumberRollsT for NumberRolls {
 		Integer::new(res)
 	}
 }
-pub type SuccessFailRolls = Vec<SuccessFail>;
-
 #[derive(Debug, Copy, Clone)]
 pub enum NumberRoll {
 	Counted(Integer),
 	NotCounted(Integer),
 }
+
+
+pub type SuccessFailRolls = Vec<SuccessFail>;
+
 #[derive(Debug, Copy, Clone)]
 pub enum SuccessFail {
 	Success(Integer),

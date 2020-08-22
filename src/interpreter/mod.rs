@@ -1,6 +1,8 @@
 // File: interpreter.rs
 
 pub mod output;
+pub mod output_traits;
+
 use output::*;
 
 use super::ast::{
