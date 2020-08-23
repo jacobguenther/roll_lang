@@ -1,5 +1,8 @@
 // File: interpreter.rs
 
+#[cfg(feature = "serialize")]
+use serde::{Serialize, Deserialize};
+
 pub mod output;
 pub mod output_traits;
 
@@ -19,6 +22,7 @@ use super::macros::Macros;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum InterpretError {
 	LexError,
 	ParseError(ParseError),

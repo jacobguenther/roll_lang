@@ -1,5 +1,8 @@
 // File: parser.rs
 
+#[cfg(feature = "serialize")]
+use serde::{Serialize, Deserialize};
+
 use super::lexer::{
 	Lexer,
 	LexerT,
@@ -82,6 +85,7 @@ trait ParserPrivateT {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum ParseError {
 	UnexpectedToken(Token),
 	ExpectedPunctuation(String),
