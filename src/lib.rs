@@ -11,17 +11,34 @@ pub mod macros;
 use std::collections::HashMap;
 use interpreter::*;
 
-use rand::{thread_rng, Rng};
 pub fn default_rand() -> f64 {
+	use rand::{thread_rng, Rng};
 	thread_rng().gen()
 }
 
-#[derive(Debug)]
+pub fn default_query_prompter(message: &str, default: &str) -> Option<String> {
+	use std::io;
+	println!("{} default({})", message, default);
+	let mut input = String::new();
+	match io::stdin().read_line(&mut input) {
+		Ok(_) => {
+			let input = input.trim().to_owned();
+			if &input == "" {
+				Some(default.to_owned())
+			} else {
+				Some(input)
+			}
+		}
+		Err(_) => None,
+	}
+}
+
 pub struct InterpreterBuilder<'s, 'r, 'm> {
 	source: Option<&'s str>,
 	roll_queries: Option<&'r HashMap<String, ast::Expression>>,
 	macros: Option<&'m macros::Macros>,
 	rand: Option<fn()->f64>,
+	query_prompter: Option< fn(&str, &str)->Option<String> >
 }
 impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm> {
 	pub fn new() -> InterpreterBuilder<'s, 'r, 'm> {
@@ -30,6 +47,7 @@ impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm> {
 			roll_queries: None,
 			macros: None,
 			rand: None,
+			query_prompter: None,
 		}
 	}
 
@@ -47,6 +65,10 @@ impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm> {
 	}
 	pub fn with_rng_func<'a>(&'a mut self, rand: fn()->f64) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
 		self.rand = Some(rand);
+		self
+	}
+	pub fn with_query_prompter<'a>(&'a mut self, prompter: fn(&str, &str) -> Option<String>) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
+		self.query_prompter = Some(prompter);
 		self
 	}
 
@@ -68,7 +90,9 @@ impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm> {
 			self.source.unwrap_or(""),
 			self.roll_queries.unwrap_or(&HashMap::new()).clone(),
 			self.macros,
-			self.rand.unwrap_or(default_rand))
+			self.rand.unwrap_or(default_rand),
+			self.query_prompter.unwrap_or(default_query_prompter),
+		)
 	}
 }
 
@@ -119,6 +143,13 @@ pub mod tests {
 		helper(
 			"/r 20*2\\ is my attack roll",
 			"20*2=40 is my attack roll");
+	}
+	#[test]
+	fn roll_queries() {
+		let source = String::from("I attack you for ?{attack|3}");
+		helper(
+			"I attack you for [[?{attack|3}]]",
+			"I attack you for 3=3");
 	}
 	#[test]
 	fn interpreter_builder() {

@@ -34,7 +34,7 @@ pub enum InterpretError {
 
 	InfiniteRerollsDetected,
 
-	ExpectedSomeInputInRollQueryPrompt,
+	FailedGettingInputFromPrompt(String),
 
 	InterpreterConstructedWithoutMacros,
 	NoMacroNamed(String),
@@ -48,13 +48,14 @@ pub struct Interpreter<'s, 'm> {
 	roll_queries: HashMap<String, Expression>,
 	macros: Option<&'m Macros>,
 	rand: fn() -> f64,
+	query_prmopter: fn(&str, &str) -> Option<String>,
 }
 pub trait InterpreterT {
 	fn new<'a, 'b>(source: &'a str,
 		roll_queries: HashMap<String, Expression>,
 		macros: Option<&'b Macros>,
-		rand: fn()->f64
-	
+		rand: fn()->f64,
+		query_prmopter: fn(&str, &str) -> Option<String>,
 	) -> Interpreter<'a, 'b>;
 	fn interpret(&mut self) -> Output;
 }
@@ -80,7 +81,6 @@ pub trait InterpreterPrivateT {
 	fn interpret_dice(&mut self, dice: &Dice, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 	fn interpret_function(&mut self, function: &Function, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 	fn interpret_roll_query(&mut self, roll_query: &RollQuery, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
-	fn prompt(&self, message: &str, default: &str) -> Result<String, InterpretError>;
 
 	fn interpret_normal_dice(&mut self, normal: &Normal, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
 	fn interpret_computed_dice(&mut self, normal: &Computed, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError>;
@@ -97,13 +97,16 @@ impl<'s, 'm> InterpreterT for Interpreter<'s, 'm> {
 		source: &'a str,
 		roll_queries: HashMap<String,
 		Expression>, macros: Option<&'b Macros>,
-		rand: fn()->f64) -> Interpreter<'a, 'b>
+		rand: fn()->f64,
+		query_prmopter: fn(&str, &str) -> Option<String>,	
+	) -> Interpreter<'a, 'b>
 	{
 		Interpreter {
 			source: source,
 			roll_queries: roll_queries,
 			macros: macros,
 			rand: rand,
+			query_prmopter: query_prmopter,
 		}
 	}
 	fn interpret(&mut self) -> Output {
@@ -173,7 +176,13 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 
 		let (output, interpreter) = match macro_data {
 			Some(data) => {
-				let mut interpreter = Interpreter::new(&data.source, self.roll_queries.clone(), self.macros, self.rand);
+				let mut interpreter = Interpreter::new(
+					&data.source,
+					self.roll_queries.clone(),
+					self.macros,
+					self.rand,
+					self.query_prmopter,
+				);
 				let output = interpreter.interpret();
 				(output, interpreter)
 			}
@@ -326,7 +335,11 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 		let expression = if self.roll_queries.contains_key(&roll_query.prompt) {
 			self.roll_queries.get(&roll_query.prompt).unwrap().clone()
 		} else {
-			let user_input = self.prompt(&roll_query.prompt, &roll_query.default)?;
+			let user_input = match (self.query_prmopter)(&roll_query.prompt, &roll_query.default) {
+				Some(input) => input,
+				None => return Err(InterpretError::FailedGettingInputFromPrompt(roll_query.prompt.clone()))
+			};
+			
 			let expression = match Parser::parse_expression_string(&user_input) {
 				Ok(expression) => expression,
 				Err(parse_error) => return Err(InterpretError::ParseError(parse_error)),
@@ -336,19 +349,6 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 			expression
 		};
 		self.interpret_expression(&expression, formula)
-	}
-	
-	#[allow(unused_variables)]
-	fn prompt(&self, message: &str, default: &str) -> Result<String, InterpretError> {
-		#[cfg(feature = "web")]
-		let prompt_result = web_sys::window().unwrap().prompt_with_message_and_default(message, default);
-		#[cfg(not(feature = "web"))] // FIX ME
-		let prompt_result: Result<Option<String>, InterpretError>  = Err(InterpretError::ExpectedSomeInputInRollQueryPrompt);
-
-		match prompt_result {
-			Ok(Some(input)) => Ok(input.to_owned()),
-			_ => Err(InterpretError::ExpectedSomeInputInRollQueryPrompt),
-		}
 	}
 
 	fn interpret_normal_dice(&mut self, normal: &Normal, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
