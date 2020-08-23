@@ -3,7 +3,11 @@
 use super::InterpretError;
 use crate::ast::number::*;
 
+#[cfg(feature = "serialize")]
+use serde::{Serialize, Deserialize};
+
 #[derive(Debug)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct Output {
 	pub(super) source: String,
 	pub(super) fragments: Vec<OutputFragment>,
@@ -20,16 +24,19 @@ impl Output {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum OutputFragment {
 	StringLit(String),
 	Roll(RollType),
 }
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum RollType {
 	ExplicitRoll(ExpressionOutput),
 	InlineRoll(ExpressionOutput),
 }
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct ExpressionOutput {
 	pub(super) formula_fragments: FormulaFragments,
 	pub(super) result: Number,
@@ -73,6 +80,7 @@ impl FormulaFragmentsT for FormulaFragments {
 	}
 }
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum FormulaFragment {
 	Basic(String),
 	// first roll, rest of rolls, tooltip
@@ -97,6 +105,7 @@ impl NumberRollsT for NumberRolls {
 	}
 }
 #[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum NumberRoll {
 	Counted(Integer),
 	NotCounted(Integer),
@@ -106,6 +115,7 @@ pub enum NumberRoll {
 pub type SuccessFailRolls = Vec<SuccessFail>;
 
 #[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum SuccessFail {
 	Success(Integer),
 	Fail(Integer),
