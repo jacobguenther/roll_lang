@@ -86,7 +86,7 @@ pub mod tests {
 			.with_source(&source)
 			.build()
 			.interpret()
-			.as_string();
+			.to_string();
 		assert_eq!(&output, result);
 	}
 	
@@ -136,10 +136,10 @@ pub mod tests {
 				.build();
 			let mut interpreter2 = builder.build();
 			assert_eq!(
-				interpreter.interpret().as_string(),
+				interpreter.interpret().to_string(),
 				String::from("I attack you for 15+4=19 and deal 10/2=5 damage!"));
 
-			assert_eq!(interpreter2.interpret().as_string(), interpreter.interpret().as_string());
+			assert_eq!(interpreter2.interpret().to_string(), interpreter.interpret().to_string());
 		}
 	}
 	#[test]
@@ -147,5 +147,21 @@ pub mod tests {
 		use super::default_rand;
 		let rand = default_rand();
 		assert!(0.0 <= rand && rand <= 1.0);
+	}
+
+	#[cfg(feature = "serialize")]
+	#[test]
+	fn serialize() {
+		use interpreter::output::Output;
+		let source = String::from("I attack you for /r 20+3[STR] and deal [[10/2]] damage!");
+
+		let out1 = InterpreterBuilder::new()
+			.with_source(&source)
+			.build()
+			.interpret();
+		let ser = serde_json::to_string(&out1).unwrap();
+		let out2: Output = serde_json::from_str(&ser).unwrap();
+
+		assert_eq!(out1.to_string(), out2.to_string());
 	}
 }
