@@ -1,5 +1,8 @@
 // File: ast/number.rs
 
+#[cfg(feature = "serialize")]
+use serde::{Serialize, Deserialize};
+
 use std::ops::{Add, Sub, Mul, Div, Neg};
 use super::Comparison;
 use super::{
@@ -12,6 +15,7 @@ use super::{
 use std::fmt;
 
 #[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum Number {
 	Integer(Integer),
 	Float(Float),
@@ -151,11 +155,13 @@ impl Neg for Number {
 }
 
 #[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum OperatorError {
 	DivideByZero
 }
 
 #[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct Integer {
 	i: i32,
 }
@@ -237,6 +243,7 @@ impl Neg for Integer {
 }
 
 #[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct Float {
 	f: f32,
 }
