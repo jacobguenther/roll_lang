@@ -2,11 +2,10 @@
 
 use super::output::*;
 
+use std::string::ToString;
+
 pub trait AsHtml {
 	fn as_html(&self) -> String;
-}
-pub trait AsString {
-	fn as_string(&self) -> String;
 }
 
 impl AsHtml for Output {
@@ -114,11 +113,11 @@ impl AsHtml for FormulaFragment {
 	}
 }
 
-impl AsString for Output {
-	fn as_string(&self) -> String {
+impl ToString for Output {
+	fn to_string(&self) -> String {
 		let mut out_string = String::new();
 		for fragment in &self.fragments {
-			out_string.push_str(&fragment.as_string());
+			out_string.push_str(&fragment.to_string());
 		}
 		match &self.error {
 			Some(error) => format!("{} :: {:?}", out_string, error),
@@ -126,34 +125,34 @@ impl AsString for Output {
 		}
 	}
 }
-impl AsString for OutputFragment {
-	fn as_string(&self) -> String {
+impl ToString for OutputFragment {
+	fn to_string(&self) -> String {
 		match self {
 			OutputFragment::StringLit(s) => s.clone(),
 			OutputFragment::Roll(RollType::ExplicitRoll(expression_output)) |
 			OutputFragment::Roll(RollType::InlineRoll(expression_output)) =>
-				expression_output.as_string(),
+				expression_output.to_string(),
 		}
 	}
 }
-impl AsString for ExpressionOutput {
-	fn as_string(&self) -> String {
+impl ToString for ExpressionOutput {
+	fn to_string(&self) -> String {
 		let mut out_string = String::new();
 		for fragment in &self.formula_fragments {
-			out_string.push_str(&fragment.as_string());
+			out_string.push_str(&fragment.to_string());
 		}
 		format!("{}={}", out_string, self.result)
 	}
 }
-impl AsString for FormulaFragment {
-	fn as_string(&self) -> String {
+impl ToString for FormulaFragment {
+	fn to_string(&self) -> String {
 		match self {
 			FormulaFragment::Basic(s) => s.clone(),
 			FormulaFragment::NumberRolls(first, rolls, tooltip) => {
-				let mut out_string = format!("{}", first.as_string());
+				let mut out_string = format!("{}", first.to_string());
 				for roll in rolls {
 					out_string.push_str("+");
-					out_string.push_str(&roll.as_string());
+					out_string.push_str(&roll.to_string());
 				}
 				out_string.push_str("");
 				match tooltip {
@@ -165,8 +164,8 @@ impl AsString for FormulaFragment {
 		}
 	}
 }
-impl AsString for NumberRoll {
-	fn as_string(&self) -> String {
+impl ToString for NumberRoll {
+	fn to_string(&self) -> String {
 		match self {
 			NumberRoll::Counted(int) => format!("{}", int.value()),
 			NumberRoll::NotCounted(_) => String::from("NC"),
