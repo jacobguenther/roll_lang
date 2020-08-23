@@ -250,7 +250,13 @@ impl ParserPrivateT for Parser {
 					let start_index = self.current_index;
 					self.skip_whitespace();
 					match self.match_current_to_punctuation("\\") {
-						Err(_) => self.current_index = start_index-1,
+						Err(_) => {
+							self.current_index = start_index-1;
+							match self.current().unwrap() {
+								Lexeme::Whitespace(_) => (),
+								_ => self.current_index += 1,
+							}
+						}
 						_ => (),
 					}
 				},
