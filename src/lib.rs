@@ -114,6 +114,9 @@ pub mod tests {
 			"/r 20*2 is my attack roll",
 			"20*2=40 is my attack roll");
 		helper(
+			"/r 20*2",
+			"20*2=40");
+		helper(
 			"/r 20*2\\ is my attack roll",
 			"20*2=40 is my attack roll");
 	}
