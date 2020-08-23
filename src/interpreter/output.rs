@@ -9,9 +9,9 @@ use serde::{Serialize, Deserialize};
 #[derive(Debug)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct Output {
-	pub(super) source: String,
-	pub(super) fragments: Vec<OutputFragment>,
-	pub(super) error: Option<InterpretError>,
+	pub source: String,
+	pub fragments: Vec<OutputFragment>,
+	pub error: Option<InterpretError>,
 }
 impl Output {
 	pub(super) fn new(source: &str) -> Output {
