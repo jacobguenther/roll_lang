@@ -1,5 +1,8 @@
 // File: lexer/token.rs
 
+#[cfg(feature = "serialize")]
+use serde::{Serialize, Deserialize};
+
 pub trait TokenT {
 	fn source(&self) -> &str;
 	fn start(&self) -> usize;
@@ -8,6 +11,7 @@ pub trait TokenT {
 	fn push_str(&mut self, s: &str);
 }
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct Token {
 	source: String,
 	start: usize,
