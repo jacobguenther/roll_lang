@@ -38,12 +38,12 @@ pub enum RollType {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct ExpressionOutput {
-	pub(super) formula_fragments: FormulaFragments,
-	pub(super) result: Number,
+	pub formula_fragments: FormulaFragments,
+	pub result: Number,
 }
 
-pub(super) type FormulaFragments = Vec<FormulaFragment>;
-pub(super) trait FormulaFragmentsT {
+pub type FormulaFragments = Vec<FormulaFragment>;
+pub trait FormulaFragmentsT {
 	fn push_str(&mut self, s: &str);
 	fn push_number_roll(&mut self, roll: &NumberRoll);
 	fn push_success_fail_roll(&mut self, roll: &SuccessFail);
