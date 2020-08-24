@@ -352,7 +352,6 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 	}
 
 	fn interpret_normal_dice(&mut self, normal: &Normal, modifiers: &Modifiers, tooltip: &Option<String>, formula: &mut FormulaFragments) -> Result<Number, InterpretError> {
-		formula.push_str("(");
 
 		let sides = normal.sides.value();
 		if sides < 1 {
@@ -413,7 +412,6 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 			None => (),
 		}
 
-		formula.push_str(")");
 		Ok(Number::Integer(Integer::new(result)))
 	}
 
