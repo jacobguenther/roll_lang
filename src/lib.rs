@@ -90,7 +90,11 @@ impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm> {
 		#[cfg(feature = "default")]
 		let rand = self.rand.unwrap_or(default_rand);
 		#[cfg(not(feature = "default"))]
-		let rand = self.rand.unwrap_or(panic!("Must supply a random number generator or enable defaults in cargo"));
+		let rand = match self.rand {
+			Some(r) => r,
+			None => panic!("Must supply a random number generator or enable defaults in cargo"),
+		};
+
 		Interpreter::new(
 			self.source.unwrap_or(""),
 			self.roll_queries.unwrap_or(&HashMap::new()).clone(),
@@ -107,12 +111,16 @@ pub mod tests {
 	use super::*;
 	use super::interpreter::output_traits::*;
 
+	fn r() -> f64 {
+		1.0
+	}
 	fn helper(
 		source: &str,
 		result: &str) 
 	{
 		let output = InterpreterBuilder::new()
 			.with_source(&source)
+			.with_rng_func(r)
 			.build()
 			.interpret()
 			.to_string();
@@ -169,6 +177,7 @@ pub mod tests {
 			let mut interpreter = builder
 				.with_source(&source)
 				.with_macros(&macros)
+				.with_rng_func(r)
 				.build();
 			let mut interpreter2 = builder.build();
 			assert_eq!(
