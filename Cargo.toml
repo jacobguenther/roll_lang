@@ -5,7 +5,7 @@ authors = ["Jacob Guenther <jacobrwguenther@protonmail.com>"]
 edition = "2018"
 description = "An interpreter for a modified version of dice notation."
 readme = "README.md"
-repository = "https://github.com/jacobguenther/RollLang"
+repository = "https://github.com/jacobguenther/roll_lang"
 license = "GPL-3.0"
 license-file = "LICENSE.md"
 keywords = ["Dice", "Notation"]
@@ -22,10 +22,15 @@ crate-type = ["lib"]
 
 [features]
 serialize = ["serde", "serde_json"]
+default = ["rand"]
 
 [dependencies]
 unicode-segmentation = "1.6.0"
-rand = "0.7.3"
+
+
+[dependencies.rand]
+version = "0.7.3"
+optional = true
 
 [dependencies.serde]
 version = "1.0.115"

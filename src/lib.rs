@@ -11,6 +11,7 @@ pub mod macros;
 use std::collections::HashMap;
 use interpreter::*;
 
+#[cfg(feature = "default")]
 pub fn default_rand() -> f64 {
 	use rand::{thread_rng, Rng};
 	thread_rng().gen()
@@ -86,11 +87,15 @@ impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm> {
 	// }
 
 	pub fn build(&self) -> Interpreter<'s, 'm> {
+		#[cfg(feature = "default")]
+		let rand = self.rand.unwrap_or(default_rand);
+		#[cfg(not(feature = "default"))]
+		let rand = self.rand.unwrap_or(panic!("Must supply a random number generator or enable defaults in cargo"));
 		Interpreter::new(
 			self.source.unwrap_or(""),
 			self.roll_queries.unwrap_or(&HashMap::new()).clone(),
 			self.macros,
-			self.rand.unwrap_or(default_rand),
+			rand,
 			self.query_prompter.unwrap_or(default_query_prompter),
 		)
 	}
@@ -173,6 +178,8 @@ pub mod tests {
 			assert_eq!(interpreter2.interpret().to_string(), interpreter.interpret().to_string());
 		}
 	}
+
+	#[cfg(feature = "default")]
 	#[test]
 	fn rng() {
 		use super::default_rand;
