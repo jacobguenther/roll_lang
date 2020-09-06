@@ -55,7 +55,7 @@ trait ParserPrivateT {
 	fn parse_comparison(&mut self) -> Result<Comparison, ParseError>;
 	fn parse_comparison_and_integer(&mut self) -> Result<(Comparison, Option<Integer>), ParseError>;
 	fn parse_comparison_and_require_integer(&mut self) -> Result<(Comparison, Integer), ParseError>;
-	
+
 	fn parse_expanding(&mut self) -> Result<Expanding, ParseError>;
 	fn parse_exploding(&mut self) -> Result<Exploding, ParseError>;
 	fn parse_compounding(&mut self) -> Result<Compounding, ParseError>;
@@ -108,7 +108,7 @@ impl Default for State {
 }
 #[derive(Debug)]
 pub struct Parser {
-	state: State,	
+	state: State,
 	lexemes: Vec<Lexeme>,
 	current_index: usize,
 }
@@ -198,7 +198,7 @@ impl ParserPrivateT for Parser {
 					break;
 				},
 				Err(_parse_error) => {
-					comment.push_str(self.current().ok()?.source());	
+					comment.push_str(self.current().ok()?.source());
 					self.step_lexemes();
 				}
 			};
@@ -224,6 +224,7 @@ impl ParserPrivateT for Parser {
 						Ok(_token) => break,
 						Err(_parse_error) => {
 							macro_name.push_str(&self.current()?.token().source());
+							self.current_index += 1;
 						},
 					}
 				}
@@ -279,7 +280,7 @@ impl ParserPrivateT for Parser {
 		self.skip_whitespace();
 		let mut expression = Expression::MulDiv(self.parse_mul_div()?);
 		loop {
-			let start_index = self.current_index;		
+			let start_index = self.current_index;
 			self.skip_whitespace();
 			let is_add = match self.current() {
 				Ok(lexeme) => match lexeme {
@@ -605,7 +606,7 @@ impl ParserPrivateT for Parser {
 	}
 	fn parse_fate(&mut self) -> Result<Fate, ParseError> {
 		let start_index = self.current_index;
-		let count = self.parse_integer()?;		
+		let count = self.parse_integer()?;
 		match self.match_current_to_literal("dF") {
 			Ok(_token) => Ok(Fate {count: count}),
 			Err(parse_error) => {
@@ -761,7 +762,7 @@ impl ParserPrivateT for Parser {
 			Err(parse_error) => {
 				self.current_index = start_index;
 				return Err(parse_error);
-			} 
+			}
 		}
 		match self.parse_comparison_and_require_integer() {
 			Ok((comparison, integer)) => Ok(Penetrating::new(comparison, Some(integer))),
@@ -947,7 +948,7 @@ impl ParserPrivateT for Parser {
 		};
 		let next = self.next_as_option();
 		let roll = next.is_some() && match next.unwrap() {
-			Lexeme::Literal(token) => 
+			Lexeme::Literal(token) =>
 				token.source() == "roll" || token.source() == "r",
 			_ => false,
 		};
