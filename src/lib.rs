@@ -116,7 +116,7 @@ pub mod tests {
 	}
 	fn helper(
 		source: &str,
-		result: &str) 
+		result: &str)
 	{
 		let output = InterpreterBuilder::new()
 			.with_source(&source)
@@ -126,7 +126,7 @@ pub mod tests {
 			.to_string();
 		assert_eq!(&output, result);
 	}
-	
+
 	#[test]
     fn interpreter() {
 		// associativity
@@ -157,6 +157,7 @@ pub mod tests {
 			"/r 20*2\\ is my attack roll",
 			"20*2=40 is my attack roll");
 	}
+	/*
 	#[test]
 	fn roll_queries() {
 		let source = String::from("I attack you for ?{attack|3}");
@@ -164,6 +165,31 @@ pub mod tests {
 			"I attack you for [[?{attack|3}]]",
 			"I attack you for 3=3");
 	}
+	*/
+	#[test]
+	fn macros() {
+		use macros::*;
+
+		let source = String::from("I attack you for #{melee attack} and deal [[10/2]] damage!");
+		let mut macros = Macros::new();
+		macros.insert(String::from("melee attack"), MacroData::new(false, "[[15+4]]"));
+		let mut builder = InterpreterBuilder::new();
+
+		{
+			let mut interpreter = builder
+				.with_source(&source)
+				.with_macros(&macros)
+				.with_rng_func(r)
+				.build();
+			let mut interpreter2 = builder.build();
+			assert_eq!(
+				interpreter.interpret().to_string(),
+				String::from("I attack you for 15+4=19 and deal 10/2=5 damage!"));
+
+			assert_eq!(interpreter2.interpret().to_string(), interpreter.interpret().to_string());
+		}
+	}
+
 	#[test]
 	fn interpreter_builder() {
 		use macros::*;
