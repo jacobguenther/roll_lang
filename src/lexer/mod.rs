@@ -14,10 +14,10 @@ pub struct Lexer<'a> {
 	current_index: usize,
 }
 pub trait LexerT {
-    fn new<'b>(source: &'b str) -> Lexer<'b>;
+    fn new(source: &str) -> Lexer;
 }
 impl<'a> LexerT for Lexer<'a> {
-    fn new<'b>(source: &'b str) -> Lexer<'b> {
+    fn new(source: &str) -> Lexer {
 		Lexer {
 			graphemes: UnicodeSegmentation::graphemes(source, true).collect(),
 			state: State::Start,
@@ -45,7 +45,7 @@ impl<'a> Iterator for Lexer<'a> {
 			};
 		}
 
-		return Some(lexeme);
+		Some(lexeme)
 	}
 }
 

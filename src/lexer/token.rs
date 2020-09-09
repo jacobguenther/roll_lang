@@ -20,7 +20,7 @@ impl Token {
 	pub fn new(start: usize) -> Token {
 		Token {
 			source: String::new(),
-			start: start,
+			start
 		}
 	}
 }
