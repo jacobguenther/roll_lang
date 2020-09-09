@@ -41,6 +41,11 @@ pub struct InterpreterBuilder<'s, 'r, 'm> {
 	rand: Option<fn() -> f64>,
 	query_prompter: Option<fn(&str, &str) -> Option<String>>,
 }
+impl<'s, 'r, 'm> Default for InterpreterBuilder<'s, 'r, 'm> {
+	fn default() -> InterpreterBuilder<'s, 'r, 'm> {
+		InterpreterBuilder::new()
+	}
+}
 impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm> {
 	pub fn new() -> InterpreterBuilder<'s, 'r, 'm> {
 		InterpreterBuilder {
@@ -88,19 +93,6 @@ impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm> {
 		self
 	}
 
-	// pub fn without_source<'a>(&'a mut self) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
-	// 	self.source = None;
-	// 	self
-	// }
-	// pub fn without_roll_queries<'a>(&'a mut self) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
-	// 	self.roll_queries = None;
-	// 	self
-	// }
-	// pub fn without_macros<'a>(&'a mut self) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
-	// 	self.macros = None;
-	// 	self
-	// }
-
 	pub fn build(&self) -> Interpreter<'s, 'm> {
 		#[cfg(feature = "default")]
 		let rand = self.rand.unwrap_or(default_rand);
@@ -122,7 +114,6 @@ impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm> {
 
 #[cfg(test)]
 pub mod tests {
-	use super::interpreter::output_traits::*;
 	use super::*;
 
 	fn r() -> f64 {
