@@ -231,13 +231,10 @@ impl ParserPrivateT for Parser {
 				return Ok(Macro { name: macro_name });
 			},
 			Err(_parse_error) => {
-				match self.current()?.clone() {
-					Lexeme::Literal(token) => {
-						self.step_lexemes();
-						return Ok(Macro { name: token.source().to_string() });
-					},
-					_ => (),
-				};
+				if let Lexeme::Literal(token) = self.current()?.clone() {
+					self.step_lexemes();
+					return Ok(Macro { name: token.source().to_string() });
+				}
 			},
 		};
 		self.current_index = start_index;
@@ -249,23 +246,17 @@ impl ParserPrivateT for Parser {
 			self.step_lexemes();
 			self.step_lexemes();
 			let expression = self.parse_expression()?;
-			match self.match_current_to_punctuation("\\") {
-				Ok(_token) => (),
-				Err(_parse_error) => {
-					let start_index = self.current_index;
-					self.skip_whitespace();
-					match self.match_current_to_punctuation("\\") {
-						Err(_) => {
-							self.current_index = start_index-1;
-							match self.current().unwrap() {
-								Lexeme::Whitespace(_) => (),
-								_ => self.current_index += 1,
-							}
-						}
-						_ => (),
+			if self.match_current_to_punctuation("\\").is_err() {
+				let start_index = self.current_index;
+				self.skip_whitespace();
+				if self.match_current_to_punctuation("\\").is_err() {
+					self.current_index = start_index-1;
+					match self.current().unwrap() {
+						Lexeme::Whitespace(_) => (),
+						_ => self.current_index += 1,
 					}
-				},
-			};
+				}
+			}
 			Ok(Roll::ExplicitRoll(expression))
 		} else {
 			self.step_lexemes();
@@ -349,22 +340,17 @@ impl ParserPrivateT for Parser {
 	}
 	fn parse_power(&mut self) -> Result<Power, ParseError> {
 		let lhs = self.parse_unary()?;
-		match self.current() {
-			Ok(lexeme) => match lexeme {
-				Lexeme::Operator(token) => match token.source() {
-					"**" | "^" => {
-						let start_index = self.current_index;
-						self.step_lexemes();
-						match self.parse_power() {
-							Ok(power) => return Ok(Power::Pow(lhs, Box::new(power))),
-							Err(_parse_error) => self.current_index = start_index,
-						};
-					},
-					_ => (),
-				},
-				_ => (),
-			},
-			Err(_e) => (),
+		if let Ok(lexeme) = self.current() {
+			if let Lexeme::Operator(token) = lexeme {
+				if let "**" | "^" = token.source() {
+					let start_index = self.current_index;
+					self.step_lexemes();
+					match self.parse_power() {
+						Ok(power) => return Ok(Power::Pow(lhs, Box::new(power))),
+						Err(_parse_error) => self.current_index = start_index,
+					};
+				}
+			}
 		};
 		Ok(Power::Unary(lhs))
 	}
@@ -859,24 +845,18 @@ impl ParserPrivateT for Parser {
 	}
 	fn step_lexemes_skip_whitespace(&mut self) {
 		self.current_index += 1;
-		match self.current() {
-			Ok(lexeme) => match lexeme {
-				Lexeme::Whitespace(_token) => self.step_lexemes_skip_whitespace(),
-				_ => (),
+		if let Ok(lexeme) =self.current() {
+			if let Lexeme::Whitespace(_token) = lexeme {
+				self.step_lexemes_skip_whitespace();
 			}
-			Err(_) => (),
 		}
 	}
 	fn skip_whitespace(&mut self) {
-		match self.current() {
-			Ok(lexeme) => match lexeme {
-				Lexeme::Whitespace(_token) => {
-					self.current_index += 1;
-					self.skip_whitespace();
-				},
-				_ => (),
+		if let Ok(lexeme) = self.current() {
+			if let Lexeme::Whitespace(_token) = lexeme {
+				self.current_index += 1;
+				self.skip_whitespace();
 			}
-			Err(_) => (),
 		}
 	}
 
@@ -900,43 +880,39 @@ impl ParserPrivateT for Parser {
 	}
 
 	fn match_current_to_punctuation(&mut self, punctuation: &str) -> Result<Token, ParseError> {
-		match self.current()?.clone() {
-			Lexeme::Punctuation(token) => if token.source() == punctuation {
+		if let Lexeme::Punctuation(token) = self.current()?.clone() {
+			if token.source() == punctuation {
 				self.step_lexemes();
-				return Ok(token.clone());
-			},
-			_ => (),
-		};
+				return Ok(token);
+			}
+		}
 		Err(ParseError::DoesNotMatch)
 	}
 	fn match_current_to_punctuation_skip_whitespace(&mut self, punctuation: &str) -> Result<Token, ParseError> {
-		match self.current()?.clone() {
-			Lexeme::Punctuation(token) => if token.source() == punctuation {
+		if let Lexeme::Punctuation(token) = self.current()?.clone() {
+			if token.source() == punctuation {
 				self.step_lexemes_skip_whitespace();
-				return Ok(token.clone());
-			},
-			_ => (),
-		};
+				return Ok(token);
+			}
+		}
 		Err(ParseError::DoesNotMatch)
 	}
 	fn match_current_to_literal(&mut self, literal: &str) -> Result<Token, ParseError> {
-		match self.current()?.clone() {
-			Lexeme::Literal(token) => if token.source() == literal {
+		if let Lexeme::Literal(token) = self.current()?.clone() {
+			if token.source() == literal {
 				self.step_lexemes_skip_whitespace();
-				return Ok(token.clone());
-			},
-			_ => (),
-		};
+				return Ok(token);
+			}
+		}
 		Err(ParseError::DoesNotMatch)
 	}
 	fn match_current_to_operator(&mut self, operator: &str) -> Result<Token, ParseError> {
-		match self.current()?.clone() {
-			Lexeme::Operator(token) => if token.source() == operator {
+		if let Lexeme::Operator(token) = self.current()?.clone() {
+			if token.source() == operator {
 				self.step_lexemes_skip_whitespace();
-				return Ok(token.clone());
-			},
-			_ => (),
-		};
+				return Ok(token);
+			}
+		}
 		Err(ParseError::DoesNotMatch)
 	}
 

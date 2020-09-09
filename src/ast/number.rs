@@ -31,19 +31,19 @@ impl fmt::Display for Number {
 impl Number {
 	pub fn floor(&self) -> Number {
 		match self {
-			Number::Integer(_) => self.clone(),
+			Number::Integer(_) => *self,
 			Number::Float(float) => Number::Integer(Integer::new(float.value().floor() as i32)),	
 		}
 	}
 	pub fn ceil(&self) -> Number {
 		match self {
-			Number::Integer(_) => self.clone(),
+			Number::Integer(_) => *self,
 			Number::Float(float) => Number::Integer(Integer::new(float.value().ceil() as i32)),	
 		}
 	}
 	pub fn round(&self) -> Number {
 		match self {
-			Number::Integer(_) => self.clone(),
+			Number::Integer(_) => *self,
 			Number::Float(float) => Number::Integer(Integer::new(float.value().round() as i32)),	
 		}
 	}
