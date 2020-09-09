@@ -96,9 +96,8 @@ impl NumberRollsT for NumberRolls {
 	fn sum_counted_rolls(&self) -> Integer {
 		let mut res = 0;
 		for number_roll in self {
-			match number_roll {
-				NumberRoll::Counted(int) => res += int.value(),
-				_ => (),
+			if let NumberRoll::Counted(int) = number_roll {
+				res += int.value();
 			}
 		}
 		Integer::new(res)

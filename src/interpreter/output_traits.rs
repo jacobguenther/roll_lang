@@ -40,7 +40,7 @@ impl ToString for FormulaFragment {
 		match self {
 			FormulaFragment::Basic(s) => s.clone(),
 			FormulaFragment::NumberRolls(first, rolls, tooltip) => {
-				let mut out_string = format!("{}", first.to_string());
+				let mut out_string = first.to_string();
 				for roll in rolls {
 					out_string.push_str("+");
 					out_string.push_str(&roll.to_string());
