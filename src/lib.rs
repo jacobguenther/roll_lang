@@ -2,14 +2,14 @@
 
 extern crate unicode_segmentation;
 
-pub mod lexer;
-pub mod parser;
 pub mod ast;
 pub mod interpreter;
+pub mod lexer;
 pub mod macros;
+pub mod parser;
 
-use std::collections::HashMap;
 use interpreter::*;
+use std::collections::HashMap;
 
 #[cfg(feature = "default")]
 pub fn default_rand() -> f64 {
@@ -38,8 +38,8 @@ pub struct InterpreterBuilder<'s, 'r, 'm> {
 	source: Option<&'s str>,
 	roll_queries: Option<&'r HashMap<String, ast::Expression>>,
 	macros: Option<&'m macros::Macros>,
-	rand: Option<fn()->f64>,
-	query_prompter: Option< fn(&str, &str)->Option<String> >
+	rand: Option<fn() -> f64>,
+	query_prompter: Option<fn(&str, &str) -> Option<String>>,
 }
 impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm> {
 	pub fn new() -> InterpreterBuilder<'s, 'r, 'm> {
@@ -52,23 +52,38 @@ impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm> {
 		}
 	}
 
-	pub fn with_source<'a>(&'a mut self, source: &'s str) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
+	pub fn with_source<'a>(
+		&'a mut self,
+		source: &'s str,
+	) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
 		self.source = Some(source);
 		self
 	}
-	pub fn with_roll_queries<'a>(&'a mut self, roll_queries: &'r HashMap<String, ast::Expression>) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
+	pub fn with_roll_queries<'a>(
+		&'a mut self,
+		roll_queries: &'r HashMap<String, ast::Expression>,
+	) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
 		self.roll_queries = Some(roll_queries);
 		self
 	}
-	pub fn with_macros<'a>(&'a mut self, macros: &'m macros::Macros) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
+	pub fn with_macros<'a>(
+		&'a mut self,
+		macros: &'m macros::Macros,
+	) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
 		self.macros = Some(macros);
 		self
 	}
-	pub fn with_rng_func<'a>(&'a mut self, rand: fn()->f64) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
+	pub fn with_rng_func<'a>(
+		&'a mut self,
+		rand: fn() -> f64,
+	) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
 		self.rand = Some(rand);
 		self
 	}
-	pub fn with_query_prompter<'a>(&'a mut self, prompter: fn(&str, &str) -> Option<String>) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
+	pub fn with_query_prompter<'a>(
+		&'a mut self,
+		prompter: fn(&str, &str) -> Option<String>,
+	) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
 		self.query_prompter = Some(prompter);
 		self
 	}
@@ -105,19 +120,15 @@ impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm> {
 	}
 }
 
-
 #[cfg(test)]
 pub mod tests {
-	use super::*;
 	use super::interpreter::output_traits::*;
+	use super::*;
 
 	fn r() -> f64 {
 		1.0
 	}
-	fn helper(
-		source: &str,
-		result: &str)
-	{
+	fn helper(source: &str, result: &str) {
 		let output = InterpreterBuilder::new()
 			.with_source(&source)
 			.with_rng_func(r)
@@ -128,7 +139,7 @@ pub mod tests {
 	}
 
 	#[test]
-    fn interpreter() {
+	fn interpreter() {
 		// associativity
 		helper("[[5-4+1]]", "5-4+1=2");
 		// multiply and divide
@@ -140,22 +151,15 @@ pub mod tests {
 		helper("文字 hello", "文字 hello");
 
 		// whitespaces
-		helper(
-			"[[ 20 + 4 * 2 ]]",
-			"20+4*2=28");
+		helper("[[ 20 + 4 * 2 ]]", "20+4*2=28");
 		// trailing whitespaces
 		helper(
 			"attack is [[20+1]] and damage is /r 10 \\ take that!",
-			"attack is 20+1=21 and damage is 10=10 take that!");
-		helper(
-			"/r 20*2 is my attack roll",
-			"20*2=40 is my attack roll");
-		helper(
-			"/r 20*2",
-			"20*2=40");
-		helper(
-			"/r 20*2\\ is my attack roll",
-			"20*2=40 is my attack roll");
+			"attack is 20+1=21 and damage is 10=10 take that!",
+		);
+		helper("/r 20*2 is my attack roll", "20*2=40 is my attack roll");
+		helper("/r 20*2", "20*2=40");
+		helper("/r 20*2\\ is my attack roll", "20*2=40 is my attack roll");
 	}
 	/*
 	#[test]
@@ -172,7 +176,10 @@ pub mod tests {
 
 		let source = String::from("I attack you for #{melee attack} and deal [[10/2]] damage!");
 		let mut macros = Macros::new();
-		macros.insert(String::from("melee attack"), MacroData::new(false, "[[15+4]]"));
+		macros.insert(
+			String::from("melee attack"),
+			MacroData::new(false, "[[15+4]]"),
+		);
 		let mut builder = InterpreterBuilder::new();
 
 		{
@@ -184,9 +191,13 @@ pub mod tests {
 			let mut interpreter2 = builder.build();
 			assert_eq!(
 				interpreter.interpret().to_string(),
-				String::from("I attack you for 15+4=19 and deal 10/2=5 damage!"));
+				String::from("I attack you for 15+4=19 and deal 10/2=5 damage!")
+			);
 
-			assert_eq!(interpreter2.interpret().to_string(), interpreter.interpret().to_string());
+			assert_eq!(
+				interpreter2.interpret().to_string(),
+				interpreter.interpret().to_string()
+			);
 		}
 	}
 
@@ -208,9 +219,13 @@ pub mod tests {
 			let mut interpreter2 = builder.build();
 			assert_eq!(
 				interpreter.interpret().to_string(),
-				String::from("I attack you for 15+4=19 and deal 10/2=5 damage!"));
+				String::from("I attack you for 15+4=19 and deal 10/2=5 damage!")
+			);
 
-			assert_eq!(interpreter2.interpret().to_string(), interpreter.interpret().to_string());
+			assert_eq!(
+				interpreter2.interpret().to_string(),
+				interpreter.interpret().to_string()
+			);
 		}
 	}
 

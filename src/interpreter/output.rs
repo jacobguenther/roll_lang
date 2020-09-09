@@ -4,7 +4,7 @@ use super::InterpretError;
 use crate::ast::number::*;
 
 #[cfg(feature = "serialize")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
@@ -54,27 +54,32 @@ impl FormulaFragmentsT for FormulaFragments {
 		match self.last_mut() {
 			Some(FormulaFragment::Basic(string)) => {
 				string.push_str(s);
-			},
+			}
 			_ => self.push(FormulaFragment::Basic(String::from(s))),
 		}
 	}
 	fn push_number_roll(&mut self, roll: &NumberRoll) {
 		match self.last_mut() {
 			Some(FormulaFragment::NumberRolls(_first, rolls, _tooltip)) => rolls.push(*roll),
-			_ => self.push(FormulaFragment::NumberRolls(*roll, vec!(), None)),
+			_ => self.push(FormulaFragment::NumberRolls(*roll, vec![], None)),
 		}
 	}
 	fn push_success_fail_roll(&mut self, success_fail: &SuccessFail) {
 		match self.last_mut() {
-			Some(FormulaFragment::SuccessFailRolls(_first, rolls, _tooltip)) => rolls.push(*success_fail),
-			_ => self.push(FormulaFragment::SuccessFailRolls(*success_fail, vec!(), None)),
+			Some(FormulaFragment::SuccessFailRolls(_first, rolls, _tooltip)) => {
+				rolls.push(*success_fail)
+			}
+			_ => self.push(FormulaFragment::SuccessFailRolls(
+				*success_fail,
+				vec![],
+				None,
+			)),
 		}
 	}
 	fn push_tooltip(&mut self, tooltip: &str) {
 		match self.last_mut() {
 			Some(FormulaFragment::NumberRolls(_, _, tip))
-			| Some(FormulaFragment::SuccessFailRolls(_, _, tip))
-				=> *tip = Some(tooltip.to_owned()),
+			| Some(FormulaFragment::SuccessFailRolls(_, _, tip)) => *tip = Some(tooltip.to_owned()),
 			_ => (),
 		}
 	}
@@ -109,7 +114,6 @@ pub enum NumberRoll {
 	Counted(Integer),
 	NotCounted(Integer),
 }
-
 
 pub type SuccessFailRolls = Vec<SuccessFail>;
 

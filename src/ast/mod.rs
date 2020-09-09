@@ -2,8 +2,8 @@
 
 pub mod number;
 
-use number::*;
 use super::parser::ParseError;
+use number::*;
 
 pub type Root = Vec<Node>;
 
@@ -166,21 +166,13 @@ impl RollQuery {
 		}
 	}
 	pub fn as_expression(&self) -> Expression {
-		Expression::MulDiv(
-			MulDiv::Power(
-				Power::Unary(
-					Unary::Atom(
-						None,
-						Atom::RollQuery(
-							RollQuery {
-								prompt: self.prompt.clone(),
-								default: self.default.clone(),
-							}
-						),
-						None
-					)
-				)
-			)
-		)
+		Expression::MulDiv(MulDiv::Power(Power::Unary(Unary::Atom(
+			None,
+			Atom::RollQuery(RollQuery {
+				prompt: self.prompt.clone(),
+				default: self.default.clone(),
+			}),
+			None,
+		))))
 	}
 }

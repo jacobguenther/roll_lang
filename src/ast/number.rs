@@ -1,18 +1,12 @@
 // File: ast/number.rs
 
 #[cfg(feature = "serialize")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-use std::ops::{Add, Sub, Mul, Div, Neg};
 use super::Comparison;
-use super::{
-	Expression,
-	MulDiv,
-	Power,
-	Unary,
-	Atom,
-};
+use super::{Atom, Expression, MulDiv, Power, Unary};
 use std::fmt;
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 #[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
@@ -21,48 +15,44 @@ pub enum Number {
 	Float(Float),
 }
 impl fmt::Display for Number {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		match self {
 			Number::Integer(int) => write!(f, "{}", int.value()),
 			Number::Float(float) => write!(f, "{}", float.value()),
 		}
-    }
+	}
 }
 impl Number {
 	pub fn floor(&self) -> Number {
 		match self {
 			Number::Integer(_) => *self,
-			Number::Float(float) => Number::Integer(Integer::new(float.value().floor() as i32)),	
+			Number::Float(float) => Number::Integer(Integer::new(float.value().floor() as i32)),
 		}
 	}
 	pub fn ceil(&self) -> Number {
 		match self {
 			Number::Integer(_) => *self,
-			Number::Float(float) => Number::Integer(Integer::new(float.value().ceil() as i32)),	
+			Number::Float(float) => Number::Integer(Integer::new(float.value().ceil() as i32)),
 		}
 	}
 	pub fn round(&self) -> Number {
 		match self {
 			Number::Integer(_) => *self,
-			Number::Float(float) => Number::Integer(Integer::new(float.value().round() as i32)),	
+			Number::Float(float) => Number::Integer(Integer::new(float.value().round() as i32)),
 		}
 	}
 	pub fn abs(&self) -> Number {
 		match self {
 			Number::Integer(int) => Number::Integer(Integer::new(int.value().abs())),
-			Number::Float(float) => Number::Float(Float::new(float.value().abs())),	
+			Number::Float(float) => Number::Float(Float::new(float.value().abs())),
 		}
 	}
 	pub fn pow(&self, exponent: &Number) -> Number {
 		let (b, e) = match (self, exponent) {
-			(Number::Integer(b), Number::Integer(e)) =>
-				(b.value() as f32, e.value() as f32),
-			(Number::Integer(b), Number::Float(e)) => 
-				(b.value() as f32, e.value()),
-			(Number::Float(b), Number::Integer(e)) => 
-				(b.value(), e.value() as f32),
-			(Number::Float(b), Number::Float(e)) =>
-				(b.value(), e.value())
+			(Number::Integer(b), Number::Integer(e)) => (b.value() as f32, e.value() as f32),
+			(Number::Integer(b), Number::Float(e)) => (b.value() as f32, e.value()),
+			(Number::Float(b), Number::Integer(e)) => (b.value(), e.value() as f32),
+			(Number::Float(b), Number::Float(e)) => (b.value(), e.value()),
 		};
 		Number::Float(Float::new(b.powf(e)))
 	}
@@ -79,30 +69,37 @@ impl Add for Number {
 	type Output = Number;
 	fn add(self, rhs: Number) -> Self::Output {
 		match (self, rhs) {
-			(Number::Integer(lhs_int), Number::Integer(rhs_int)) =>
-				Number::Integer(lhs_int + rhs_int),
-			(Number::Integer(lhs_int), Number::Float(rhs_float)) =>
-				Number::Float(Float::new(lhs_int.value() as f32 + rhs_float.value())),
-			(Number::Float(lhs_float), Number::Integer(rhs_int)) =>
-				Number::Float(Float::new(lhs_float.value() + rhs_int.value() as f32)),
-			(Number::Float(lhs_float), Number::Float(rhs_float)) =>
-				Number::Float(lhs_float + rhs_float),
+			(Number::Integer(lhs_int), Number::Integer(rhs_int)) => {
+				Number::Integer(lhs_int + rhs_int)
+			}
+			(Number::Integer(lhs_int), Number::Float(rhs_float)) => {
+				Number::Float(Float::new(lhs_int.value() as f32 + rhs_float.value()))
+			}
+			(Number::Float(lhs_float), Number::Integer(rhs_int)) => {
+				Number::Float(Float::new(lhs_float.value() + rhs_int.value() as f32))
+			}
+			(Number::Float(lhs_float), Number::Float(rhs_float)) => {
+				Number::Float(lhs_float + rhs_float)
+			}
 		}
 	}
-
 }
 impl Sub for Number {
 	type Output = Number;
 	fn sub(self, rhs: Number) -> Self::Output {
 		match (self, rhs) {
-			(Number::Integer(lhs_int), Number::Integer(rhs_int)) =>
-				Number::Integer(lhs_int - rhs_int),
-			(Number::Integer(lhs_int), Number::Float(rhs_float)) =>
-				Number::Float(Float::new(lhs_int.value() as f32 - rhs_float.value())),
-			(Number::Float(lhs_float), Number::Integer(rhs_int)) =>
-				Number::Float(Float::new(lhs_float.value() - rhs_int.value() as f32)),
-			(Number::Float(lhs_float), Number::Float(rhs_float)) =>
-				Number::Float(lhs_float - rhs_float),
+			(Number::Integer(lhs_int), Number::Integer(rhs_int)) => {
+				Number::Integer(lhs_int - rhs_int)
+			}
+			(Number::Integer(lhs_int), Number::Float(rhs_float)) => {
+				Number::Float(Float::new(lhs_int.value() as f32 - rhs_float.value()))
+			}
+			(Number::Float(lhs_float), Number::Integer(rhs_int)) => {
+				Number::Float(Float::new(lhs_float.value() - rhs_int.value() as f32))
+			}
+			(Number::Float(lhs_float), Number::Float(rhs_float)) => {
+				Number::Float(lhs_float - rhs_float)
+			}
 		}
 	}
 }
@@ -110,14 +107,18 @@ impl Mul for Number {
 	type Output = Number;
 	fn mul(self, rhs: Number) -> Self::Output {
 		match (self, rhs) {
-			(Number::Integer(lhs_int), Number::Integer(rhs_int)) =>
-				Number::Integer(lhs_int * rhs_int),
-			(Number::Integer(lhs_int), Number::Float(rhs_float)) =>
-				Number::Float(Float::new(lhs_int.value() as f32 * rhs_float.value())),
-			(Number::Float(lhs_float), Number::Integer(rhs_int)) =>
-				Number::Float(Float::new(lhs_float.value() * rhs_int.value() as f32)),
-			(Number::Float(lhs_float), Number::Float(rhs_float)) =>
-				Number::Float(lhs_float * rhs_float),
+			(Number::Integer(lhs_int), Number::Integer(rhs_int)) => {
+				Number::Integer(lhs_int * rhs_int)
+			}
+			(Number::Integer(lhs_int), Number::Float(rhs_float)) => {
+				Number::Float(Float::new(lhs_int.value() as f32 * rhs_float.value()))
+			}
+			(Number::Float(lhs_float), Number::Integer(rhs_int)) => {
+				Number::Float(Float::new(lhs_float.value() * rhs_int.value() as f32))
+			}
+			(Number::Float(lhs_float), Number::Float(rhs_float)) => {
+				Number::Float(lhs_float * rhs_float)
+			}
 		}
 	}
 }
@@ -125,22 +126,30 @@ impl Div for Number {
 	type Output = Result<Number, OperatorError>;
 	fn div(self, divisor: Number) -> Self::Output {
 		match divisor {
-			Number::Integer(int) => if int.value() == 0 {
-				return Err(OperatorError::DivideByZero);
-			},
-			Number::Float(float) => if float.value() == 0.0 {
-				return Err(OperatorError::DivideByZero);
+			Number::Integer(int) => {
+				if int.value() == 0 {
+					return Err(OperatorError::DivideByZero);
+				}
+			}
+			Number::Float(float) => {
+				if float.value() == 0.0 {
+					return Err(OperatorError::DivideByZero);
+				}
 			}
 		}
 		match (self, divisor) {
-			(Number::Integer(lhs_int), Number::Integer(rhs_int)) =>
-				Ok(Number::Integer(lhs_int / rhs_int)),
-			(Number::Integer(lhs_int), Number::Float(rhs_float)) =>
-				Ok(Number::Float(Float::new(lhs_int.value() as f32 / rhs_float.value()))),
-			(Number::Float(lhs_float), Number::Integer(rhs_int)) =>
-				Ok(Number::Float(Float::new(lhs_float.value() / rhs_int.value() as f32))),
-			(Number::Float(lhs_float), Number::Float(rhs_float)) =>
-				Ok(Number::Float(lhs_float / rhs_float)),
+			(Number::Integer(lhs_int), Number::Integer(rhs_int)) => {
+				Ok(Number::Integer(lhs_int / rhs_int))
+			}
+			(Number::Integer(lhs_int), Number::Float(rhs_float)) => Ok(Number::Float(Float::new(
+				lhs_int.value() as f32 / rhs_float.value(),
+			))),
+			(Number::Float(lhs_float), Number::Integer(rhs_int)) => Ok(Number::Float(Float::new(
+				lhs_float.value() / rhs_int.value() as f32,
+			))),
+			(Number::Float(lhs_float), Number::Float(rhs_float)) => {
+				Ok(Number::Float(lhs_float / rhs_float))
+			}
 		}
 	}
 }
@@ -157,7 +166,7 @@ impl Neg for Number {
 #[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum OperatorError {
-	DivideByZero
+	DivideByZero,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -184,29 +193,15 @@ impl Integer {
 		}
 	}
 	pub fn clamp_min(&self, min: i32) -> Integer {
-		Integer::new(
-			if self.i < min {
-				min
-			} else {
-				self.i
-			}
-		)
+		Integer::new(if self.i < min { min } else { self.i })
 	}
 	pub fn as_expression(&self) -> Expression {
 		let new_int = Integer::new(self.i);
-		Expression::MulDiv(
-			MulDiv::Power(
-				Power::Unary(
-					Unary::Atom(
-						None,
-						Atom::Number(
-							Number::Integer(new_int)
-						),
-						None
-					)
-				)
-			)
-		)
+		Expression::MulDiv(MulDiv::Power(Power::Unary(Unary::Atom(
+			None,
+			Atom::Number(Number::Integer(new_int)),
+			None,
+		))))
 	}
 }
 impl Add for Integer {

@@ -1,22 +1,15 @@
 // File: parser.rs
 
 #[cfg(feature = "serialize")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use super::lexer::{
-	Lexer,
-	LexerT,
-	token::{
-		Token,
-		TokenT,
-	},
 	lexeme::Lexeme,
+	token::{Token, TokenT},
+	Lexer, LexerT,
 };
 
-use super::ast::{
-	*,
-	number::*,
-};
+use super::ast::{number::*, *};
 
 pub trait ParserT {
 	fn new(source: &str) -> Parser;
@@ -53,8 +46,10 @@ trait ParserPrivateT {
 
 	fn parse_modifiers(&mut self) -> Modifiers;
 	fn parse_comparison(&mut self) -> Result<Comparison, ParseError>;
-	fn parse_comparison_and_integer(&mut self) -> Result<(Comparison, Option<Integer>), ParseError>;
-	fn parse_comparison_and_require_integer(&mut self) -> Result<(Comparison, Integer), ParseError>;
+	fn parse_comparison_and_integer(&mut self)
+		-> Result<(Comparison, Option<Integer>), ParseError>;
+	fn parse_comparison_and_require_integer(&mut self)
+		-> Result<(Comparison, Integer), ParseError>;
 
 	fn parse_expanding(&mut self) -> Result<Expanding, ParseError>;
 	fn parse_exploding(&mut self) -> Result<Exploding, ParseError>;
@@ -76,7 +71,10 @@ trait ParserPrivateT {
 	fn next_as_option(&self) -> Option<&Lexeme>;
 
 	fn match_current_to_punctuation(&mut self, punctuation: &str) -> Result<Token, ParseError>;
-	fn match_current_to_punctuation_skip_whitespace(&mut self, punctuation: &str) -> Result<Token, ParseError>;
+	fn match_current_to_punctuation_skip_whitespace(
+		&mut self,
+		punctuation: &str,
+	) -> Result<Token, ParseError>;
 	fn match_current_to_literal(&mut self, literal: &str) -> Result<Token, ParseError>;
 	fn match_current_to_operator(&mut self, operator: &str) -> Result<Token, ParseError>;
 
@@ -130,21 +128,21 @@ impl ParserT for Parser {
 						Ok(my_macro) => {
 							root.push(Node::Macro(my_macro));
 							continue;
-						},
+						}
 						Err(_parse_error) => (),
 					}
 					let string_literal = self.parse_string_literal();
 					root.push(Node::StringLiteral(string_literal));
-				},
+				}
 				State::Roll => match self.parse_roll() {
 					Ok(roll) => {
 						root.push(Node::Roll(roll));
 						self.state = State::Start;
-					},
+					}
 					Err(e) => {
 						root.push(Node::ParseError(e.clone()));
 						self.state = State::Done;
-					},
+					}
 				},
 				State::Done => break,
 			};
@@ -156,7 +154,6 @@ impl ParserT for Parser {
 		parser.state = State::Roll;
 		parser.parse_expression()
 	}
-
 }
 impl ParserPrivateT for Parser {
 	fn parse_start(&mut self) {
@@ -196,7 +193,7 @@ impl ParserPrivateT for Parser {
 				Ok(_token) => {
 					self.skip_whitespace();
 					break;
-				},
+				}
 				Err(_parse_error) => {
 					comment.push_str(self.current().ok()?.source());
 					self.step_lexemes();
@@ -225,21 +222,22 @@ impl ParserPrivateT for Parser {
 						Err(_parse_error) => {
 							macro_name.push_str(&self.current()?.token().source());
 							self.current_index += 1;
-						},
+						}
 					}
 				}
 				return Ok(Macro { name: macro_name });
-			},
+			}
 			Err(_parse_error) => {
 				if let Lexeme::Literal(token) = self.current()?.clone() {
 					self.step_lexemes();
-					return Ok(Macro { name: token.source().to_string() });
+					return Ok(Macro {
+						name: token.source().to_string(),
+					});
 				}
-			},
+			}
 		};
 		self.current_index = start_index;
 		Err(ParseError::DoesNotMatch)
-
 	}
 	fn parse_roll(&mut self) -> Result<Roll, ParseError> {
 		if self.is_roll() {
@@ -250,7 +248,7 @@ impl ParserPrivateT for Parser {
 				let start_index = self.current_index;
 				self.skip_whitespace();
 				if self.match_current_to_punctuation("\\").is_err() {
-					self.current_index = start_index-1;
+					self.current_index = start_index - 1;
 					match self.current().unwrap() {
 						Lexeme::Whitespace(_) => (),
 						_ => self.current_index += 1,
@@ -280,7 +278,7 @@ impl ParserPrivateT for Parser {
 						"-" => false,
 						_ => {
 							self.current_index = start_index;
-							break // wrong operator
+							break; // wrong operator
 						}
 					},
 					_ => break, // not an operator
@@ -294,7 +292,7 @@ impl ParserPrivateT for Parser {
 				Err(_e) => {
 					self.current_index = start_index;
 					break;
-				},
+				}
 			};
 			expression = match is_add {
 				true => Expression::Add(Box::new(expression), next_mul_div),
@@ -315,7 +313,7 @@ impl ParserPrivateT for Parser {
 						"/" => false,
 						_ => {
 							self.current_index = start_index;
-							break // wrong operator
+							break; // wrong operator
 						}
 					},
 					_ => break,
@@ -329,7 +327,7 @@ impl ParserPrivateT for Parser {
 				Err(_e) => {
 					self.current_index = start_index;
 					break;
-				},
+				}
 			};
 			mul_div = match is_multiply {
 				true => MulDiv::Multiply(Box::new(mul_div), next_power),
@@ -358,18 +356,16 @@ impl ParserPrivateT for Parser {
 		let start_index = self.current_index;
 		let comment = self.parse_comment();
 		match self.match_current_to_operator("-") {
-			Ok(_token) => {
-				match self.parse_unary() {
-					Ok(unary) => return Ok(Unary::Minus(comment, Box::new(unary))),
-					Err(_parse_error) => self.current_index = start_index,
-				}
+			Ok(_token) => match self.parse_unary() {
+				Ok(unary) => return Ok(Unary::Minus(comment, Box::new(unary))),
+				Err(_parse_error) => self.current_index = start_index,
 			},
 			Err(_parse_error) => self.current_index = start_index,
 		}
 		Ok(Unary::Atom(
 			self.parse_comment(),
 			self.parse_atom()?,
-			self.parse_comment()
+			self.parse_comment(),
 		))
 	}
 	fn parse_atom(&mut self) -> Result<Atom, ParseError> {
@@ -418,7 +414,7 @@ impl ParserPrivateT for Parser {
 	fn parse_function(&mut self) -> Result<Function, ParseError> {
 		match self.current()?.clone() {
 			Lexeme::Literal(token) => match token.source() {
-				"abs" | "ceil" | "floor"| "round" => {
+				"abs" | "ceil" | "floor" | "round" => {
 					let start_index = self.current_index;
 					self.step_lexemes();
 					match self.match_current_to_punctuation_skip_whitespace("(") {
@@ -446,7 +442,7 @@ impl ParserPrivateT for Parser {
 						}
 					};
 					Ok(function)
-				},
+				}
 				_ => Err(ParseError::DoesNotMatch),
 			},
 			_ => Err(ParseError::DoesNotMatch),
@@ -461,9 +457,7 @@ impl ParserPrivateT for Parser {
 			Err(_e) => self.current_index = start_index,
 		};
 		match self.parse_integer() {
-			Ok(int) => {
-				Ok(Number::Integer(int))
-			},
+			Ok(int) => Ok(Number::Integer(int)),
 			Err(_e) => Err(ParseError::DoesNotMatch),
 		}
 	}
@@ -482,18 +476,16 @@ impl ParserPrivateT for Parser {
 				match self.current()?.clone() {
 					Lexeme::Number(fraction_token) => {
 						self.step_lexemes();
-						Ok(Float::new(format!(
-								"{}.{}",
-								integer_token.source(),
-								fraction_token.source())
-							.parse()
-							.unwrap()
+						Ok(Float::new(
+							format!("{}.{}", integer_token.source(), fraction_token.source())
+								.parse()
+								.unwrap(),
 						))
-					},
-					_ => Err(ParseError::DoesNotMatch)
+					}
+					_ => Err(ParseError::DoesNotMatch),
 				}
-			},
-			_ => Err(ParseError::DoesNotMatch)
+			}
+			_ => Err(ParseError::DoesNotMatch),
 		}
 	}
 	fn parse_integer(&mut self) -> Result<Integer, ParseError> {
@@ -501,8 +493,8 @@ impl ParserPrivateT for Parser {
 			Lexeme::Number(integer_token) => {
 				self.step_lexemes();
 				Ok(Integer::new(integer_token.source().parse().unwrap()))
-			},
-			_ => Err(ParseError::DoesNotMatch)
+			}
+			_ => Err(ParseError::DoesNotMatch),
 		}
 	}
 
@@ -522,12 +514,18 @@ impl ParserPrivateT for Parser {
 		loop {
 			match self.match_current_to_punctuation_skip_whitespace("|") {
 				Ok(_token) => prompt_complete = true,
-				Err(_parse_error) => if !prompt_complete {
-					roll_query.prompt.push_str(&self.current()?.token().source());
-					self.step_lexemes();
-				} else {
-					roll_query.default.push_str(&self.current()?.token().source());
-					self.step_lexemes();
+				Err(_parse_error) => {
+					if !prompt_complete {
+						roll_query
+							.prompt
+							.push_str(&self.current()?.token().source());
+						self.step_lexemes();
+					} else {
+						roll_query
+							.default
+							.push_str(&self.current()?.token().source());
+						self.step_lexemes();
+					}
 				}
 			}
 			match self.match_current_to_punctuation_skip_whitespace("}") {
@@ -541,27 +539,33 @@ impl ParserPrivateT for Parser {
 	fn parse_dice(&mut self) -> Result<Dice, ParseError> {
 		let start_index = self.current_index;
 		match self.parse_normal() {
-			Ok(normal) => return Ok(Dice::Normal(
-				normal,
-				self.parse_modifiers(),
-				self.parse_comment()
-			)),
+			Ok(normal) => {
+				return Ok(Dice::Normal(
+					normal,
+					self.parse_modifiers(),
+					self.parse_comment(),
+				))
+			}
 			Err(_parse_error) => self.current_index = start_index,
 		};
 		match self.parse_fate() {
-			Ok(fate) => return Ok(Dice::Fate(
-				fate,
-				self.parse_modifiers(),
-				self.parse_comment()
-			)),
+			Ok(fate) => {
+				return Ok(Dice::Fate(
+					fate,
+					self.parse_modifiers(),
+					self.parse_comment(),
+				))
+			}
 			Err(_parse_error) => self.current_index = start_index,
 		};
 		match self.parse_computed() {
-			Ok(computed) => return Ok(Dice::Computed(
-				computed,
-				self.parse_modifiers(),
-				self.parse_comment()
-			)),
+			Ok(computed) => {
+				return Ok(Dice::Computed(
+					computed,
+					self.parse_modifiers(),
+					self.parse_comment(),
+				))
+			}
 			Err(_parse_error) => self.current_index = start_index,
 		}
 		Err(ParseError::DoesNotMatch)
@@ -583,7 +587,7 @@ impl ParserPrivateT for Parser {
 			}
 		};
 		match self.parse_integer() {
-			Ok(sides) => Ok(Normal {count, sides}),
+			Ok(sides) => Ok(Normal { count, sides }),
 			Err(parse_error) => {
 				self.current_index = start_index;
 				Err(parse_error)
@@ -609,7 +613,10 @@ impl ParserPrivateT for Parser {
 		let count = self.parse_computed_helper()?;
 		self.match_current_to_literal("d")?;
 		let sides = self.parse_computed_helper()?;
-		Ok(Computed {count: Box::new(count), sides: Box::new(sides)})
+		Ok(Computed {
+			count: Box::new(count),
+			sides: Box::new(sides),
+		})
 	}
 	fn parse_computed_helper(&mut self) -> Result<Expression, ParseError> {
 		match self.parse_integer() {
@@ -622,7 +629,7 @@ impl ParserPrivateT for Parser {
 					self.match_current_to_punctuation(")")?;
 					Ok(expression)
 				}
-			}
+			},
 		}
 	}
 	fn parse_modifiers(&mut self) -> Modifiers {
@@ -636,7 +643,7 @@ impl ParserPrivateT for Parser {
 				Ok(reroll_modifier) => {
 					modifiers.reroll_modifiers.push(reroll_modifier);
 					found_one = true;
-				},
+				}
 				Err(_parse_error) => self.current_index = start_index,
 			};
 			let start_index = self.current_index;
@@ -644,7 +651,7 @@ impl ParserPrivateT for Parser {
 				Ok(successes_modifier) => {
 					modifiers.post_modifiers.push(successes_modifier);
 					found_one = true;
-				},
+				}
 				Err(_parse_error) => self.current_index = start_index,
 			};
 			let start_index = self.current_index;
@@ -652,7 +659,7 @@ impl ParserPrivateT for Parser {
 				Ok(critical_modifier) => {
 					modifiers.post_modifiers.push(critical_modifier);
 					found_one = true;
-				},
+				}
 				Err(_parse_error) => self.current_index = start_index,
 			};
 			let start_index = self.current_index;
@@ -660,7 +667,7 @@ impl ParserPrivateT for Parser {
 				Ok(critical_modifier) => {
 					modifiers.post_modifiers.push(critical_modifier);
 					found_one = true;
-				},
+				}
 				Err(_parse_error) => self.current_index = start_index,
 			};
 			if !found_one {
@@ -684,22 +691,24 @@ impl ParserPrivateT for Parser {
 		self.step_lexemes();
 		comparison
 	}
-	fn parse_comparison_and_integer(&mut self) -> Result<(Comparison, Option<Integer>), ParseError> {
+	fn parse_comparison_and_integer(
+		&mut self,
+	) -> Result<(Comparison, Option<Integer>), ParseError> {
 		let start_index = self.current_index;
 		match self.parse_comparison() {
-			Ok(comparison) => {
-				match self.parse_integer() {
-					Ok(integer) => Ok((comparison, Some(integer))),
-					Err(_parse_error) => {
-						self.current_index = start_index;
-						Err(ParseError::ExpectedInteger)
-					}
+			Ok(comparison) => match self.parse_integer() {
+				Ok(integer) => Ok((comparison, Some(integer))),
+				Err(_parse_error) => {
+					self.current_index = start_index;
+					Err(ParseError::ExpectedInteger)
 				}
 			},
 			Err(_parse_error) => Ok((Comparison::Equal, self.parse_integer().ok())),
 		}
 	}
-	fn parse_comparison_and_require_integer(&mut self) -> Result<(Comparison, Integer), ParseError> {
+	fn parse_comparison_and_require_integer(
+		&mut self,
+	) -> Result<(Comparison, Integer), ParseError> {
 		let start_index = self.current_index;
 		let comparison = match self.parse_comparison() {
 			Ok(comparison) => comparison,
@@ -783,8 +792,7 @@ impl ParserPrivateT for Parser {
 	fn parse_high_low(&mut self) -> Result<PostModifier, ParseError> {
 		match self.current()?.clone() {
 			Lexeme::Literal(token) => match token.source() {
-				"dh" | "k" | "kh" |
-				"d" | "dl" | "kl" => {
+				"dh" | "k" | "kh" | "d" | "dl" | "kl" => {
 					let start_index = self.current_index;
 					self.step_lexemes_skip_whitespace();
 					let count = match self.parse_integer() {
@@ -801,7 +809,7 @@ impl ParserPrivateT for Parser {
 						"kl" => Ok(PostModifier::KeepLowest(count)),
 						_ => Err(ParseError::Unknown),
 					}
-				},
+				}
 				_ => Err(ParseError::DoesNotMatch),
 			},
 			_ => Err(ParseError::DoesNotMatch),
@@ -828,24 +836,21 @@ impl ParserPrivateT for Parser {
 					match token.source() {
 						"cs" => Ok(PostModifier::CriticalSuccess(comparison, integer)),
 						"cf" => Ok(PostModifier::CriticalFailure(comparison, integer)),
-						_ => Err(ParseError::Unknown)
+						_ => Err(ParseError::Unknown),
 					}
-				},
-				_ => Err(ParseError::DoesNotMatch)
+				}
+				_ => Err(ParseError::DoesNotMatch),
 			},
-			_ => Err(ParseError::DoesNotMatch)
+			_ => Err(ParseError::DoesNotMatch),
 		}
 	}
-
-
-
 
 	fn step_lexemes(&mut self) {
 		self.current_index += 1;
 	}
 	fn step_lexemes_skip_whitespace(&mut self) {
 		self.current_index += 1;
-		if let Ok(lexeme) =self.current() {
+		if let Ok(lexeme) = self.current() {
 			if let Lexeme::Whitespace(_token) = lexeme {
 				self.step_lexemes_skip_whitespace();
 			}
@@ -863,13 +868,13 @@ impl ParserPrivateT for Parser {
 	fn current(&self) -> Result<&Lexeme, ParseError> {
 		match self.current_as_option() {
 			Some(lexeme) => Ok(lexeme),
-			None => Err(ParseError::OutOfBounds)
+			None => Err(ParseError::OutOfBounds),
 		}
 	}
 	fn next(&self) -> Result<&Lexeme, ParseError> {
 		match self.next_as_option() {
 			Some(lexeme) => Ok(lexeme),
-			None => Err(ParseError::OutOfBounds)
+			None => Err(ParseError::OutOfBounds),
 		}
 	}
 	fn current_as_option(&self) -> Option<&Lexeme> {
@@ -888,7 +893,10 @@ impl ParserPrivateT for Parser {
 		}
 		Err(ParseError::DoesNotMatch)
 	}
-	fn match_current_to_punctuation_skip_whitespace(&mut self, punctuation: &str) -> Result<Token, ParseError> {
+	fn match_current_to_punctuation_skip_whitespace(
+		&mut self,
+		punctuation: &str,
+	) -> Result<Token, ParseError> {
 		if let Lexeme::Punctuation(token) = self.current()?.clone() {
 			if token.source() == punctuation {
 				self.step_lexemes_skip_whitespace();
@@ -918,24 +926,26 @@ impl ParserPrivateT for Parser {
 
 	fn is_roll(&self) -> bool {
 		let current = self.current_as_option();
-		let slash = current.is_some() && match current.unwrap() {
-			Lexeme::Operator(token) => token.source() == "/",
-			_ => false,
-		};
+		let slash = current.is_some()
+			&& match current.unwrap() {
+				Lexeme::Operator(token) => token.source() == "/",
+				_ => false,
+			};
 		let next = self.next_as_option();
-		let roll = next.is_some() && match next.unwrap() {
-			Lexeme::Literal(token) =>
-				token.source() == "roll" || token.source() == "r",
-			_ => false,
-		};
+		let roll = next.is_some()
+			&& match next.unwrap() {
+				Lexeme::Literal(token) => token.source() == "roll" || token.source() == "r",
+				_ => false,
+			};
 		slash && roll
 	}
 	fn is_inline_roll(&self) -> bool {
 		let is_open_bracket = |lexeme: &Option<&Lexeme>| -> bool {
-			lexeme.is_some() && match lexeme.unwrap() {
-				Lexeme::Punctuation(token) => token.source() == "[",
-				_ => false,
-			}
+			lexeme.is_some()
+				&& match lexeme.unwrap() {
+					Lexeme::Punctuation(token) => token.source() == "[",
+					_ => false,
+				}
 		};
 		let current = is_open_bracket(&self.current_as_option());
 		let next = is_open_bracket(&self.next_as_option());

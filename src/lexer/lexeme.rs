@@ -23,14 +23,22 @@ pub enum LexemeType {
 impl Lexeme {
 	pub fn mut_token(&mut self) -> &mut Token {
 		match self {
-			Lexeme::Whitespace(t) | Lexeme::Literal(t) | Lexeme::Number(t) |
-			Lexeme::Comparison(t) | Lexeme::Operator(t) | Lexeme::Punctuation(t) => t 
+			Lexeme::Whitespace(t)
+			| Lexeme::Literal(t)
+			| Lexeme::Number(t)
+			| Lexeme::Comparison(t)
+			| Lexeme::Operator(t)
+			| Lexeme::Punctuation(t) => t,
 		}
 	}
 	pub fn token(&self) -> &Token {
 		match self {
-			Lexeme::Whitespace(t) | Lexeme::Literal(t) | Lexeme::Number(t) |
-			Lexeme::Comparison(t) | Lexeme::Operator(t) | Lexeme::Punctuation(t) => t 
+			Lexeme::Whitespace(t)
+			| Lexeme::Literal(t)
+			| Lexeme::Number(t)
+			| Lexeme::Comparison(t)
+			| Lexeme::Operator(t)
+			| Lexeme::Punctuation(t) => t,
 		}
 	}
 	pub(super) fn into(&mut self, lexeme: &LexemeType) -> Lexeme {

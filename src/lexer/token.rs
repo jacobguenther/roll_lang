@@ -1,7 +1,7 @@
 // File: lexer/token.rs
 
 #[cfg(feature = "serialize")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 pub trait TokenT {
 	fn source(&self) -> &str;
@@ -20,7 +20,7 @@ impl Token {
 	pub fn new(start: usize) -> Token {
 		Token {
 			source: String::new(),
-			start
+			start,
 		}
 	}
 }

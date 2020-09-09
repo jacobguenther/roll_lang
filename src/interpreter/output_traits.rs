@@ -20,9 +20,8 @@ impl ToString for OutputFragment {
 	fn to_string(&self) -> String {
 		match self {
 			OutputFragment::StringLit(s) => s.clone(),
-			OutputFragment::Roll(RollType::ExplicitRoll(expression_output)) |
-			OutputFragment::Roll(RollType::InlineRoll(expression_output)) =>
-				expression_output.to_string(),
+			OutputFragment::Roll(RollType::ExplicitRoll(expression_output))
+			| OutputFragment::Roll(RollType::InlineRoll(expression_output)) => expression_output.to_string(),
 		}
 	}
 }

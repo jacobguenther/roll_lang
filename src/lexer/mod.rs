@@ -14,16 +14,16 @@ pub struct Lexer<'a> {
 	current_index: usize,
 }
 pub trait LexerT {
-    fn new(source: &str) -> Lexer;
+	fn new(source: &str) -> Lexer;
 }
 impl<'a> LexerT for Lexer<'a> {
-    fn new(source: &str) -> Lexer {
+	fn new(source: &str) -> Lexer {
 		Lexer {
 			graphemes: UnicodeSegmentation::graphemes(source, true).collect(),
 			state: State::Start,
 			current_index: 0,
-        }
-    }
+		}
+	}
 }
 impl<'a> Iterator for Lexer<'a> {
 	type Item = Lexeme;
@@ -75,7 +75,7 @@ trait LexerPrivateT {
 	fn is_digit(s: &str) -> bool;
 	fn is_comparison_operator(s: &str) -> bool;
 	fn is_operator(s: &str) -> bool;
-	fn is_punctuation(s: &str) -> bool; 
+	fn is_punctuation(s: &str) -> bool;
 }
 impl<'a> LexerPrivateT for Lexer<'a> {
 	fn current_char(&self) -> Option<String> {
@@ -104,11 +104,11 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 						self.state = State::Done;
 						break;
 					}
-				},
+				}
 				false => {
 					self.state = State::Done;
 					break;
-				},
+				}
 			}
 		}
 	}
@@ -142,9 +142,7 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 		if Lexer::is_comparison_operator(&c) {
 			self.add_one(lexeme);
 			*lexeme = lexeme.into(&LexemeType::Comparison);
-			if !self.at_end()
-				&& ((c == "<" || c == ">") && self.current_char().unwrap() == "=")
-			{
+			if !self.at_end() && ((c == "<" || c == ">") && self.current_char().unwrap() == "=") {
 				self.add_one(lexeme);
 			}
 			self.state = State::Done;
@@ -156,9 +154,10 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 			*lexeme = lexeme.into(&LexemeType::Operator);
 			if !self.at_end()
 				&& ((c == "*" && self.current_char().unwrap() == "*")
-				|| (c == "!" && self.current_char().unwrap() == "!" || self.current_char().unwrap() == "p"))
+					|| (c == "!" && self.current_char().unwrap() == "!"
+						|| self.current_char().unwrap() == "p"))
 			{
-				self.add_one(lexeme);	
+				self.add_one(lexeme);
 			}
 			self.state = State::Done;
 			return;
@@ -184,9 +183,11 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 				break;
 			}
 			let c = self.current_char().unwrap();
-			if !Lexer::is_digit(&c) && !Lexer::is_whitespace(&c)
-				&& !Lexer::is_operator(&c) && !Lexer::is_punctuation(&c)
-				&& !Lexer::is_comparison_operator(&c) 
+			if !Lexer::is_digit(&c)
+				&& !Lexer::is_whitespace(&c)
+				&& !Lexer::is_operator(&c)
+				&& !Lexer::is_punctuation(&c)
+				&& !Lexer::is_comparison_operator(&c)
 			{
 				self.add_one(lexeme);
 			} else {
@@ -225,7 +226,7 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 	fn is_operator(s: &str) -> bool {
 		match s {
 			"+" | "-" | "*" | "/" | "!" | "!!" | "%" | "**" | "^" => true,
-			_ => false, 
+			_ => false,
 		}
 	}
 	fn is_punctuation(s: &str) -> bool {
