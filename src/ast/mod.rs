@@ -83,7 +83,7 @@ pub struct Modifiers {
 	pub post_modifiers: Vec<PostModifier>,
 }
 impl Modifiers {
-	pub fn new() -> Self {
+	pub fn new() -> Modifiers {
 		Modifiers {
 			expanding: None,
 			reroll_modifiers: Vec::new(),
@@ -108,10 +108,10 @@ pub trait RerollT {
 	fn new(comparison: Comparison, comparison_point: Option<Integer>) -> Self;
 }
 impl RerollT for Reroll {
-	fn new(comparison: Comparison, comparison_point: Option<Integer>) -> Self {
-		Self {
-			comparison: comparison,
-			comparison_point: comparison_point,
+	fn new(comparison: Comparison, comparison_point: Option<Integer>) -> Reroll {
+		Reroll {
+			comparison,
+			comparison_point,
 		}
 	}
 }

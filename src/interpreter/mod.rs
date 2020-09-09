@@ -102,11 +102,11 @@ impl<'s, 'm> InterpreterT for Interpreter<'s, 'm> {
 	) -> Interpreter<'a, 'b>
 	{
 		Interpreter {
-			source: source,
-			roll_queries: roll_queries,
-			macros: macros,
-			rand: rand,
-			query_prmopter: query_prmopter,
+			source,
+			roll_queries,
+			macros,
+			rand,
+			query_prmopter,
 		}
 	}
 	fn interpret(&mut self) -> Output {
@@ -156,14 +156,14 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 				let result = self.interpret_expression(expression, &mut formula)?;
 				RollType::ExplicitRoll(ExpressionOutput {
 					formula_fragments: formula,
-					result: result
+					result
 				})
 			},
 			Roll::InlineRoll(expression) => {
 				let result = self.interpret_expression(expression, &mut formula)?;
 				RollType::InlineRoll(ExpressionOutput {
 					formula_fragments: formula,
-					result: result
+					result
 				})
 			}
 		}))

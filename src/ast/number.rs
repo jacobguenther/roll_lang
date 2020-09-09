@@ -167,9 +167,7 @@ pub struct Integer {
 }
 impl Integer {
 	pub fn new(i: i32) -> Integer {
-		Integer {
-			i: i,
-		}
+		Integer { i }
 	}
 	pub fn value(&self) -> i32 {
 		self.i
@@ -249,9 +247,7 @@ pub struct Float {
 }
 impl Float {
 	pub fn new(f: f32) -> Float {
-		Float {
-			f: f,
-		}
+		Float { f }
 	}
 	pub fn value(&self) -> f32 {
 		self.f

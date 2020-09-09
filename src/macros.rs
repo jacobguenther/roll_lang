@@ -10,7 +10,7 @@ pub struct MacroData {
 impl MacroData {
 	pub fn new(in_bar: bool, source: &str) -> MacroData {
 		MacroData {
-			in_bar: in_bar,
+			in_bar,
 			source: source.to_string(),
 		}
 	}

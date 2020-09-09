@@ -583,7 +583,7 @@ impl ParserPrivateT for Parser {
 			}
 		};
 		match self.parse_integer() {
-			Ok(sides) => Ok(Normal {count: count, sides: sides}),
+			Ok(sides) => Ok(Normal {count, sides}),
 			Err(parse_error) => {
 				self.current_index = start_index;
 				Err(parse_error)
@@ -594,7 +594,7 @@ impl ParserPrivateT for Parser {
 		let start_index = self.current_index;
 		let count = self.parse_integer()?;
 		match self.match_current_to_literal("dF") {
-			Ok(_token) => Ok(Fate {count: count}),
+			Ok(_token) => Ok(Fate { count }),
 			Err(parse_error) => {
 				self.current_index = start_index;
 				Err(parse_error)
