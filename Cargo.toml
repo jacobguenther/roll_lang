@@ -6,10 +6,9 @@ edition = "2018"
 description = "An interpreter for a modified version of dice notation."
 readme = "README.md"
 repository = "https://github.com/jacobguenther/roll_lang"
-license = "GPL-3.0"
 license-file = "LICENSE.md"
 keywords = ["Dice", "Notation"]
-catagories = ["game-development", "parser-implementations", "text-processing"]
+categories = ["game-development", "parser-implementations", "text-processing"]
 
 [profile.dev]
 opt-level = 0
