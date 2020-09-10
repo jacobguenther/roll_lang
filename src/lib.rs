@@ -161,6 +161,38 @@ pub mod tests {
 			"I attack you for 3=3");
 	}
 	*/
+
+	#[test]
+	fn short_macro() {
+		use macros::*;
+
+		let source = String::from("I attack you for #melee and deal [[10/2]] damage!");
+		let mut macros = Macros::new();
+		macros.insert(
+			String::from("melee"),
+			MacroData::new(false, "[[15+4]]"),
+		);
+		let mut builder = InterpreterBuilder::new();
+
+		{
+			let mut interpreter = builder
+				.with_source(&source)
+				.with_macros(&macros)
+				.with_rng_func(r)
+				.build();
+			let mut interpreter2 = builder.build();
+			assert_eq!(
+				interpreter.interpret().to_string(),
+				String::from("I attack you for 15+4=19 and deal 10/2=5 damage!")
+			);
+
+			assert_eq!(
+				interpreter2.interpret().to_string(),
+				interpreter.interpret().to_string()
+			);
+		}
+	}
+
 	#[test]
 	fn macros() {
 		use macros::*;
