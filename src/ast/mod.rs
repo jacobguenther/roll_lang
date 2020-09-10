@@ -82,6 +82,11 @@ pub struct Modifiers {
 	pub reroll_modifiers: Vec<Reroll>,
 	pub post_modifiers: Vec<PostModifier>,
 }
+impl Default for Modifiers {
+	fn default() -> Modifiers {
+		Modifiers::new()
+	}
+}
 impl Modifiers {
 	pub fn new() -> Modifiers {
 		Modifiers {
@@ -157,6 +162,11 @@ pub enum Function {
 pub struct RollQuery {
 	pub prompt: String,
 	pub default: String,
+}
+impl Default for RollQuery {
+	fn default() -> RollQuery {
+		RollQuery::new()
+	}
 }
 impl RollQuery {
 	pub fn new() -> RollQuery {
