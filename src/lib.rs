@@ -170,7 +170,7 @@ pub mod tests {
 		let mut macros = Macros::new();
 		macros.insert(
 			String::from("melee"),
-			MacroData::new(false, "[[15+4]]"),
+			String::from("[[15+4]]"),
 		);
 		let mut builder = InterpreterBuilder::new();
 
@@ -201,7 +201,7 @@ pub mod tests {
 		let mut macros = Macros::new();
 		macros.insert(
 			String::from("melee attack"),
-			MacroData::new(false, "[[15+4]]"),
+			String::from("[[15+4]]"),
 		);
 		let mut builder = InterpreterBuilder::new();
 
@@ -230,7 +230,9 @@ pub mod tests {
 
 		let source = String::from("I attack you for #attack and deal [[10/2]] damage!");
 		let mut macros = Macros::new();
-		macros.insert(String::from("attack"), MacroData::new(false, "[[15+4]]"));
+		macros.insert(
+			String::from("attack"),
+			String::from("[[15+4]]"));
 		let mut builder = InterpreterBuilder::new();
 
 		{

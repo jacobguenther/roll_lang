@@ -237,15 +237,15 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 		}))
 	}
 	fn interpret_macro(&mut self, my_macro: &Macro) -> Result<Vec<OutputFragment>, InterpretError> {
-		let macro_data = match self.macros {
+		let macro_source = match self.macros {
 			Some(container) => container.get(&my_macro.name),
 			None => return Err(InterpretError::InterpreterConstructedWithoutMacros),
 		};
 
-		let (output, interpreter) = match macro_data {
+		let (output, interpreter) = match macro_source {
 			Some(data) => {
 				let mut interpreter = Interpreter::new(
-					&data.source,
+					&data,
 					self.roll_queries.clone(),
 					self.macros,
 					self.rand,
