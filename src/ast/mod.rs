@@ -52,6 +52,7 @@ pub enum Atom {
 	Function(Function),
 	RollQuery(RollQuery),
 	ParenthesesExpression(Box<Expression>),
+	InlineRoll(Box<Expression>),
 	Macro(Macro),
 }
 
