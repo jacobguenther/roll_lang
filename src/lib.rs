@@ -223,6 +223,25 @@ pub mod tests {
 			);
 		}
 	}
+	#[test]
+	fn nested_macros() {
+		use macros::*;
+		let source = String::from("[[ #dtwenty + 1 ]]");
+		let mut macros = Macros::new();
+		macros.insert(
+			String::from("dtwenty"),
+			String::from("[[ 14 ]]")
+		);
+		let mut interpreter = InterpreterBuilder::new()
+			.with_source(&source)
+			.with_macros(&macros)
+			.with_rng_func(r)
+			.build();
+		assert_eq!(
+			interpreter.interpret().to_string(),
+			String::from("{14}+1=15")
+		);
+	}
 
 	#[test]
 	fn interpreter_builder() {
