@@ -380,6 +380,10 @@ impl ParserPrivateT for Parser {
 			Ok(function) => return Ok(Atom::Function(function)),
 			Err(_parse_error) => self.current_index = start_index,
 		};
+		match self.parse_macro() {
+			Ok(nested_macro) => return Ok(Atom::Macro(nested_macro)),
+			Err(_parse_error) => self.current_index = start_index,
+		};
 
 		if let Err(parse_error) = self.match_current_to_punctuation_skip_whitespace("(") {
 			self.current_index = start_index;
