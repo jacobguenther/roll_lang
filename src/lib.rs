@@ -242,6 +242,21 @@ pub mod tests {
 			String::from("{14}+1=15")
 		);
 	}
+	#[test]
+	fn nested_inline_roll() {
+		use macros::*;
+		let source = String::from("/r 10+[[7+8]]");
+		let mut macros = Macros::new();
+		let mut interpreter = InterpreterBuilder::new()
+			.with_source(&source)
+			.with_macros(&macros)
+			.with_rng_func(r)
+			.build();
+		assert_eq!(
+			interpreter.interpret().to_string(),
+			String::from("10+(15)=25")
+		);
+	}
 
 	#[test]
 	fn interpreter_builder() {
