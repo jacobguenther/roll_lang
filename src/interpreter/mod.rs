@@ -32,6 +32,7 @@ pub enum InterpretError {
 	InterpreterConstructedWithoutMacros,
 	NoMacroNamed(String),
 	ErrorInMacro(String, Box<InterpretError>),
+	ThisMacroCannotBeNested(String),
 
 	Unkown,
 }
@@ -403,6 +404,22 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 				let expression_output = self.interpret_expression(expression, formula)?;
 				formula.push_str(")");
 				Ok(expression_output)
+			}
+			Atom::Macro(nested_macro) => {
+				let output_fragments = self.interpret_macro(&nested_macro)?;
+				if output_fragments.len() == 1 {
+				if let fragment = &output_fragments[0] {
+					match fragment {
+						OutputFragment::Roll(RollType::InlineRoll(expression)) |
+						OutputFragment::Roll(RollType::ExplicitRoll(expression)) => {
+							formula.push_str(&format!("{{{}}}", expression.result));
+							return Ok(expression.result);
+						}
+						_ => ()
+					}
+				}
+				}
+				Err(InterpretError::ThisMacroCannotBeNested(nested_macro.name.clone()))
 			}
 		}
 	}
