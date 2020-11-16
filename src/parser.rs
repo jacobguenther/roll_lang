@@ -144,6 +144,7 @@ impl ParserT for Parser {
 				State::Done => break,
 			};
 		}
+		println!("{:?}", root);
 		root
 	}
 	fn parse_expression_string(source: &str) -> Result<Expression, ParseError> {
@@ -182,8 +183,12 @@ impl ParserPrivateT for Parser {
 		literal
 	}
 	fn parse_comment(&mut self) -> Option<String> {
-		let _start_index = self.current_index;
+		let start_index = self.current_index;
 		self.match_current_to_punctuation("[").ok()?;
+		if self.match_current_to_punctuation("[").is_ok() {
+			self.current_index = start_index;
+			return None;
+		}
 		let mut comment = String::new();
 		loop {
 			match self.match_current_to_punctuation("]") {
@@ -364,6 +369,10 @@ impl ParserPrivateT for Parser {
 	}
 	fn parse_atom(&mut self) -> Result<Atom, ParseError> {
 		let start_index = self.current_index;
+		println!("{}: {:?}", self.current_index, self.current().unwrap());
+		println!("{:?}", self.lexemes);
+		println!("");
+
 		match self.parse_dice() {
 			Ok(dice) => return Ok(Atom::Dice(dice)),
 			Err(_parse_error) => self.current_index = start_index,
@@ -384,6 +393,23 @@ impl ParserPrivateT for Parser {
 			Ok(nested_macro) => return Ok(Atom::Macro(nested_macro)),
 			Err(_parse_error) => self.current_index = start_index,
 		};
+		println!("{}: {:?}", self.current_index, self.current().unwrap());
+		println!("{:?}", self.lexemes);
+		if self.is_inline_roll() {
+			self.step_lexemes();
+			self.step_lexemes();
+			if let expression = self.parse_expression().unwrap() {
+				if self.match_current_to_punctuation("]").is_ok() &&
+					self.match_current_to_punctuation("]").is_ok()
+				{
+					return Ok(Atom::InlineRoll(Box::new(expression)));
+				} else {
+					self.current_index = start_index;
+				}
+			} else {
+				self.current_index = start_index;
+			}
+		}
 
 		if let Err(parse_error) = self.match_current_to_punctuation_skip_whitespace("(") {
 			self.current_index = start_index;
