@@ -405,6 +405,12 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 				formula.push_str(")");
 				Ok(expression_output)
 			}
+			Atom::InlineRoll(expression) => {
+				let mut temp_formula = vec!();
+				let expression_output = self.interpret_expression(expression, &mut temp_formula)?;
+				formula.push_str(&format!("({})", expression_output));
+				Ok(expression_output)
+			}
 			Atom::Macro(nested_macro) => {
 				let output_fragments = self.interpret_macro(&nested_macro)?;
 				if output_fragments.len() == 1 {
