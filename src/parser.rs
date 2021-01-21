@@ -144,7 +144,6 @@ impl ParserT for Parser {
 				State::Done => break,
 			};
 		}
-		println!("{:?}", root);
 		root
 	}
 	fn parse_expression_string(source: &str) -> Result<Expression, ParseError> {
@@ -369,9 +368,6 @@ impl ParserPrivateT for Parser {
 	}
 	fn parse_atom(&mut self) -> Result<Atom, ParseError> {
 		let start_index = self.current_index;
-		println!("{}: {:?}", self.current_index, self.current().unwrap());
-		println!("{:?}", self.lexemes);
-		println!("");
 
 		match self.parse_dice() {
 			Ok(dice) => return Ok(Atom::Dice(dice)),
@@ -393,12 +389,11 @@ impl ParserPrivateT for Parser {
 			Ok(nested_macro) => return Ok(Atom::Macro(nested_macro)),
 			Err(_parse_error) => self.current_index = start_index,
 		};
-		println!("{}: {:?}", self.current_index, self.current().unwrap());
-		println!("{:?}", self.lexemes);
+
 		if self.is_inline_roll() {
 			self.step_lexemes();
 			self.step_lexemes();
-			if let expression = self.parse_expression().unwrap() {
+			if let Ok(expression) = self.parse_expression() {
 				if self.match_current_to_punctuation("]").is_ok() &&
 					self.match_current_to_punctuation("]").is_ok()
 				{
