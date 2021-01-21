@@ -412,10 +412,9 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 				Ok(expression_output)
 			}
 			Atom::Macro(nested_macro) => {
-
 				let output_fragments = self.interpret_macro(&nested_macro)?;
 				if output_fragments.len() == 1 {
-				if let fragment = &output_fragments[0] {
+					let fragment = &output_fragments[0];
 					match fragment {
 						OutputFragment::Roll(RollType::InlineRoll(expression)) |
 						OutputFragment::Roll(RollType::ExplicitRoll(expression)) => {
@@ -426,7 +425,6 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 						}
 						_ => ()
 					}
-				}
 				}
 				Err(InterpretError::ThisMacroCannotBeNested(nested_macro.name.clone()))
 			}
