@@ -246,7 +246,7 @@ pub mod tests {
 	fn nested_inline_roll() {
 		use macros::*;
 		let source = String::from("/r 10+[[7+8]]");
-		let mut macros = Macros::new();
+		let macros = Macros::new();
 		let mut interpreter = InterpreterBuilder::new()
 			.with_source(&source)
 			.with_macros(&macros)
