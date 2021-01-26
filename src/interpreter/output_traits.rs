@@ -20,8 +20,12 @@ impl ToString for OutputFragment {
 	fn to_string(&self) -> String {
 		match self {
 			OutputFragment::StringLit(s) => s.clone(),
-			OutputFragment::Roll(RollType::ExplicitRoll(expression_output))
-			| OutputFragment::Roll(RollType::InlineRoll(expression_output)) => expression_output.to_string(),
+			OutputFragment::Roll(RollType::ExplicitRoll(expression_output)) => {
+				expression_output.to_string()
+			}
+			OutputFragment::Roll(RollType::InlineRoll(expression_output)) => {
+				format!("({})", expression_output.result.to_string())
+			}
 		}
 	}
 }
@@ -31,7 +35,7 @@ impl ToString for ExpressionOutput {
 		for fragment in &self.formula_fragments {
 			out_string.push_str(&fragment.to_string());
 		}
-		format!("{}={}", out_string, self.result)
+		format!("{} = {}", out_string, self.result)
 	}
 }
 impl ToString for FormulaFragment {
