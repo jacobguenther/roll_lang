@@ -289,7 +289,7 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 		formula: &mut FormulaFragments,
 	) -> Result<Number, InterpretError> {
 		let lhs = self.interpret_expression(lhs, formula)?;
-		formula.push_str("+");
+		formula.push_str(" + ");
 		let rhs = self.interpret_mul_div(rhs, formula)?;
 		Ok(lhs + rhs)
 	}
@@ -300,7 +300,7 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 		formula: &mut FormulaFragments,
 	) -> Result<Number, InterpretError> {
 		let lhs = self.interpret_expression(lhs, formula)?;
-		formula.push_str("-");
+		formula.push_str(" - ");
 		let rhs = self.interpret_mul_div(rhs, formula)?;
 		Ok(lhs - rhs)
 	}
@@ -326,7 +326,7 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 		formula: &mut FormulaFragments,
 	) -> Result<Number, InterpretError> {
 		let lhs = self.interpret_mul_div(lhs, formula)?;
-		formula.push_str("*");
+		formula.push_str(" * ");
 		let rhs = self.interpret_power(rhs, formula)?;
 		Ok(lhs * rhs)
 	}
@@ -337,7 +337,7 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 		formula: &mut FormulaFragments,
 	) -> Result<Number, InterpretError> {
 		let lhs = self.interpret_mul_div(lhs, formula)?;
-		formula.push_str("/");
+		formula.push_str(" / ");
 		let rhs = self.interpret_power(rhs, formula)?;
 		match lhs / rhs {
 			Ok(number) => Ok(number),
