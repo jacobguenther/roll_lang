@@ -132,35 +132,26 @@ pub mod tests {
 	#[test]
 	fn interpreter() {
 		// associativity
-		helper("[[5-4+1]]", "5-4+1=2");
+		helper("[[5-4+1]]", "(2)");
 		// multiply and divide
-		helper("[[4*6/3]]", "4*6/3=8");
+		helper("[[4*6/3]]", "(8)");
 		// precedence
-		helper("[[(4+2)*2]]", "(4+2)*2=12");
+		helper("[[(4+2)*2]]", "(12)");
 
 		// unicode and localization
 		helper("文字 hello", "文字 hello");
 
 		// whitespaces
-		helper("[[ 20 + 4 * 2 ]]", "20+4*2=28");
+		helper("[[ 20 + 4 * 2 ]]", "(28)");
 		// trailing whitespaces
 		helper(
 			"attack is [[20+1]] and damage is /r 10 \\ take that!",
-			"attack is 20+1=21 and damage is 10=10 take that!",
+			"attack is (21) and damage is 10 = 10 take that!",
 		);
-		helper("/r 20*2 is my attack roll", "20*2=40 is my attack roll");
-		helper("/r 20*2", "20*2=40");
-		helper("/r 20*2\\ is my attack roll", "20*2=40 is my attack roll");
+		helper("/r 20*2", "20 * 2 = 40");
+		helper("/r 20*2 is my attack roll", "20 * 2 = 40 is my attack roll");
+		helper("/r 20*2\\ is my attack roll", "20 * 2 = 40 is my attack roll");
 	}
-	/*
-	#[test]
-	fn roll_queries() {
-		let source = String::from("I attack you for ?{attack|3}");
-		helper(
-			"I attack you for [[?{attack|3}]]",
-			"I attack you for 3=3");
-	}
-	*/
 
 	#[test]
 	fn short_macro() {
@@ -183,7 +174,7 @@ pub mod tests {
 			let mut interpreter2 = builder.build();
 			assert_eq!(
 				interpreter.interpret().to_string(),
-				String::from("I attack you for 15+4=19 and deal 10/2=5 damage!")
+				String::from("I attack you for (19) and deal (5) damage!")
 			);
 
 			assert_eq!(
@@ -214,7 +205,7 @@ pub mod tests {
 			let mut interpreter2 = builder.build();
 			assert_eq!(
 				interpreter.interpret().to_string(),
-				String::from("I attack you for 15+4=19 and deal 10/2=5 damage!")
+				String::from("I attack you for (19) and deal (5) damage!")
 			);
 
 			assert_eq!(
@@ -239,7 +230,7 @@ pub mod tests {
 			.build();
 		assert_eq!(
 			interpreter.interpret().to_string(),
-			String::from("{14}+1=15")
+			String::from("(15)")
 		);
 	}
 	#[test]
@@ -254,7 +245,7 @@ pub mod tests {
 			.build();
 		assert_eq!(
 			interpreter.interpret().to_string(),
-			String::from("10+(15)=25")
+			String::from("10 + (15) = 25")
 		);
 	}
 
@@ -278,7 +269,7 @@ pub mod tests {
 			let mut interpreter2 = builder.build();
 			assert_eq!(
 				interpreter.interpret().to_string(),
-				String::from("I attack you for 15+4=19 and deal 10/2=5 damage!")
+				String::from("I attack you for (19) and deal (5) damage!")
 			);
 
 			assert_eq!(
@@ -294,21 +285,5 @@ pub mod tests {
 		use super::default_rand;
 		let rand = default_rand();
 		assert!(0.0 <= rand && rand <= 1.0);
-	}
-
-	#[cfg(feature = "serialize")]
-	#[test]
-	fn serialize() {
-		use interpreter::output::Output;
-		let source = String::from("I attack you for /r 20+3[STR] and deal [[10/2]] damage!");
-
-		let out1 = InterpreterBuilder::new()
-			.with_source(&source)
-			.build()
-			.interpret();
-		let ser = serde_json::to_string(&out1).unwrap();
-		let out2: Output = serde_json::from_str(&ser).unwrap();
-
-		assert_eq!(out1.to_string(), out2.to_string());
 	}
 }
