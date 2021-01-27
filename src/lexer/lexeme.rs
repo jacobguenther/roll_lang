@@ -1,6 +1,6 @@
 // lexer/lexeme.rs
 
-use super::token::*;
+use super::token::{Token, TokenT};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Lexeme {
@@ -12,7 +12,7 @@ pub enum Lexeme {
 	Punctuation(Token),
 }
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub enum LexemeType {
+pub(super) enum LexemeType {
 	Whitespace,
 	Literal,
 	Number,
@@ -21,16 +21,6 @@ pub enum LexemeType {
 	Punctuation,
 }
 impl Lexeme {
-	pub fn mut_token(&mut self) -> &mut Token {
-		match self {
-			Lexeme::Whitespace(t)
-			| Lexeme::Literal(t)
-			| Lexeme::Number(t)
-			| Lexeme::Comparison(t)
-			| Lexeme::Operator(t)
-			| Lexeme::Punctuation(t) => t,
-		}
-	}
 	pub fn token(&self) -> &Token {
 		match self {
 			Lexeme::Whitespace(t)
@@ -66,6 +56,13 @@ impl TokenT for Lexeme {
 		self.token().length()
 	}
 	fn push_str(&mut self, s: &str) {
-		self.mut_token().push_str(s);
+		match self {
+			Lexeme::Whitespace(t)
+			| Lexeme::Literal(t)
+			| Lexeme::Number(t)
+			| Lexeme::Comparison(t)
+			| Lexeme::Operator(t)
+			| Lexeme::Punctuation(t) => t.push_str(s),
+		}
 	}
 }
