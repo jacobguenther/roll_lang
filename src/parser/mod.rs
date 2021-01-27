@@ -1,5 +1,8 @@
 // File: parser.rs
 
+pub mod error;
+use error::ParseError;
+
 #[cfg(feature = "serialize")]
 use serde::{Deserialize, Serialize};
 
@@ -83,17 +86,6 @@ trait ParserPrivateT {
 	fn is_inline_roll(&self) -> bool;
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
-pub enum ParseError {
-	UnexpectedToken(Token),
-	ExpectedPunctuation(String),
-	ExpectedInteger,
-	DoesNotMatch,
-	OutOfBounds,
-	UnexpectedTooltip(String),
-	Unknown,
-}
 #[derive(Debug, Copy, Clone)]
 enum State {
 	Start,
