@@ -202,7 +202,7 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 
 	fn is_whitespace(s: &str) -> bool {
 		for c in s.chars() {
-			if !c.is_ascii_whitespace() {
+			if !c.is_whitespace() {
 				return false;
 			}
 		}
@@ -218,21 +218,15 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 	}
 
 	fn is_comparison_operator(s: &str) -> bool {
-		match s {
-			"<" | ">" | "=" | "<=" | ">=" => true,
-			_ => false,
-		}
+		matches!(s, "<" | ">" | "=" | "<=" | ">=")
 	}
 	fn is_operator(s: &str) -> bool {
-		match s {
-			"+" | "-" | "*" | "/" | "!" | "!!" | "%" | "**" | "^" => true,
-			_ => false,
-		}
+		matches!(s, "+" | "-" | "*" | "/" | "!" | "!!" | "%" | "**" | "^")
 	}
 	fn is_punctuation(s: &str) -> bool {
-		match s {
-			"[" | "]" | "(" | ")" | "{" | "}" | "\\" | "." | "?" | "|" | "#" => true,
-			_ => false,
-		}
+		matches!(
+			s,
+			"[" | "]" | "(" | ")" | "{" | "}" | "\\" | "." | "?" | "|" | "#"
+		)
 	}
 }

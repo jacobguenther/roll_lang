@@ -21,6 +21,7 @@ trait ParserPrivateT {
 
 	fn parse_string_literal(&mut self) -> String;
 	fn parse_comment(&mut self) -> Option<String>;
+	fn parse_tooltip(&mut self) -> Option<String>;
 	fn parse_macro(&mut self) -> Result<Macro, ParseError>;
 
 	fn parse_roll(&mut self) -> Result<Roll, ParseError>;
@@ -90,6 +91,7 @@ pub enum ParseError {
 	ExpectedInteger,
 	DoesNotMatch,
 	OutOfBounds,
+	UnexpectedTooltip(String),
 	Unknown,
 }
 #[derive(Debug, Copy, Clone)]
@@ -184,10 +186,13 @@ impl ParserPrivateT for Parser {
 	fn parse_comment(&mut self) -> Option<String> {
 		let start_index = self.current_index;
 		self.match_current_to_punctuation("[").ok()?;
-		if self.match_current_to_punctuation("[").is_ok() {
+		if self.match_current_to_punctuation("[").is_ok()
+			|| self.match_current_to_punctuation("?").is_ok()
+		{
 			self.current_index = start_index;
 			return None;
 		}
+
 		let mut comment = String::new();
 		loop {
 			match self.match_current_to_punctuation("]") {
@@ -201,9 +206,36 @@ impl ParserPrivateT for Parser {
 				}
 			};
 		}
+
 		Some(comment)
 	}
+	fn parse_tooltip(&mut self) -> Option<String> {
+		let start_index = self.current_index;
+		self.match_current_to_punctuation("[").ok()?;
 
+		if self.match_current_to_punctuation("[").is_ok()
+			|| self.match_current_to_punctuation("?").is_err()
+		{
+			self.current_index = start_index;
+			return None;
+		}
+
+		let mut tooltip = String::new();
+		loop {
+			match self.match_current_to_punctuation("]") {
+				Ok(_token) => {
+					self.skip_whitespace();
+					break;
+				}
+				Err(_parse_error) => {
+					tooltip.push_str(self.current().ok()?.source());
+					self.step_lexemes();
+				}
+			};
+		}
+		println!("{}", tooltip);
+		Some(tooltip)
+	}
 	fn parse_macro(&mut self) -> Result<Macro, ParseError> {
 		let start_index = self.current_index;
 		self.skip_whitespace();
@@ -336,16 +368,14 @@ impl ParserPrivateT for Parser {
 	}
 	fn parse_power(&mut self) -> Result<Power, ParseError> {
 		let lhs = self.parse_unary()?;
-		if let Ok(lexeme) = self.current() {
-			if let Lexeme::Operator(token) = lexeme {
-				if let "**" | "^" = token.source() {
-					let start_index = self.current_index;
-					self.step_lexemes();
-					match self.parse_power() {
-						Ok(power) => return Ok(Power::Pow(lhs, Box::new(power))),
-						Err(_parse_error) => self.current_index = start_index,
-					};
-				}
+		if let Ok(Lexeme::Operator(token)) = self.current() {
+			if let "**" | "^" = token.source() {
+				let start_index = self.current_index;
+				self.step_lexemes();
+				match self.parse_power() {
+					Ok(power) => return Ok(Power::Pow(lhs, Box::new(power))),
+					Err(_parse_error) => self.current_index = start_index,
+				};
 			}
 		};
 		Ok(Power::Unary(lhs))
@@ -360,6 +390,7 @@ impl ParserPrivateT for Parser {
 			},
 			Err(_parse_error) => self.current_index = start_index,
 		}
+
 		Ok(Unary::Atom(
 			self.parse_comment(),
 			self.parse_atom()?,
@@ -368,15 +399,39 @@ impl ParserPrivateT for Parser {
 	}
 	fn parse_atom(&mut self) -> Result<Atom, ParseError> {
 		let start_index = self.current_index;
-
+		let tooltip = self.parse_tooltip();
+		if tooltip.is_none() {
+			self.current_index = start_index;
+		}
 		match self.parse_dice() {
-			Ok(dice) => return Ok(Atom::Dice(dice)),
+			Ok(dice) => {
+				let tooltip = if tooltip.is_some() {
+					tooltip
+				} else {
+					self.parse_tooltip()
+				};
+				return Ok(Atom::Dice(dice, tooltip));
+			}
 			Err(_parse_error) => self.current_index = start_index,
 		};
+
+		let tooltip = self.parse_tooltip();
 		match self.parse_number() {
-			Ok(num) => return Ok(Atom::Number(num)),
+			Ok(num) => {
+				let tooltip = if tooltip.is_some() {
+					tooltip
+				} else {
+					self.parse_tooltip()
+				};
+				return Ok(Atom::Number(num, tooltip));
+			}
 			Err(_parse_error) => self.current_index = start_index,
 		};
+
+		if let Some(tip) = tooltip {
+			return Err(ParseError::UnexpectedTooltip(tip));
+		}
+
 		match self.parse_roll_query() {
 			Ok(query) => return Ok(Atom::RollQuery(query)),
 			Err(_parse_error) => self.current_index = start_index,
@@ -394,8 +449,8 @@ impl ParserPrivateT for Parser {
 			self.step_lexemes();
 			self.step_lexemes();
 			if let Ok(expression) = self.parse_expression() {
-				if self.match_current_to_punctuation("]").is_ok() &&
-					self.match_current_to_punctuation("]").is_ok()
+				if self.match_current_to_punctuation("]").is_ok()
+					&& self.match_current_to_punctuation("]").is_ok()
 				{
 					return Ok(Atom::InlineRoll(Box::new(expression)));
 				} else {
@@ -447,7 +502,7 @@ impl ParserPrivateT for Parser {
 					self.current_index = start_index;
 					return Err(parse_error);
 				}
-				return Ok(function)
+				return Ok(function);
 			}
 		}
 		Err(ParseError::DoesNotMatch)
@@ -479,7 +534,7 @@ impl ParserPrivateT for Parser {
 					format!("{}.{}", integer_token.source(), fraction_token.source())
 						.parse()
 						.unwrap(),
-				))
+				));
 			}
 		}
 		Err(ParseError::DoesNotMatch)
@@ -519,8 +574,11 @@ impl ParserPrivateT for Parser {
 					}
 				}
 			}
-			if self.match_current_to_punctuation_skip_whitespace("}").is_ok() {
-				break
+			if self
+				.match_current_to_punctuation_skip_whitespace("}")
+				.is_ok()
+			{
+				break;
 			}
 		}
 		Ok(roll_query)
@@ -530,31 +588,19 @@ impl ParserPrivateT for Parser {
 		let start_index = self.current_index;
 		match self.parse_normal() {
 			Ok(normal) => {
-				return Ok(Dice::Normal(
-					normal,
-					self.parse_modifiers(),
-					self.parse_comment(),
-				));
+				return Ok(Dice::Normal(normal, self.parse_modifiers()));
 			}
 			Err(_parse_error) => self.current_index = start_index,
 		};
 		match self.parse_fate() {
 			Ok(fate) => {
-				return Ok(Dice::Fate(
-					fate,
-					self.parse_modifiers(),
-					self.parse_comment(),
-				));
+				return Ok(Dice::Fate(fate, self.parse_modifiers()));
 			}
 			Err(_parse_error) => self.current_index = start_index,
 		};
 		match self.parse_computed() {
 			Ok(computed) => {
-				return Ok(Dice::Computed(
-					computed,
-					self.parse_modifiers(),
-					self.parse_comment(),
-				));
+				return Ok(Dice::Computed(computed, self.parse_modifiers()));
 			}
 			Err(_parse_error) => self.current_index = start_index,
 		}
@@ -796,7 +842,7 @@ impl ParserPrivateT for Parser {
 		Ok(PostModifier::Success(comparison, integer))
 	}
 	fn parse_cirtical(&mut self) -> Result<PostModifier, ParseError> {
-		if let Lexeme::Literal(token) =  self.current()?.clone() {
+		if let Lexeme::Literal(token) = self.current()?.clone() {
 			if let "cs" | "cf" = token.source() {
 				let start_index = self.current_index;
 				self.step_lexemes_skip_whitespace();
@@ -822,18 +868,14 @@ impl ParserPrivateT for Parser {
 	}
 	fn step_lexemes_skip_whitespace(&mut self) {
 		self.current_index += 1;
-		if let Ok(lexeme) = self.current() {
-			if let Lexeme::Whitespace(_token) = lexeme {
-				self.step_lexemes_skip_whitespace();
-			}
+		if let Ok(Lexeme::Whitespace(_)) = self.current() {
+			self.step_lexemes_skip_whitespace();
 		}
 	}
 	fn skip_whitespace(&mut self) {
-		if let Ok(lexeme) = self.current() {
-			if let Lexeme::Whitespace(_token) = lexeme {
-				self.current_index += 1;
-				self.skip_whitespace();
-			}
+		if let Ok(Lexeme::Whitespace(_token)) = self.current() {
+			self.current_index += 1;
+			self.skip_whitespace();
 		}
 	}
 

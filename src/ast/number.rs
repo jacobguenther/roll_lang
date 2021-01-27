@@ -199,7 +199,7 @@ impl Integer {
 		let new_int = Integer::new(self.i);
 		Expression::MulDiv(MulDiv::Power(Power::Unary(Unary::Atom(
 			None,
-			Atom::Number(Number::Integer(new_int)),
+			Atom::Number(Number::Integer(new_int), None),
 			None,
 		))))
 	}

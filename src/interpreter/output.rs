@@ -45,6 +45,7 @@ pub struct ExpressionOutput {
 pub type FormulaFragments = Vec<FormulaFragment>;
 pub trait FormulaFragmentsT {
 	fn push_str(&mut self, s: &str);
+	fn push_new_str(&mut self, s: &str);
 	fn push_number_roll(&mut self, roll: &NumberRoll);
 	fn push_success_fail_roll(&mut self, roll: &SuccessFail);
 	fn push_tooltip(&mut self, tooltip: &str);
@@ -52,42 +53,50 @@ pub trait FormulaFragmentsT {
 impl FormulaFragmentsT for FormulaFragments {
 	fn push_str(&mut self, s: &str) {
 		match self.last_mut() {
-			Some(FormulaFragment::Basic(string)) => {
+			Some(FormulaFragment::Basic(string, None)) => {
 				string.push_str(s);
 			}
-			_ => self.push(FormulaFragment::Basic(String::from(s))),
+			_ => self.push(FormulaFragment::Basic(String::from(s), None)),
 		}
 	}
+	fn push_new_str(&mut self, s: &str) {
+		self.push(FormulaFragment::Basic(s.to_owned(), None));
+	}
 	fn push_number_roll(&mut self, roll: &NumberRoll) {
-		match self.last_mut() {
-			Some(FormulaFragment::NumberRolls(_first, rolls, _tooltip)) => rolls.push(*roll),
-			_ => self.push(FormulaFragment::NumberRolls(*roll, vec![], None)),
+		if let Some(FormulaFragment::NumberRolls(_, rolls, _)) = self.last_mut() {
+			rolls.push(*roll);
+		} else {
+			self.push(FormulaFragment::NumberRolls(*roll, Vec::new(), None));
 		}
 	}
 	fn push_success_fail_roll(&mut self, success_fail: &SuccessFail) {
-		match self.last_mut() {
-			Some(FormulaFragment::SuccessFailRolls(_first, rolls, _tooltip)) => {
-				rolls.push(*success_fail)
-			}
-			_ => self.push(FormulaFragment::SuccessFailRolls(
+		if let Some(FormulaFragment::SuccessFailRolls(_, rolls, _)) = self.last_mut() {
+			rolls.push(*success_fail);
+		} else {
+			self.push(FormulaFragment::SuccessFailRolls(
 				*success_fail,
-				vec![],
+				Vec::new(),
 				None,
-			)),
+			));
 		}
 	}
 	fn push_tooltip(&mut self, tooltip: &str) {
 		match self.last_mut() {
 			Some(FormulaFragment::NumberRolls(_, _, tip))
-			| Some(FormulaFragment::SuccessFailRolls(_, _, tip)) => *tip = Some(tooltip.to_owned()),
-			_ => (),
+			| Some(FormulaFragment::SuccessFailRolls(_, _, tip))
+			| Some(FormulaFragment::Basic(_, tip)) => {
+				*tip = Some(tooltip.to_owned());
+			}
+			_ => panic!("Unexpected push_tooltip"),
 		}
+		self.push(FormulaFragment::Basic(String::new(), None));
 	}
 }
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum FormulaFragment {
-	Basic(String),
+	// string, tooltip
+	Basic(String, Option<String>),
 	// first roll, rest of rolls, tooltip
 	NumberRolls(NumberRoll, NumberRolls, Option<String>),
 	SuccessFailRolls(SuccessFail, SuccessFailRolls, Option<String>),

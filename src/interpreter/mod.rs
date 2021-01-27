@@ -116,6 +116,7 @@ pub trait InterpreterPrivateT {
 	fn interpret_dice(
 		&mut self,
 		dice: &Dice,
+		tooltip: &Option<String>,
 		formula: &mut FormulaFragments,
 	) -> Result<Number, InterpretError>;
 	fn interpret_function(
@@ -376,12 +377,14 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 			Unary::Minus(comment, u) => {
 				self.interpret_comment(comment, formula);
 				formula.push_str("-");
-				Ok(-self.interpret_unary(u, formula)?)
+				let result = -self.interpret_unary(u, formula)?;
+
+				Ok(result)
 			}
-			Unary::Atom(comment_before, atom, comment_after) => {
-				self.interpret_comment(comment_before, formula);
+			Unary::Atom(leading_comment, atom, trailing_comment) => {
+				self.interpret_comment(leading_comment, formula);
 				let result = self.interpret_atom(atom, formula)?;
-				self.interpret_comment(comment_after, formula);
+				self.interpret_comment(trailing_comment, formula);
 				Ok(result)
 			}
 		}
@@ -392,23 +395,26 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 		formula: &mut FormulaFragments,
 	) -> Result<Number, InterpretError> {
 		match atom {
-			Atom::Number(number) => {
-				formula.push_str(&String::from(*number));
+			Atom::Number(number, tooltip) => {
+				formula.push_new_str(&String::from(*number));
+				if let Some(tip) = tooltip {
+					formula.push_tooltip(tip);
+				}
 				Ok(*number)
 			}
-			Atom::Dice(dice) => self.interpret_dice(dice, formula),
+			Atom::Dice(dice, tooltip) => self.interpret_dice(dice, tooltip, formula),
 			Atom::Function(function) => self.interpret_function(function, formula),
 			Atom::RollQuery(roll_query) => self.interpret_roll_query(roll_query, formula),
 			Atom::ParenthesesExpression(expression) => {
-				formula.push_str("(");
+				formula.push_new_str("(");
 				let expression_output = self.interpret_expression(expression, formula)?;
 				formula.push_str(")");
 				Ok(expression_output)
 			}
 			Atom::InlineRoll(expression) => {
-				let mut temp_formula = vec!();
+				let mut temp_formula = vec![];
 				let expression_output = self.interpret_expression(expression, &mut temp_formula)?;
-				formula.push_str(&format!("({})", expression_output));
+				formula.push_new_str(&format!("({})", expression_output));
 				Ok(expression_output)
 			}
 			Atom::Macro(nested_macro) => {
@@ -416,32 +422,35 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 				if output_fragments.len() == 1 {
 					let fragment = &output_fragments[0];
 					match fragment {
-						OutputFragment::Roll(RollType::InlineRoll(expression)) |
-						OutputFragment::Roll(RollType::ExplicitRoll(expression)) => {
+						OutputFragment::Roll(RollType::InlineRoll(expression))
+						| OutputFragment::Roll(RollType::ExplicitRoll(expression)) => {
 							formula.push_str("{");
 							formula.append(&mut expression.formula_fragments.clone());
 							formula.push_str("}");
 							return Ok(expression.result);
 						}
-						_ => ()
+						_ => (),
 					}
 				}
-				Err(InterpretError::ThisMacroCannotBeNested(nested_macro.name.clone()))
+				Err(InterpretError::ThisMacroCannotBeNested(
+					nested_macro.name.clone(),
+				))
 			}
 		}
 	}
 	fn interpret_dice(
 		&mut self,
 		dice: &Dice,
+		tooltip: &Option<String>,
 		formula: &mut FormulaFragments,
 	) -> Result<Number, InterpretError> {
 		match dice {
-			Dice::Normal(normal, modifiers, tooltip) => {
-				self.interpret_normal_dice(normal, modifiers, &tooltip, formula)
+			Dice::Normal(normal, modifiers) => {
+				self.interpret_normal_dice(normal, modifiers, tooltip, formula)
 			}
 			// Dice::Fate(fate, modifiers, tooltip) => self.interpret_fate_dice(fate, modifiers, &tooltip, formula),
-			Dice::Computed(computed, modifiers, tooltip) => {
-				self.interpret_computed_dice(computed, modifiers, &tooltip, formula)
+			Dice::Computed(computed, modifiers) => {
+				self.interpret_computed_dice(computed, modifiers, tooltip, formula)
 			}
 			_ => Err(InterpretError::Unkown),
 		}
@@ -559,10 +568,8 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 		for roll in rolls {
 			formula.push_number_roll(&roll);
 		}
-
-		match tooltip {
-			Some(comment) => formula.push_tooltip(comment),
-			None => (),
+		if let Some(tip) = tooltip {
+			formula.push_tooltip(tip);
 		}
 
 		Ok(Number::Integer(Integer::new(result)))
@@ -636,7 +643,7 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 				.value();
 			reroll_on.append(&mut add_rerolls_for(&reroll_modifier.comparison, point));
 		}
-		reroll_on.sort();
+		reroll_on.sort_unstable();
 		reroll_on.dedup();
 		let mut reroll_on_all = true;
 		for i in 1..(sides + 1) {

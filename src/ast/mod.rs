@@ -40,27 +40,32 @@ pub enum Power {
 	Pow(Unary, Box<Power>),
 	Unary(Unary),
 }
+
+type Tooltip = Option<String>;
+type Comment = Option<String>;
+
 #[derive(Debug, Clone)]
 pub enum Unary {
-	Minus(Option<String>, Box<Unary>),
-	Atom(Option<String>, Atom, Option<String>),
+	Minus(Comment, Box<Unary>),
+	Atom(Comment, Atom, Comment),
 }
+
 #[derive(Debug, Clone)]
 pub enum Atom {
-	Number(Number),
-	Dice(Dice),
+	Number(Number, Tooltip),
+	Dice(Dice, Tooltip),
 	Function(Function),
-	RollQuery(RollQuery),
+	RollQuery(RollQuery), // is a tooltip
 	ParenthesesExpression(Box<Expression>),
-	InlineRoll(Box<Expression>),
-	Macro(Macro),
+	InlineRoll(Box<Expression>), // is a tooltip
+	Macro(Macro),                // is a tooltip
 }
 
 #[derive(Debug, Clone)]
 pub enum Dice {
-	Normal(Normal, Modifiers, Option<String>),
-	Fate(Fate, Modifiers, Option<String>),
-	Computed(Computed, Modifiers, Option<String>),
+	Normal(Normal, Modifiers),
+	Fate(Fate, Modifiers),
+	Computed(Computed, Modifiers),
 }
 
 #[derive(Debug, Copy, Clone)]
