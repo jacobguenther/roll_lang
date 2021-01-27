@@ -10,7 +10,7 @@ use output::*;
 
 use super::ast::{number::*, *};
 use super::macros::Macros;
-use super::parser::{ParseError, Parser, ParserT};
+use super::parser::{Parser, ParserT, error::ParseError};
 
 use std::collections::HashMap;
 
