@@ -170,7 +170,8 @@ impl ParserPrivateT for Parser {
 				return Ok(Macro { name: macro_name });
 			}
 			Err(_parse_error) => {
-				if let Lexeme::Literal(token) = self.current()?.clone() {
+				if let Lexeme::Literal(token) = self.current()? {
+					let token = token.clone();
 					self.step_lexemes();
 					return Ok(Macro {
 						name: token.source().to_string(),
@@ -377,9 +378,10 @@ impl ParserPrivateT for Parser {
 	}
 
 	fn parse_function(&mut self) -> Result<Function, ParseError> {
-		if let Lexeme::Literal(token) = self.current()?.clone() {
+		if let Lexeme::Literal(token) = self.current()? {
 			if let "abs" | "ceil" | "floor" | "round" = token.source() {
 				let start_index = self.current_index;
+				let token = token.clone();
 				self.step_lexemes();
 				if let Err(parse_error) = self.match_current_to_punctuation_skip_whitespace("(") {
 					self.current_index = start_index;
@@ -418,17 +420,19 @@ impl ParserPrivateT for Parser {
 		}
 	}
 	fn parse_float(&mut self) -> Result<Float, ParseError> {
-		if let Lexeme::Number(integer_token) = self.current()?.clone() {
+		if let Lexeme::Number(integer_token) = self.current()? {
 			let start_index = self.current_index;
+			let integer_token = integer_token.clone();
 			self.step_lexemes();
-			if let Err(parse_error) = self.match_current_to_punctuation(".") {
+			if let Err(_parse_error) = self.match_current_to_punctuation(".") {
 				self.current_index = start_index;
-				return Err(parse_error);
+				return Err(ParseError::ExpectedPunctuation(String::from(".")));
 			};
-			if let Lexeme::Number(fraction_token) = self.current()?.clone() {
+			if let Lexeme::Number(decimal_token) = self.current()? {
+				let decimal_token = decimal_token.clone();
 				self.step_lexemes();
 				return Ok(Float::new(
-					format!("{}.{}", integer_token.source(), fraction_token.source())
+					format!("{}.{}", integer_token.source(), decimal_token.source())
 						.parse()
 						.unwrap(),
 				));
@@ -437,7 +441,8 @@ impl ParserPrivateT for Parser {
 		Err(ParseError::DoesNotMatch)
 	}
 	fn parse_integer(&mut self) -> Result<Integer, ParseError> {
-		if let Lexeme::Number(token) = self.current()?.to_owned() {
+		if let Lexeme::Number(token) = self.current()? {
+			let token = token.clone();
 			self.step_lexemes();
 			return Ok(Integer::new(token.source().parse().unwrap()));
 		}
@@ -711,9 +716,10 @@ impl ParserPrivateT for Parser {
 		}
 	}
 	fn parse_high_low(&mut self) -> Result<PostModifier, ParseError> {
-		if let Lexeme::Literal(token) = self.current()?.clone() {
+		if let Lexeme::Literal(token) = self.current()? {
 			if let "dh" | "k" | "kh" | "d" | "dl" | "kl" = token.source() {
 				let start_index = self.current_index;
+				let token = token.clone();
 				self.step_lexemes_skip_whitespace();
 				let count = match self.parse_integer() {
 					Ok(int) => int,
@@ -739,9 +745,10 @@ impl ParserPrivateT for Parser {
 		Ok(PostModifier::Success(comparison, integer))
 	}
 	fn parse_cirtical(&mut self) -> Result<PostModifier, ParseError> {
-		if let Lexeme::Literal(token) = self.current()?.clone() {
+		if let Lexeme::Literal(token) = self.current()? {
 			if let "cs" | "cf" = token.source() {
 				let start_index = self.current_index;
+				let token = token.clone();
 				self.step_lexemes_skip_whitespace();
 				let (comparison, integer) = match self.parse_comparison_and_require_integer() {
 					Ok((comparison, integer)) => (comparison, integer),
@@ -796,8 +803,9 @@ impl ParserPrivateT for Parser {
 	}
 
 	fn match_current_to_punctuation(&mut self, punctuation: &str) -> Result<Token, ParseError> {
-		if let Lexeme::Punctuation(token) = self.current()?.clone() {
+		if let Lexeme::Punctuation(token) = self.current()? {
 			if token.source() == punctuation {
+				let token = token.clone();
 				self.step_lexemes();
 				return Ok(token);
 			}
@@ -808,8 +816,9 @@ impl ParserPrivateT for Parser {
 		&mut self,
 		punctuation: &str,
 	) -> Result<Token, ParseError> {
-		if let Lexeme::Punctuation(token) = self.current()?.clone() {
+		if let Lexeme::Punctuation(token) = self.current()? {
 			if token.source() == punctuation {
+				let token = token.clone();
 				self.step_lexemes_skip_whitespace();
 				return Ok(token);
 			}
@@ -817,8 +826,9 @@ impl ParserPrivateT for Parser {
 		Err(ParseError::DoesNotMatch)
 	}
 	fn match_current_to_literal(&mut self, literal: &str) -> Result<Token, ParseError> {
-		if let Lexeme::Literal(token) = self.current()?.clone() {
+		if let Lexeme::Literal(token) = self.current()? {
 			if token.source() == literal {
+				let token = token.clone();
 				self.step_lexemes_skip_whitespace();
 				return Ok(token);
 			}
@@ -826,8 +836,9 @@ impl ParserPrivateT for Parser {
 		Err(ParseError::DoesNotMatch)
 	}
 	fn match_current_to_operator(&mut self, operator: &str) -> Result<Token, ParseError> {
-		if let Lexeme::Operator(token) = self.current()?.clone() {
+		if let Lexeme::Operator(token) = self.current()? {
 			if token.source() == operator {
+				let token = token.clone();
 				self.step_lexemes_skip_whitespace();
 				return Ok(token);
 			}
@@ -852,11 +863,11 @@ impl ParserPrivateT for Parser {
 	}
 	fn is_inline_roll(&self) -> bool {
 		let is_open_bracket = |lexeme: &Option<&Lexeme>| -> bool {
-			lexeme.is_some()
-				&& match lexeme.unwrap() {
-					Lexeme::Punctuation(token) => token.source() == "[",
-					_ => false,
-				}
+			if let Some(Lexeme::Punctuation(token)) = lexeme {
+				token.source() == "["
+			} else {
+				false
+			}
 		};
 		let current = is_open_bracket(&self.current_as_option());
 		let next = is_open_bracket(&self.next_as_option());
