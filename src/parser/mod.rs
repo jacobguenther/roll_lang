@@ -3,6 +3,9 @@
 pub mod error;
 use error::ParseError;
 
+mod state;
+use state::State;
+
 #[cfg(feature = "serialize")]
 use serde::{Deserialize, Serialize};
 
@@ -86,18 +89,6 @@ trait ParserPrivateT {
 	fn is_inline_roll(&self) -> bool;
 }
 
-#[derive(Debug, Copy, Clone)]
-enum State {
-	Start,
-	StringLiteral,
-	Roll,
-	Done,
-}
-impl Default for State {
-	fn default() -> State {
-		State::Start
-	}
-}
 #[derive(Debug)]
 pub struct Parser {
 	state: State,
