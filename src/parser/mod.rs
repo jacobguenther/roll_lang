@@ -12,10 +12,7 @@ use private_traits::ParserPrivateT;
 #[cfg(feature = "serialize")]
 use serde::{Deserialize, Serialize};
 
-use super::lexer::{
-	lexeme::Lexeme,
-	Lexer, LexerT,
-};
+use super::lexer::{lexeme::Lexeme, Lexer, LexerT};
 
 use super::ast::*;
 

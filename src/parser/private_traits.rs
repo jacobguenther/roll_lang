@@ -1,26 +1,22 @@
 // File: parser/private_traits.rs
 
+use super::{error::ParseError, state::State, Parser};
 use crate::ast::{number::*, *};
 use crate::lexer::{
-    lexeme::Lexeme,
-    token::{Token, TokenT}
-};
-use super::{
-    Parser,
-    error::ParseError,
-    state::State,
+	lexeme::Lexeme,
+	token::{Token, TokenT},
 };
 
 pub(super) trait ParserPrivateT {
 	fn parse_start(&mut self);
 
-    fn parse_string_literal(&mut self) -> String;
+	fn parse_string_literal(&mut self) -> String;
 
-    fn template_parse_comment(&mut self) -> Option<String>;
-    fn parse_comment(&mut self) -> Option<String>;
+	fn template_parse_comment(&mut self) -> Option<String>;
+	fn parse_comment(&mut self) -> Option<String>;
 	fn parse_tooltip(&mut self) -> Option<String>;
-    
-    fn parse_macro(&mut self) -> Result<Macro, ParseError>;
+
+	fn parse_macro(&mut self) -> Result<Macro, ParseError>;
 
 	fn parse_roll(&mut self) -> Result<Roll, ParseError>;
 	fn parse_expression(&mut self) -> Result<Expression, ParseError>;
@@ -109,8 +105,8 @@ impl ParserPrivateT for Parser {
 			}
 		}
 		literal
-    }
-    fn template_parse_comment(&mut self) -> Option<String> {
+	}
+	fn template_parse_comment(&mut self) -> Option<String> {
 		let mut comment = String::new();
 		loop {
 			match self.match_current_to_punctuation("]") {
@@ -126,7 +122,7 @@ impl ParserPrivateT for Parser {
 		}
 
 		Some(comment)
-    }
+	}
 
 	fn parse_comment(&mut self) -> Option<String> {
 		let start_index = self.current_index;
@@ -217,18 +213,18 @@ impl ParserPrivateT for Parser {
 		loop {
 			let start_index = self.current_index;
 			self.skip_whitespace();
-			let is_add = if let Ok(Lexeme::Operator(token)) =  self.current() {
-                match token.source() {
-                    "+" => true,
-                    "-" => false,
-                    _ => break,
-                }
-            } else {
-                break
-            };
-            self.step_lexemes_skip_whitespace();
+			let is_add = if let Ok(Lexeme::Operator(token)) = self.current() {
+				match token.source() {
+					"+" => true,
+					"-" => false,
+					_ => break,
+				}
+			} else {
+				break;
+			};
+			self.step_lexemes_skip_whitespace();
 
-            let next_mul_div = match self.parse_mul_div() {
+			let next_mul_div = match self.parse_mul_div() {
 				Ok(next) => next,
 				Err(_parse_error) => {
 					self.current_index = start_index;
@@ -247,18 +243,18 @@ impl ParserPrivateT for Parser {
 		loop {
 			let start_index = self.current_index;
 			self.skip_whitespace();
-			let is_multiply = if let Ok(Lexeme::Operator(token)) =  self.current() {
-                match token.source() {
-                    "*" => true,
-                    "/" => false,
-                    _ => break,
-                }
-            } else {
-                break
-            };
+			let is_multiply = if let Ok(Lexeme::Operator(token)) = self.current() {
+				match token.source() {
+					"*" => true,
+					"/" => false,
+					_ => break,
+				}
+			} else {
+				break;
+			};
 			self.step_lexemes_skip_whitespace();
 
-            let next_power = match self.parse_power() {
+			let next_power = match self.parse_power() {
 				Ok(next) => next,
 				Err(_parse_error) => {
 					self.current_index = start_index;
@@ -304,31 +300,26 @@ impl ParserPrivateT for Parser {
 		))
 	}
 	fn parse_atom(&mut self) -> Result<Atom, ParseError> {
-		let start_index = self.current_index;
-		let tooltip = self.parse_tooltip();
-		if tooltip.is_none() {
-			self.current_index = start_index;
-		}
-		match self.parse_dice() {
-			Ok(dice) => {
-				let tooltip = if tooltip.is_some() {
-					tooltip
-				} else {
-					self.parse_tooltip()
-				};
-				return Ok(Atom::Dice(dice, tooltip));
-			}
-			Err(_parse_error) => self.current_index = start_index,
+		let check_tooltip = |tip_1: Option<String>, tip_2: Option<String>| match (tip_1, tip_2) {
+			(Some(_), Some(unexepected)) => Err(ParseError::UnexpectedTooltip(unexepected)),
+			(Some(t), None) | (None, Some(t)) => Ok(Some(t)),
+			(_, _) => Ok(None),
 		};
 
+		let start_index = self.current_index;
 		let tooltip = self.parse_tooltip();
+		let after_tip_index = self.current_index;
+		match self.parse_dice() {
+			Ok(dice) => {
+				let tooltip = check_tooltip(tooltip, self.parse_tooltip())?;
+				return Ok(Atom::Dice(dice, tooltip));
+			}
+			Err(_parse_error) => self.current_index = after_tip_index,
+		};
+
 		match self.parse_number() {
 			Ok(num) => {
-				let tooltip = if tooltip.is_some() {
-					tooltip
-				} else {
-					self.parse_tooltip()
-				};
+				let tooltip = check_tooltip(tooltip, self.parse_tooltip())?;
 				return Ok(Atom::Number(num, tooltip));
 			}
 			Err(_parse_error) => self.current_index = start_index,
@@ -446,9 +437,9 @@ impl ParserPrivateT for Parser {
 		Err(ParseError::DoesNotMatch)
 	}
 	fn parse_integer(&mut self) -> Result<Integer, ParseError> {
-		if let Lexeme::Number(integer_token) = self.current()?.clone() {
+		if let Lexeme::Number(token) = self.current()?.to_owned() {
 			self.step_lexemes();
-			return Ok(Integer::new(integer_token.source().parse().unwrap()));
+			return Ok(Integer::new(token.source().parse().unwrap()));
 		}
 		Err(ParseError::DoesNotMatch)
 	}
