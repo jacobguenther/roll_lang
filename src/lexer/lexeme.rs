@@ -2,15 +2,6 @@
 
 use super::token::{Token, TokenT};
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Lexeme {
-	Whitespace(Token),
-	Literal(Token),
-	Number(Token),
-	Comparison(Token),
-	Operator(Token),
-	Punctuation(Token),
-}
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub(super) enum LexemeType {
 	Whitespace,
@@ -19,6 +10,16 @@ pub(super) enum LexemeType {
 	Comparison,
 	Operator,
 	Punctuation,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Lexeme {
+	Whitespace(Token),
+	Literal(Token),
+	Number(Token),
+	Comparison(Token),
+	Operator(Token),
+	Punctuation(Token),
 }
 impl Lexeme {
 	pub fn token(&self) -> &Token {
