@@ -11,7 +11,7 @@ impl ToString for Output {
 			out_string.push_str(&fragment.to_string());
 		}
 		match &self.error {
-			Some(error) => format!("{} :: {:?}", out_string, error),
+			Some(error) => format!("{}::{:?}", out_string, error),
 			None => out_string,
 		}
 	}
@@ -20,8 +20,12 @@ impl ToString for OutputFragment {
 	fn to_string(&self) -> String {
 		match self {
 			OutputFragment::StringLit(s) => s.clone(),
-			OutputFragment::Roll(RollType::ExplicitRoll(expression_output))
-			| OutputFragment::Roll(RollType::InlineRoll(expression_output)) => expression_output.to_string(),
+			OutputFragment::Roll(RollType::ExplicitRoll(expression_output)) => {
+				expression_output.to_string()
+			}
+			OutputFragment::Roll(RollType::InlineRoll(expression_output)) => {
+				format!("({})", expression_output.result.to_string())
+			}
 		}
 	}
 }
@@ -31,23 +35,32 @@ impl ToString for ExpressionOutput {
 		for fragment in &self.formula_fragments {
 			out_string.push_str(&fragment.to_string());
 		}
-		format!("{}={}", out_string, self.result)
+		format!("{} = {}", out_string, self.result)
 	}
 }
 impl ToString for FormulaFragment {
 	fn to_string(&self) -> String {
 		match self {
-			FormulaFragment::Basic(s) => s.clone(),
+			FormulaFragment::Basic(s, tip) => match tip {
+				Some(tip) => format!("[{} | tip: {}]", s, tip),
+				None => s.clone(),
+			},
 			FormulaFragment::NumberRolls(first, rolls, tooltip) => {
-				let mut out_string = first.to_string();
-				for roll in rolls {
-					out_string.push_str("+");
-					out_string.push_str(&roll.to_string());
-				}
-				out_string.push_str("");
+				let print_rolls = |first: &NumberRoll, rolls: &Vec<NumberRoll>| {
+					let mut out_string = String::from('(');
+					out_string.push_str(&first.to_string());
+					for roll in rolls {
+						out_string.push('+');
+						out_string.push_str(&roll.to_string());
+					}
+					out_string.push(')');
+					out_string
+				};
 				match tooltip {
-					Some(tip) => format!("{}[{}]", out_string, tip),
-					None => out_string,
+					Some(tip) => {
+						format!("[{} | tip: {}]", print_rolls(first, rolls), tip)
+					}
+					None => print_rolls(first, rolls),
 				}
 			}
 			FormulaFragment::SuccessFailRolls(_, _, _) => String::from("SF"),
@@ -58,7 +71,7 @@ impl ToString for NumberRoll {
 	fn to_string(&self) -> String {
 		match self {
 			NumberRoll::Counted(int) => format!("{}", int.value()),
-			NumberRoll::NotCounted(_) => String::from("NC"),
+			NumberRoll::NotCounted(_) => String::from("not-counted"),
 		}
 	}
 }

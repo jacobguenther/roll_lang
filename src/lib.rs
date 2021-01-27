@@ -11,12 +11,6 @@ pub mod parser;
 use interpreter::*;
 use std::collections::HashMap;
 
-#[cfg(feature = "default")]
-pub fn default_rand() -> f64 {
-	use rand::{thread_rng, Rng};
-	thread_rng().gen()
-}
-
 pub fn default_query_prompter(message: &str, default: &str) -> Option<String> {
 	use std::io;
 	println!("{} default({})", message, default);
@@ -24,7 +18,7 @@ pub fn default_query_prompter(message: &str, default: &str) -> Option<String> {
 	match io::stdin().read_line(&mut input) {
 		Ok(_) => {
 			let input = input.trim().to_owned();
-			if &input == "" {
+			if input.is_empty() {
 				Some(default.to_owned())
 			} else {
 				Some(input)
@@ -94,19 +88,11 @@ impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm> {
 	}
 
 	pub fn build(&self) -> Interpreter<'s, 'm> {
-		#[cfg(feature = "default")]
-		let rand = self.rand.unwrap_or(default_rand);
-		#[cfg(not(feature = "default"))]
-		let rand = match self.rand {
-			Some(r) => r,
-			None => panic!("Must supply a random number generator or enable defaults in cargo"),
-		};
-
 		Interpreter::new(
 			self.source.unwrap_or(""),
 			self.roll_queries.unwrap_or(&HashMap::new()).clone(),
 			self.macros,
-			rand,
+			self.rand.unwrap(),
 			self.query_prompter.unwrap_or(default_query_prompter),
 		)
 	}
@@ -126,41 +112,72 @@ pub mod tests {
 			.build()
 			.interpret()
 			.to_string();
+		println!("{}", source);
 		assert_eq!(&output, result);
 	}
 
 	#[test]
 	fn interpreter() {
 		// associativity
-		helper("[[5-4+1]]", "5-4+1=2");
+		helper("[[5-4+1]]", "(2)");
 		// multiply and divide
-		helper("[[4*6/3]]", "4*6/3=8");
+		helper("[[4*6/3]]", "(8)");
 		// precedence
-		helper("[[(4+2)*2]]", "(4+2)*2=12");
+		helper("[[(4+2)*2]]", "(12)");
 
 		// unicode and localization
 		helper("文字 hello", "文字 hello");
 
 		// whitespaces
-		helper("[[ 20 + 4 * 2 ]]", "20+4*2=28");
-		// trailing whitespaces
-		helper(
-			"attack is [[20+1]] and damage is /r 10 \\ take that!",
-			"attack is 20+1=21 and damage is 10=10 take that!",
-		);
-		helper("/r 20*2 is my attack roll", "20*2=40 is my attack roll");
-		helper("/r 20*2", "20*2=40");
-		helper("/r 20*2\\ is my attack roll", "20*2=40 is my attack roll");
+		helper("[[ 20 + 4 * 2 ]]", "(28)");
+		helper("[[ 20 + 4 * 2 ]] ", "(28) ");
+		helper("/r 20 + 4 * 2 ", "20 + 4 * 2 = 28 ");
+		helper("/r 20 + 4 * 2 \\", "20 + 4 * 2 = 28");
+		helper("/r 20 + 4 * 2 \\ ", "20 + 4 * 2 = 28 ");
+
+		// comment
+		helper("/r [1]20 \\", "[1]20 = 20");
+		helper("/r 20[1] \\", "20[1] = 20");
+		// comments
+		helper("/r [1]20[2] \\", "[1]20[2] = 20");
+
+		// tooltips
+		helper("/r [?1]20 \\", "[20 | tip: 1] = 20");
+		helper("/r 20[?1] \\", "[20 | tip: 1] = 20");
+
+		// comment and tooltip
+		helper("/r [1][?2]20 \\", "[1][20 | tip: 2] = 20");
+		helper("/r [1]20[?2] \\", "[1][20 | tip: 2] = 20");
+		helper("/r 20[?1][2] \\", "[20 | tip: 1][2] = 20");
+
+		// comments and tooltip
+		helper("/r [1][?2]20[3] \\", "[1][20 | tip: 2][3] = 20");
+		helper("/r [1]20[?2][3] \\", "[1][20 | tip: 2][3] = 20");
+
+		// comment
+		helper("/r [1]1d1 \\", "[1](2) = 2");
+		helper("/r 1d1[1] \\", "(2)[1] = 2");
+		// comments
+		helper("/r [1]1d1[2] \\", "[1](2)[2] = 2");
+
+		// tooltips
+		helper("/r [?1]1d1 \\", "[(2) | tip: 1] = 2");
+		helper("/r 1d1[?1] \\", "[(2) | tip: 1] = 2");
+
+		// comment and tooltip
+		helper("/r [1][?2]1d1 \\", "[1][(2) | tip: 2] = 2");
+		helper("/r [1]1d1[?2] \\", "[1][(2) | tip: 2] = 2");
+		helper("/r 1d1[?1][2] \\", "[(2) | tip: 1][2] = 2");
+
+		// comments and tooltip
+		helper("/r [1][?2]1d1[3] \\", "[1][(2) | tip: 2][3] = 2");
+		helper("/r [1]1d1[?2][3] \\", "[1][(2) | tip: 2][3] = 2");
+
+		// comment and tooltip
+		helper("/r [1][?2]3d1 \\", "[1][(2+2+2) | tip: 2] = 6");
+		helper("/r [1]4d1[?2] \\", "[1][(2+2+2+2) | tip: 2] = 8");
+		helper("/r 5d1[?1][2] \\", "[(2+2+2+2+2) | tip: 1][2] = 10");
 	}
-	/*
-	#[test]
-	fn roll_queries() {
-		let source = String::from("I attack you for ?{attack|3}");
-		helper(
-			"I attack you for [[?{attack|3}]]",
-			"I attack you for 3=3");
-	}
-	*/
 
 	#[test]
 	fn short_macro() {
@@ -168,10 +185,7 @@ pub mod tests {
 
 		let source = String::from("I attack you for #melee and deal [[10/2]] damage!");
 		let mut macros = Macros::new();
-		macros.insert(
-			String::from("melee"),
-			String::from("[[15+4]]"),
-		);
+		macros.insert(String::from("melee"), String::from("[[15+4]]"));
 		let mut builder = InterpreterBuilder::new();
 
 		{
@@ -183,7 +197,7 @@ pub mod tests {
 			let mut interpreter2 = builder.build();
 			assert_eq!(
 				interpreter.interpret().to_string(),
-				String::from("I attack you for 15+4=19 and deal 10/2=5 damage!")
+				String::from("I attack you for (19) and deal (5) damage!")
 			);
 
 			assert_eq!(
@@ -199,10 +213,7 @@ pub mod tests {
 
 		let source = String::from("I attack you for #{melee attack} and deal [[10/2]] damage!");
 		let mut macros = Macros::new();
-		macros.insert(
-			String::from("melee attack"),
-			String::from("[[15+4]]"),
-		);
+		macros.insert(String::from("melee attack"), String::from("[[15+4]]"));
 		let mut builder = InterpreterBuilder::new();
 
 		{
@@ -214,7 +225,7 @@ pub mod tests {
 			let mut interpreter2 = builder.build();
 			assert_eq!(
 				interpreter.interpret().to_string(),
-				String::from("I attack you for 15+4=19 and deal 10/2=5 damage!")
+				String::from("I attack you for (19) and deal (5) damage!")
 			);
 
 			assert_eq!(
@@ -228,19 +239,13 @@ pub mod tests {
 		use macros::*;
 		let source = String::from("[[ #dtwenty + 1 ]]");
 		let mut macros = Macros::new();
-		macros.insert(
-			String::from("dtwenty"),
-			String::from("[[ 14 ]]")
-		);
+		macros.insert(String::from("dtwenty"), String::from("[[ 14 ]]"));
 		let mut interpreter = InterpreterBuilder::new()
 			.with_source(&source)
 			.with_macros(&macros)
 			.with_rng_func(r)
 			.build();
-		assert_eq!(
-			interpreter.interpret().to_string(),
-			String::from("{14}+1=15")
-		);
+		assert_eq!(interpreter.interpret().to_string(), String::from("(15)"));
 	}
 	#[test]
 	fn nested_inline_roll() {
@@ -254,7 +259,7 @@ pub mod tests {
 			.build();
 		assert_eq!(
 			interpreter.interpret().to_string(),
-			String::from("10+(15)=25")
+			String::from("10 + (15) = 25")
 		);
 	}
 
@@ -264,9 +269,7 @@ pub mod tests {
 
 		let source = String::from("I attack you for #attack and deal [[10/2]] damage!");
 		let mut macros = Macros::new();
-		macros.insert(
-			String::from("attack"),
-			String::from("[[15+4]]"));
+		macros.insert(String::from("attack"), String::from("[[15+4]]"));
 		let mut builder = InterpreterBuilder::new();
 
 		{
@@ -278,7 +281,7 @@ pub mod tests {
 			let mut interpreter2 = builder.build();
 			assert_eq!(
 				interpreter.interpret().to_string(),
-				String::from("I attack you for 15+4=19 and deal 10/2=5 damage!")
+				String::from("I attack you for (19) and deal (5) damage!")
 			);
 
 			assert_eq!(
@@ -286,29 +289,5 @@ pub mod tests {
 				interpreter.interpret().to_string()
 			);
 		}
-	}
-
-	#[cfg(feature = "default")]
-	#[test]
-	fn rng() {
-		use super::default_rand;
-		let rand = default_rand();
-		assert!(0.0 <= rand && rand <= 1.0);
-	}
-
-	#[cfg(feature = "serialize")]
-	#[test]
-	fn serialize() {
-		use interpreter::output::Output;
-		let source = String::from("I attack you for /r 20+3[STR] and deal [[10/2]] damage!");
-
-		let out1 = InterpreterBuilder::new()
-			.with_source(&source)
-			.build()
-			.interpret();
-		let ser = serde_json::to_string(&out1).unwrap();
-		let out2: Output = serde_json::from_str(&ser).unwrap();
-
-		assert_eq!(out1.to_string(), out2.to_string());
 	}
 }
