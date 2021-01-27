@@ -21,15 +21,9 @@ crate-type = ["lib"]
 
 [features]
 serialize = ["serde", "serde_json"]
-random = ["rand"]
 
 [dependencies]
 unicode-segmentation = "1.6.0"
-
-
-[dependencies.rand]
-version = "0.7.3"
-optional = true
 
 [dependencies.serde]
 version = "1.0.115"
