@@ -2,9 +2,11 @@
 
 pub mod lexeme;
 pub mod token;
+mod state;
 
 use lexeme::*;
 use token::*;
+use state::State;
 
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -47,15 +49,6 @@ impl<'a> Iterator for Lexer<'a> {
 
 		Some(lexeme)
 	}
-}
-
-#[derive(Debug, Copy, Clone, PartialEq)]
-enum State {
-	Start,
-	Whitespace,
-	Literal,
-	Digit,
-	Done,
 }
 
 trait LexerPrivateT {
