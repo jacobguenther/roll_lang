@@ -12,12 +12,11 @@ use private_traits::ParserPrivateT;
 #[cfg(feature = "serialize")]
 use serde::{Deserialize, Serialize};
 
-use super::lexer::{lexeme::Lexeme, Lexer, LexerT};
+use super::lexer::{lexeme::Lexeme, Lexer};
 
 use super::ast::*;
 
 pub trait ParserT {
-	fn new(source: &str) -> Parser;
 	fn parse(&mut self) -> Root;
 	fn parse_expression_string(source: &str) -> Result<Expression, ParseError>;
 }
@@ -28,14 +27,16 @@ pub struct Parser {
 	lexemes: Vec<Lexeme>,
 	current_index: usize,
 }
-impl ParserT for Parser {
-	fn new(source: &str) -> Parser {
+impl Parser {
+	pub fn new(source: &str) -> Parser {
 		Parser {
 			state: State::default(),
 			lexemes: Lexer::new(source).collect(),
 			current_index: 0,
 		}
 	}
+}
+impl ParserT for Parser {
 	fn parse(&mut self) -> Root {
 		let mut root = Root::new();
 		loop {
