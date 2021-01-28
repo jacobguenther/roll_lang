@@ -124,56 +124,55 @@ pub mod tests {
 		helper("[[4*6/3]]", "(8)");
 		// precedence
 		helper("[[(4+2)*2]]", "(12)");
-
 		// unicode and localization
 		helper("文字 hello", "文字 hello");
+	}
 
-		// whitespaces
+	#[test]
+	fn whitespaces() {
 		helper("[[ 20 + 4 * 2 ]]", "(28)");
 		helper("[[ 20 + 4 * 2 ]] ", "(28) ");
 		helper("/r 20 + 4 * 2 ", "20 + 4 * 2 = 28 ");
 		helper("/r 20 + 4 * 2 \\", "20 + 4 * 2 = 28");
 		helper("/r 20 + 4 * 2 \\ ", "20 + 4 * 2 = 28 ");
+	}
 
-		// comment
+	#[test]
+	fn comments() {
 		helper("/r [1]20 \\", "[1]20 = 20");
 		helper("/r 20[1] \\", "20[1] = 20");
-		// comments
 		helper("/r [1]20[2] \\", "[1]20[2] = 20");
 
-		// tooltips
+		helper("/r [1]1d1 \\", "[1](2) = 2");
+		helper("/r 1d1[1] \\", "(2)[1] = 2");
+		helper("/r [1]1d1[2] \\", "[1](2)[2] = 2");
+	}
+
+	#[test]
+	fn tooltips() {
 		helper("/r [?1]20 \\", "[20 | tip: 1] = 20");
 		helper("/r 20[?1] \\", "[20 | tip: 1] = 20");
 
-		// comment and tooltip
+		helper("/r [?1]1d1 \\", "[(2) | tip: 1] = 2");
+		helper("/r 1d1[?1] \\", "[(2) | tip: 1] = 2");
+	}
+
+	#[test]
+	fn comments_and_tooltips() {
 		helper("/r [1][?2]20 \\", "[1][20 | tip: 2] = 20");
 		helper("/r [1]20[?2] \\", "[1][20 | tip: 2] = 20");
 		helper("/r 20[?1][2] \\", "[20 | tip: 1][2] = 20");
 
-		// comments and tooltip
 		helper("/r [1][?2]20[3] \\", "[1][20 | tip: 2][3] = 20");
 		helper("/r [1]20[?2][3] \\", "[1][20 | tip: 2][3] = 20");
 
-		// comment
-		helper("/r [1]1d1 \\", "[1](2) = 2");
-		helper("/r 1d1[1] \\", "(2)[1] = 2");
-		// comments
-		helper("/r [1]1d1[2] \\", "[1](2)[2] = 2");
-
-		// tooltips
-		helper("/r [?1]1d1 \\", "[(2) | tip: 1] = 2");
-		helper("/r 1d1[?1] \\", "[(2) | tip: 1] = 2");
-
-		// comment and tooltip
 		helper("/r [1][?2]1d1 \\", "[1][(2) | tip: 2] = 2");
 		helper("/r [1]1d1[?2] \\", "[1][(2) | tip: 2] = 2");
 		helper("/r 1d1[?1][2] \\", "[(2) | tip: 1][2] = 2");
 
-		// comments and tooltip
 		helper("/r [1][?2]1d1[3] \\", "[1][(2) | tip: 2][3] = 2");
 		helper("/r [1]1d1[?2][3] \\", "[1][(2) | tip: 2][3] = 2");
 
-		// comment and tooltip
 		helper("/r [1][?2]3d1 \\", "[1][(2+2+2) | tip: 2] = 6");
 		helper("/r [1]4d1[?2] \\", "[1][(2+2+2+2) | tip: 2] = 8");
 		helper("/r 5d1[?1][2] \\", "[(2+2+2+2+2) | tip: 1][2] = 10");
