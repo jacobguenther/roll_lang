@@ -1,11 +1,10 @@
 // File: interpreter.rs
 
-#[cfg(feature = "serialize")]
-use serde::{Deserialize, Serialize};
-
+pub mod error;
 pub mod output;
 pub mod output_traits;
 
+use error::InterpretError;
 use output::*;
 
 use super::ast::{number::*, *};
@@ -13,29 +12,6 @@ use super::macros::Macros;
 use super::parser::{error::ParseError, Parser, ParserT};
 
 use std::collections::HashMap;
-
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
-pub enum InterpretError {
-	LexError,
-	ParseError(ParseError),
-	OperatorError(OperatorError),
-
-	DiceWithFewerThanOneSides,
-	DiceCountMustBeAnInteger,
-	DiceSidesMustBeAnInteger,
-
-	InfiniteRerollsDetected,
-
-	FailedGettingInputFromPrompt(String),
-
-	InterpreterConstructedWithoutMacros,
-	NoMacroNamed(String),
-	ErrorInMacro(String, Box<InterpretError>),
-	ThisMacroCannotBeNested(String),
-
-	Unkown,
-}
 
 pub struct Interpreter<'s, 'm> {
 	source: &'s str,
