@@ -3,8 +3,8 @@
 #[cfg(feature = "serialize")]
 use serde::{Deserialize, Serialize};
 
-use super::Comparison;
-use super::{Atom, Expression, MulDiv, Power, Unary};
+use super::error::OperatorError;
+use super::{Atom, Comparison, Expression, MulDiv, Power, Unary};
 use std::fmt;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
@@ -161,12 +161,6 @@ impl Neg for Number {
 			Number::Float(float) => Number::Float(-float),
 		}
 	}
-}
-
-#[derive(Debug, Copy, Clone)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
-pub enum OperatorError {
-	DivideByZero,
 }
 
 #[derive(Debug, Copy, Clone)]

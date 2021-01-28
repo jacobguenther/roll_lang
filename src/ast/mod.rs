@@ -1,5 +1,6 @@
 // File: ast.rs
 
+pub mod error;
 pub mod number;
 
 use crate::parser::error::ParseError;

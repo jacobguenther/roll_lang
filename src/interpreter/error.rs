@@ -3,7 +3,7 @@
 #[cfg(feature = "serialize")]
 use serde::{Deserialize, Serialize};
 
-use crate::ast::number::OperatorError;
+use crate::ast::error::OperatorError;
 use crate::parser::error::ParseError;
 
 #[derive(Debug, Clone)]
