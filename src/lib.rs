@@ -208,31 +208,23 @@ pub mod tests {
 	}
 
 	#[test]
-	fn macros() {
+	fn top_level_macros() {
 		use macros::*;
 
-		let source = String::from("I attack you for #{melee attack} and deal [[10/2]] damage!");
+		let source = String::from("#{melee attack}");
 		let mut macros = Macros::new();
 		macros.insert(String::from("melee attack"), String::from("[[15+4]]"));
 		let mut builder = InterpreterBuilder::new();
 
-		{
-			let mut interpreter = builder
-				.with_source(&source)
-				.with_macros(&macros)
-				.with_rng_func(r)
-				.build();
-			let mut interpreter2 = builder.build();
-			assert_eq!(
-				interpreter.interpret().to_string(),
-				String::from("I attack you for (19) and deal (5) damage!")
-			);
-
-			assert_eq!(
-				interpreter2.interpret().to_string(),
-				interpreter.interpret().to_string()
-			);
-		}
+		let mut interpreter = builder
+			.with_source(&source)
+			.with_macros(&macros)
+			.with_rng_func(r)
+			.build();
+		assert_eq!(
+			interpreter.interpret().to_string(),
+			String::from("(19)")
+		);
 	}
 	#[test]
 	fn nested_macros() {
@@ -249,45 +241,14 @@ pub mod tests {
 	}
 	#[test]
 	fn nested_inline_roll() {
-		use macros::*;
 		let source = String::from("/r 10+[[7+8]]");
-		let macros = Macros::new();
 		let mut interpreter = InterpreterBuilder::new()
 			.with_source(&source)
-			.with_macros(&macros)
 			.with_rng_func(r)
 			.build();
 		assert_eq!(
 			interpreter.interpret().to_string(),
 			String::from("10 + (15) = 25")
 		);
-	}
-
-	#[test]
-	fn interpreter_builder() {
-		use macros::*;
-
-		let source = String::from("I attack you for #attack and deal [[10/2]] damage!");
-		let mut macros = Macros::new();
-		macros.insert(String::from("attack"), String::from("[[15+4]]"));
-		let mut builder = InterpreterBuilder::new();
-
-		{
-			let mut interpreter = builder
-				.with_source(&source)
-				.with_macros(&macros)
-				.with_rng_func(r)
-				.build();
-			let mut interpreter2 = builder.build();
-			assert_eq!(
-				interpreter.interpret().to_string(),
-				String::from("I attack you for (19) and deal (5) damage!")
-			);
-
-			assert_eq!(
-				interpreter2.interpret().to_string(),
-				interpreter.interpret().to_string()
-			);
-		}
 	}
 }
