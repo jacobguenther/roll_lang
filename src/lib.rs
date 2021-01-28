@@ -179,76 +179,43 @@ pub mod tests {
 		helper("/r 5d1[?1][2] \\", "[(2+2+2+2+2) | tip: 1][2] = 10");
 	}
 
-	#[test]
-	fn short_macro() {
-		use macros::*;
-
-		let source = String::from("I attack you for #melee and deal [[10/2]] damage!");
-		let mut macros = Macros::new();
-		macros.insert(String::from("melee"), String::from("[[15+4]]"));
-		let mut builder = InterpreterBuilder::new();
-
-		{
-			let mut interpreter = builder
-				.with_source(&source)
-				.with_macros(&macros)
-				.with_rng_func(r)
-				.build();
-			let mut interpreter2 = builder.build();
-			assert_eq!(
-				interpreter.interpret().to_string(),
-				String::from("I attack you for (19) and deal (5) damage!")
-			);
-
-			assert_eq!(
-				interpreter2.interpret().to_string(),
-				interpreter.interpret().to_string()
-			);
-		}
+	use macros::*;
+	fn macro_helper(macros: &Macros, source: &str, result: &str) {
+		let interpreter_result = InterpreterBuilder::new()
+			.with_source(&source)
+			.with_macros(&macros)
+			.with_rng_func(r)
+			.build()
+			.interpret()
+			.to_string();
+		assert_eq!(interpreter_result, result);
 	}
 
 	#[test]
-	fn top_level_macros() {
+	fn top_level_macro() {
 		use macros::*;
-
-		let source = String::from("#{melee attack}");
 		let mut macros = Macros::new();
 		macros.insert(String::from("melee attack"), String::from("[[15+4]]"));
-		let mut builder = InterpreterBuilder::new();
-
-		let mut interpreter = builder
-			.with_source(&source)
-			.with_macros(&macros)
-			.with_rng_func(r)
-			.build();
-		assert_eq!(
-			interpreter.interpret().to_string(),
-			String::from("(19)")
-		);
+		macro_helper(&macros, "#{melee attack}", "(19)");
 	}
 	#[test]
-	fn nested_macros() {
+	fn top_level_short_macro() {
 		use macros::*;
-		let source = String::from("[[ #dtwenty + 1 ]]");
 		let mut macros = Macros::new();
-		macros.insert(String::from("dtwenty"), String::from("[[ 14 ]]"));
-		let mut interpreter = InterpreterBuilder::new()
-			.with_source(&source)
-			.with_macros(&macros)
-			.with_rng_func(r)
-			.build();
-		assert_eq!(interpreter.interpret().to_string(), String::from("(15)"));
+		macros.insert(String::from("melee"), String::from("[[15+4]]"));
+		macro_helper(&macros, "#melee", "(19)");
 	}
+
 	#[test]
-	fn nested_inline_roll() {
-		let source = String::from("/r 10+[[7+8]]");
-		let mut interpreter = InterpreterBuilder::new()
-			.with_source(&source)
-			.with_rng_func(r)
-			.build();
-		assert_eq!(
-			interpreter.interpret().to_string(),
-			String::from("10 + (15) = 25")
-		);
+	fn embedded_macro() {
+		use macros::*;
+		let mut macros = Macros::new();
+		macros.insert(String::from("melee"), String::from("[[15+4]]"));
+		macro_helper(&macros, "[[ #melee ]]", "(19)");
+	}
+
+	#[test]
+	fn embedded_inline_roll() {
+		helper("/r 10+[[7+8]]", "10 + (15) = 25");
 	}
 }
