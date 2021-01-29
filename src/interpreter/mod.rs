@@ -14,23 +14,28 @@ use super::macros::Macros;
 use super::parser::{Parser, ParserT};
 
 use std::collections::HashMap;
-use std::sync::Arc;
 
-pub struct Interpreter<'s, 'm> {
+pub struct Interpreter<'s, 'm, R>
+where
+	R: Fn() -> f64 + Copy,
+{
 	source: &'s str,
 	roll_queries: HashMap<String, Expression>,
 	macros: Option<&'m Macros>,
-	rand: Arc<dyn Fn() -> f64>,
+	rand: R,
 	query_prmopter: fn(&str, &str) -> Option<String>,
 }
-impl<'s, 'm> Interpreter<'s, 'm> {
+impl<'s, 'm, R> Interpreter<'s, 'm, R>
+where
+	R: Fn() -> f64 + Copy,
+{
 	pub fn new<'a, 'b>(
 		source: &'a str,
 		roll_queries: HashMap<String, Expression>,
 		macros: Option<&'b Macros>,
-		rand: Arc<dyn Fn() -> f64>,
+		rand: R,
 		query_prmopter: fn(&str, &str) -> Option<String>,
-	) -> Interpreter<'a, 'b> {
+	) -> Interpreter<'a, 'b, R> {
 		Interpreter {
 			source,
 			roll_queries,
@@ -44,7 +49,10 @@ impl<'s, 'm> Interpreter<'s, 'm> {
 pub trait InterpreterT {
 	fn interpret(&mut self) -> Output;
 }
-impl<'s, 'm> InterpreterT for Interpreter<'s, 'm> {
+impl<'s, 'm, R> InterpreterT for Interpreter<'s, 'm, R>
+where
+	R: Fn() -> f64 + Copy,
+{
 	fn interpret(&mut self) -> Output {
 		let mut output = Output::new(&self.source);
 		let ast = Parser::new(self.source).parse();

@@ -7,111 +7,20 @@ pub mod interpreter;
 pub mod lexer;
 pub mod macros;
 pub mod parser;
-
-use interpreter::*;
-use std::collections::HashMap;
-
-use std::sync::Arc;
-
-pub fn default_query_prompter(message: &str, default: &str) -> Option<String> {
-	use std::io;
-	println!("{} default({})", message, default);
-	let mut input = String::new();
-	match io::stdin().read_line(&mut input) {
-		Ok(_) => {
-			let input = input.trim().to_owned();
-			if input.is_empty() {
-				Some(default.to_owned())
-			} else {
-				Some(input)
-			}
-		}
-		Err(_) => None,
-	}
-}
-
-pub struct InterpreterBuilder<'s, 'r, 'm> {
-	source: Option<&'s str>,
-	roll_queries: Option<&'r HashMap<String, ast::Expression>>,
-	macros: Option<&'m macros::Macros>,
-	rand: Option<Arc<dyn Fn() -> f64>>,
-	query_prompter: Option<fn(&str, &str) -> Option<String>>,
-}
-impl<'s, 'r, 'm> Default for InterpreterBuilder<'s, 'r, 'm> {
-	fn default() -> InterpreterBuilder<'s, 'r, 'm> {
-		InterpreterBuilder::new()
-	}
-}
-impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm> {
-	pub fn new() -> InterpreterBuilder<'s, 'r, 'm> {
-		InterpreterBuilder {
-			source: None,
-			roll_queries: None,
-			macros: None,
-			rand: None,
-			query_prompter: None,
-		}
-	}
-
-	pub fn with_source<'a>(
-		&'a mut self,
-		source: &'s str,
-	) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
-		self.source = Some(source);
-		self
-	}
-	pub fn with_roll_queries<'a>(
-		&'a mut self,
-		roll_queries: &'r HashMap<String, ast::Expression>,
-	) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
-		self.roll_queries = Some(roll_queries);
-		self
-	}
-	pub fn with_macros<'a>(
-		&'a mut self,
-		macros: &'m macros::Macros,
-	) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
-		self.macros = Some(macros);
-		self
-	}
-	pub fn with_rng_func<'a>(
-		&'a mut self,
-		rand: Arc<dyn Fn() -> f64>,
-	) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
-		self.rand = Some(rand);
-		self
-	}
-	pub fn with_query_prompter<'a>(
-		&'a mut self,
-		prompter: fn(&str, &str) -> Option<String>,
-	) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
-		self.query_prompter = Some(prompter);
-		self
-	}
-
-	pub fn build(&self) -> Interpreter<'s, 'm> {
-		Interpreter::new(
-			self.source.unwrap_or(""),
-			self.roll_queries.unwrap_or(&HashMap::new()).clone(),
-			self.macros,
-			Arc::clone(self.rand.as_ref().unwrap()),
-			self.query_prompter.unwrap_or(default_query_prompter),
-		)
-	}
-}
+pub mod builder;
 
 #[cfg(test)]
 pub mod tests {
-	use super::*;
+	use super::interpreter::*;
+	use crate::builder::InterpreterBuilder;
 
 	fn r() -> f64 {
 		1.0
 	}
 	fn helper(source: &str, result: &str) {
-		let output = InterpreterBuilder::new()
+		let output = InterpreterBuilder::default()
 			.with_source(&source)
-			.with_rng_func(Arc::new(r))
-			.build()
+			.build(r)
 			.interpret()
 			.to_string();
 		println!("{}", source);
@@ -180,13 +89,17 @@ pub mod tests {
 		helper("/r 5d1[?1][2] \\", "[(2+2+2+2+2) | tip: 1][2] = 10");
 	}
 
-	use macros::*;
+	#[test]
+	fn embedded_inline_roll() {
+		helper("/r 10+[[7+8]]", "10 + (15) = 25");
+	}
+
+	use super::macros::*;
 	fn macro_helper(macros: &Macros, source: &str, result: &str) {
-		let interpreter_result = InterpreterBuilder::new()
+		let interpreter_result = InterpreterBuilder::default()
 			.with_source(&source)
 			.with_macros(&macros)
-			.with_rng_func(Arc::new(r))
-			.build()
+			.build(|| 1.0)
 			.interpret()
 			.to_string();
 		assert_eq!(interpreter_result, result);
@@ -194,14 +107,12 @@ pub mod tests {
 
 	#[test]
 	fn top_level_macro() {
-		use macros::*;
 		let mut macros = Macros::new();
 		macros.insert(String::from("melee attack"), String::from("[[15+4]]"));
 		macro_helper(&macros, "#{melee attack}", "(19)");
 	}
 	#[test]
 	fn top_level_short_macro() {
-		use macros::*;
 		let mut macros = Macros::new();
 		macros.insert(String::from("melee"), String::from("[[15+4]]"));
 		macro_helper(&macros, "#melee", "(19)");
@@ -209,14 +120,8 @@ pub mod tests {
 
 	#[test]
 	fn embedded_macro() {
-		use macros::*;
 		let mut macros = Macros::new();
 		macros.insert(String::from("melee"), String::from("[[15+4]]"));
 		macro_helper(&macros, "[[ #melee ]]", "(19)");
-	}
-
-	#[test]
-	fn embedded_inline_roll() {
-		helper("/r 10+[[7+8]]", "10 + (15) = 25");
 	}
 }
