@@ -1,10 +1,12 @@
 // File: lexer/mod.rs
 
 pub mod lexeme;
+mod state;
 pub mod token;
 
-use lexeme::*;
-use token::*;
+use lexeme::{Lexeme, LexemeType};
+use state::State;
+use token::{Token, TokenT};
 
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -13,11 +15,8 @@ pub struct Lexer<'a> {
 	state: State,
 	current_index: usize,
 }
-pub trait LexerT {
-	fn new(source: &str) -> Lexer;
-}
-impl<'a> LexerT for Lexer<'a> {
-	fn new(source: &str) -> Lexer {
+impl<'a> Lexer<'a> {
+	pub fn new(source: &str) -> Lexer {
 		Lexer {
 			graphemes: UnicodeSegmentation::graphemes(source, true).collect(),
 			state: State::Start,
@@ -47,15 +46,6 @@ impl<'a> Iterator for Lexer<'a> {
 
 		Some(lexeme)
 	}
-}
-
-#[derive(Debug, Copy, Clone, PartialEq)]
-enum State {
-	Start,
-	Whitespace,
-	Literal,
-	Digit,
-	Done,
 }
 
 trait LexerPrivateT {
@@ -119,16 +109,12 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 		if Lexer::is_digit(&c) {
 			self.add_one(lexeme);
 			*lexeme = lexeme.into(&LexemeType::Number);
-			self.state = State::Digit;
 			if self.at_end() {
 				self.state = State::Done;
 			} else {
 				self.state = State::Digit;
 			}
-			return;
-		}
-
-		if Lexer::is_whitespace(&c) {
+		} else if Lexer::is_whitespace(&c) {
 			self.add_one(lexeme);
 			*lexeme = lexeme.into(&LexemeType::Whitespace);
 			if self.at_end() {
@@ -136,20 +122,14 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 			} else {
 				self.state = State::Whitespace;
 			}
-			return;
-		}
-
-		if Lexer::is_comparison_operator(&c) {
+		} else if Lexer::is_comparison_operator(&c) {
 			self.add_one(lexeme);
 			*lexeme = lexeme.into(&LexemeType::Comparison);
 			if !self.at_end() && ((c == "<" || c == ">") && self.current_char().unwrap() == "=") {
 				self.add_one(lexeme);
 			}
 			self.state = State::Done;
-			return;
-		}
-
-		if Lexer::is_operator(&c) {
+		} else if Lexer::is_operator(&c) {
 			self.add_one(lexeme);
 			*lexeme = lexeme.into(&LexemeType::Operator);
 			if !self.at_end()
@@ -160,18 +140,14 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 				self.add_one(lexeme);
 			}
 			self.state = State::Done;
-			return;
-		}
-
-		if Lexer::is_punctuation(&c) {
+		} else if Lexer::is_punctuation(&c) {
 			self.add_one(lexeme);
 			*lexeme = lexeme.into(&LexemeType::Punctuation);
 			self.state = State::Done;
-			return;
+		} else {
+			*lexeme = lexeme.into(&LexemeType::Literal);
+			self.state = State::Literal;
 		}
-
-		*lexeme = lexeme.into(&LexemeType::Literal);
-		self.state = State::Literal;
 	}
 	fn handle_whitespace(&mut self, lexeme: &mut Lexeme) {
 		self.template_function_match_repeated(Lexer::is_whitespace, lexeme);

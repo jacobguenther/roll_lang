@@ -1,8 +1,9 @@
 // File: ast.rs
 
+pub mod error;
 pub mod number;
 
-use super::parser::ParseError;
+use crate::parser::error::ParseError;
 use number::*;
 
 pub type Root = Vec<Node>;

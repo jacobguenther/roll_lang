@@ -124,170 +124,97 @@ pub mod tests {
 		helper("[[4*6/3]]", "(8)");
 		// precedence
 		helper("[[(4+2)*2]]", "(12)");
-
 		// unicode and localization
 		helper("文字 hello", "文字 hello");
+	}
 
-		// whitespaces
+	#[test]
+	fn whitespaces() {
 		helper("[[ 20 + 4 * 2 ]]", "(28)");
 		helper("[[ 20 + 4 * 2 ]] ", "(28) ");
 		helper("/r 20 + 4 * 2 ", "20 + 4 * 2 = 28 ");
 		helper("/r 20 + 4 * 2 \\", "20 + 4 * 2 = 28");
 		helper("/r 20 + 4 * 2 \\ ", "20 + 4 * 2 = 28 ");
+	}
 
-		// comment
+	#[test]
+	fn comments() {
 		helper("/r [1]20 \\", "[1]20 = 20");
 		helper("/r 20[1] \\", "20[1] = 20");
-		// comments
 		helper("/r [1]20[2] \\", "[1]20[2] = 20");
 
-		// tooltips
+		helper("/r [1]1d1 \\", "[1](2) = 2");
+		helper("/r 1d1[1] \\", "(2)[1] = 2");
+		helper("/r [1]1d1[2] \\", "[1](2)[2] = 2");
+	}
+
+	#[test]
+	fn tooltips() {
 		helper("/r [?1]20 \\", "[20 | tip: 1] = 20");
 		helper("/r 20[?1] \\", "[20 | tip: 1] = 20");
 
-		// comment and tooltip
+		helper("/r [?1]1d1 \\", "[(2) | tip: 1] = 2");
+		helper("/r 1d1[?1] \\", "[(2) | tip: 1] = 2");
+	}
+
+	#[test]
+	fn comments_and_tooltips() {
 		helper("/r [1][?2]20 \\", "[1][20 | tip: 2] = 20");
 		helper("/r [1]20[?2] \\", "[1][20 | tip: 2] = 20");
 		helper("/r 20[?1][2] \\", "[20 | tip: 1][2] = 20");
 
-		// comments and tooltip
 		helper("/r [1][?2]20[3] \\", "[1][20 | tip: 2][3] = 20");
 		helper("/r [1]20[?2][3] \\", "[1][20 | tip: 2][3] = 20");
 
-		// comment
-		helper("/r [1]1d1 \\", "[1](2) = 2");
-		helper("/r 1d1[1] \\", "(2)[1] = 2");
-		// comments
-		helper("/r [1]1d1[2] \\", "[1](2)[2] = 2");
-
-		// tooltips
-		helper("/r [?1]1d1 \\", "[(2) | tip: 1] = 2");
-		helper("/r 1d1[?1] \\", "[(2) | tip: 1] = 2");
-
-		// comment and tooltip
 		helper("/r [1][?2]1d1 \\", "[1][(2) | tip: 2] = 2");
 		helper("/r [1]1d1[?2] \\", "[1][(2) | tip: 2] = 2");
 		helper("/r 1d1[?1][2] \\", "[(2) | tip: 1][2] = 2");
 
-		// comments and tooltip
 		helper("/r [1][?2]1d1[3] \\", "[1][(2) | tip: 2][3] = 2");
 		helper("/r [1]1d1[?2][3] \\", "[1][(2) | tip: 2][3] = 2");
 
-		// comment and tooltip
 		helper("/r [1][?2]3d1 \\", "[1][(2+2+2) | tip: 2] = 6");
 		helper("/r [1]4d1[?2] \\", "[1][(2+2+2+2) | tip: 2] = 8");
 		helper("/r 5d1[?1][2] \\", "[(2+2+2+2+2) | tip: 1][2] = 10");
 	}
 
-	#[test]
-	fn short_macro() {
-		use macros::*;
-
-		let source = String::from("I attack you for #melee and deal [[10/2]] damage!");
-		let mut macros = Macros::new();
-		macros.insert(String::from("melee"), String::from("[[15+4]]"));
-		let mut builder = InterpreterBuilder::new();
-
-		{
-			let mut interpreter = builder
-				.with_source(&source)
-				.with_macros(&macros)
-				.with_rng_func(r)
-				.build();
-			let mut interpreter2 = builder.build();
-			assert_eq!(
-				interpreter.interpret().to_string(),
-				String::from("I attack you for (19) and deal (5) damage!")
-			);
-
-			assert_eq!(
-				interpreter2.interpret().to_string(),
-				interpreter.interpret().to_string()
-			);
-		}
+	use macros::*;
+	fn macro_helper(macros: &Macros, source: &str, result: &str) {
+		let interpreter_result = InterpreterBuilder::new()
+			.with_source(&source)
+			.with_macros(&macros)
+			.with_rng_func(r)
+			.build()
+			.interpret()
+			.to_string();
+		assert_eq!(interpreter_result, result);
 	}
 
 	#[test]
-	fn macros() {
+	fn top_level_macro() {
 		use macros::*;
-
-		let source = String::from("I attack you for #{melee attack} and deal [[10/2]] damage!");
 		let mut macros = Macros::new();
 		macros.insert(String::from("melee attack"), String::from("[[15+4]]"));
-		let mut builder = InterpreterBuilder::new();
-
-		{
-			let mut interpreter = builder
-				.with_source(&source)
-				.with_macros(&macros)
-				.with_rng_func(r)
-				.build();
-			let mut interpreter2 = builder.build();
-			assert_eq!(
-				interpreter.interpret().to_string(),
-				String::from("I attack you for (19) and deal (5) damage!")
-			);
-
-			assert_eq!(
-				interpreter2.interpret().to_string(),
-				interpreter.interpret().to_string()
-			);
-		}
+		macro_helper(&macros, "#{melee attack}", "(19)");
 	}
 	#[test]
-	fn nested_macros() {
+	fn top_level_short_macro() {
 		use macros::*;
-		let source = String::from("[[ #dtwenty + 1 ]]");
 		let mut macros = Macros::new();
-		macros.insert(String::from("dtwenty"), String::from("[[ 14 ]]"));
-		let mut interpreter = InterpreterBuilder::new()
-			.with_source(&source)
-			.with_macros(&macros)
-			.with_rng_func(r)
-			.build();
-		assert_eq!(interpreter.interpret().to_string(), String::from("(15)"));
-	}
-	#[test]
-	fn nested_inline_roll() {
-		use macros::*;
-		let source = String::from("/r 10+[[7+8]]");
-		let macros = Macros::new();
-		let mut interpreter = InterpreterBuilder::new()
-			.with_source(&source)
-			.with_macros(&macros)
-			.with_rng_func(r)
-			.build();
-		assert_eq!(
-			interpreter.interpret().to_string(),
-			String::from("10 + (15) = 25")
-		);
+		macros.insert(String::from("melee"), String::from("[[15+4]]"));
+		macro_helper(&macros, "#melee", "(19)");
 	}
 
 	#[test]
-	fn interpreter_builder() {
+	fn embedded_macro() {
 		use macros::*;
-
-		let source = String::from("I attack you for #attack and deal [[10/2]] damage!");
 		let mut macros = Macros::new();
-		macros.insert(String::from("attack"), String::from("[[15+4]]"));
-		let mut builder = InterpreterBuilder::new();
+		macros.insert(String::from("melee"), String::from("[[15+4]]"));
+		macro_helper(&macros, "[[ #melee ]]", "(19)");
+	}
 
-		{
-			let mut interpreter = builder
-				.with_source(&source)
-				.with_macros(&macros)
-				.with_rng_func(r)
-				.build();
-			let mut interpreter2 = builder.build();
-			assert_eq!(
-				interpreter.interpret().to_string(),
-				String::from("I attack you for (19) and deal (5) damage!")
-			);
-
-			assert_eq!(
-				interpreter2.interpret().to_string(),
-				interpreter.interpret().to_string()
-			);
-		}
+	#[test]
+	fn embedded_inline_roll() {
+		helper("/r 10+[[7+8]]", "10 + (15) = 25");
 	}
 }
