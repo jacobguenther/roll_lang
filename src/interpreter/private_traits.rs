@@ -7,6 +7,8 @@ use super::error::InterpretError;
 use super::output::*;
 use super::{Interpreter, InterpreterT};
 
+use std::sync::Arc;
+
 pub(super) trait InterpreterPrivateT {
 	fn interpret_parse_error(&self, parse_error: &ParseError) -> InterpretError;
 	fn interpret_string_literal(&self, string_literal: &str) -> OutputFragment;
@@ -161,7 +163,7 @@ impl<'s, 'm> InterpreterPrivateT for Interpreter<'s, 'm> {
 					&data,
 					self.roll_queries.clone(),
 					self.macros,
-					self.rand,
+					Arc::clone(&self.rand),
 					self.query_prmopter,
 				);
 				let output = interpreter.interpret();

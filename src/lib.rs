@@ -11,6 +11,8 @@ pub mod parser;
 use interpreter::*;
 use std::collections::HashMap;
 
+use std::sync::Arc;
+
 pub fn default_query_prompter(message: &str, default: &str) -> Option<String> {
 	use std::io;
 	println!("{} default({})", message, default);
@@ -32,7 +34,7 @@ pub struct InterpreterBuilder<'s, 'r, 'm> {
 	source: Option<&'s str>,
 	roll_queries: Option<&'r HashMap<String, ast::Expression>>,
 	macros: Option<&'m macros::Macros>,
-	rand: Option<fn() -> f64>,
+	rand: Option<Arc<dyn Fn() -> f64>>,
 	query_prompter: Option<fn(&str, &str) -> Option<String>>,
 }
 impl<'s, 'r, 'm> Default for InterpreterBuilder<'s, 'r, 'm> {
@@ -74,7 +76,7 @@ impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm> {
 	}
 	pub fn with_rng_func<'a>(
 		&'a mut self,
-		rand: fn() -> f64,
+		rand: Arc<dyn Fn() -> f64>,
 	) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
 		self.rand = Some(rand);
 		self
@@ -92,7 +94,7 @@ impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm> {
 			self.source.unwrap_or(""),
 			self.roll_queries.unwrap_or(&HashMap::new()).clone(),
 			self.macros,
-			self.rand.unwrap(),
+			Arc::clone(self.rand.as_ref().unwrap()),
 			self.query_prompter.unwrap_or(default_query_prompter),
 		)
 	}
@@ -108,7 +110,7 @@ pub mod tests {
 	fn helper(source: &str, result: &str) {
 		let output = InterpreterBuilder::new()
 			.with_source(&source)
-			.with_rng_func(r)
+			.with_rng_func(Arc::new(r))
 			.build()
 			.interpret()
 			.to_string();
@@ -183,7 +185,7 @@ pub mod tests {
 		let interpreter_result = InterpreterBuilder::new()
 			.with_source(&source)
 			.with_macros(&macros)
-			.with_rng_func(r)
+			.with_rng_func(Arc::new(r))
 			.build()
 			.interpret()
 			.to_string();

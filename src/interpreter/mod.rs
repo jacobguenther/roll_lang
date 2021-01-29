@@ -14,12 +14,13 @@ use super::macros::Macros;
 use super::parser::{Parser, ParserT};
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 pub struct Interpreter<'s, 'm> {
 	source: &'s str,
 	roll_queries: HashMap<String, Expression>,
 	macros: Option<&'m Macros>,
-	rand: fn() -> f64,
+	rand: Arc<dyn Fn() -> f64>,
 	query_prmopter: fn(&str, &str) -> Option<String>,
 }
 impl<'s, 'm> Interpreter<'s, 'm> {
@@ -27,7 +28,7 @@ impl<'s, 'm> Interpreter<'s, 'm> {
 		source: &'a str,
 		roll_queries: HashMap<String, Expression>,
 		macros: Option<&'b Macros>,
-		rand: fn() -> f64,
+		rand: Arc<dyn Fn() -> f64>,
 		query_prmopter: fn(&str, &str) -> Option<String>,
 	) -> Interpreter<'a, 'b> {
 		Interpreter {
