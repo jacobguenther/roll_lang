@@ -100,12 +100,37 @@ pub(super) trait InterpreterPrivateT {
 
 	fn random_range(&self, low: i32, high: i32) -> Integer;
 	fn validate_modifiers(&self, modifiers: &Modifiers, sides: i32) -> Result<(), InterpretError>;
-	fn apply_exploding_and_reroll_modifiers(
+
+	fn reroll_applies(&self, roll: &Integer, sides: i32, modifiers: &[Reroll]) -> bool;
+
+	fn apply_reroll_modifiers(
 		&self,
-		roll: &Integer,
+		next_roll_value: &Integer,
+		rolls: &mut Vec<NumberRoll>,
 		sides: i32,
-		modifiers: &Modifiers,
-	) -> Vec<NumberRoll>;
+		modifiers: &[Reroll],
+	);
+
+	fn apply_exploding_modifiers(
+		&self,
+		rolls: &mut Vec<NumberRoll>,
+		sides: i32,
+		modifiers: &[Reroll],
+	);
+	fn apply_penetrating_modifiers(
+		&self,
+		rolls: &mut Vec<NumberRoll>,
+		sides: i32,
+		modifiers: &[Reroll],
+		is_first: bool,
+	);
+	fn apply_compounding_modifiers(
+		&self,
+		rolls: &mut Vec<NumberRoll>,
+		sides: i32,
+		modifiers: &[Reroll],
+	);
+
 	fn apply_drop_keep_modifiers(
 		&self,
 		rolls: &[NumberRoll],
@@ -446,40 +471,48 @@ where
 
 		self.validate_modifiers(modifiers, sides)?;
 
-		let mut rolls = Vec::<NumberRoll>::new();
-		let mut result = 0;
-		for _dice in 0..normal.count.value() {
-			let roll = self.random_range(1, sides);
+		let rolls = (0..normal.count.value())
+			.map(|_i| {
+				let roll = self.random_range(1, sides);
 
-			let modified_rolls = self.apply_exploding_and_reroll_modifiers(&roll, sides, modifiers);
-			let modified_result = modified_rolls.sum_counted_rolls();
-			result += modified_result.value();
+				let mut modified_rolls = Vec::new();
+				self.apply_reroll_modifiers(&roll, &mut modified_rolls, sides, &modifiers.reroll);
 
-			// if compounding combine dice into single roll
-			// continue to next roll
-			if let Some(Expanding::Compounding(_)) = modifiers.expanding {
-				rolls.push(NumberRoll::Counted(modified_result));
-				continue;
-			}
-
-			let mut penetration = 0;
-			for modified_roll in &modified_rolls {
-				// if penetrating reduce concecutive dice rolls by 1
-				if let Some(Expanding::Penetrating(_)) = modifiers.expanding {
-					if let NumberRoll::Counted(num) = modified_roll {
-						rolls.push(NumberRoll::Counted(
-							Integer::new(num.value() - penetration).clamp_min(1),
-						));
-						penetration += 1;
-						continue;
+				if let Some(expanding) = modifiers.expanding.as_ref() {
+					match expanding {
+						Expanding::Exploding(exploding) => {
+							self.apply_exploding_modifiers(&mut modified_rolls, sides, exploding)
+						}
+						Expanding::Penetrating(penetrating) => self.apply_penetrating_modifiers(
+							&mut modified_rolls,
+							sides,
+							penetrating,
+							true,
+						),
+						Expanding::Compounding(compounding) => self.apply_compounding_modifiers(
+							&mut modified_rolls,
+							sides,
+							compounding,
+						),
 					}
 				}
-				rolls.push(*modified_roll);
+
+				// self.apply_post_modifiers(&mut modified_rolls, modifiers.post_modifiers);
+
+				modified_rolls
+			})
+			.flatten()
+			.collect::<Vec<_>>();
+
+		let result = rolls.iter().fold(0, |mut acc, el| {
+			if let NumberRoll::Counted(roll) = el {
+				acc += roll.value();
 			}
-		}
+			acc
+		});
 
 		// Add all rolls to formula
-		for roll in rolls {
+		for roll in rolls.iter() {
 			formula.push_number_roll(&roll);
 		}
 		if let Some(tip) = tooltip {
@@ -519,7 +552,7 @@ where
 		Integer::new(low + ((self.rand)() * high as f64).floor() as i32)
 	}
 	fn validate_modifiers(&self, modifiers: &Modifiers, sides: i32) -> Result<(), InterpretError> {
-		let add_rerolls_for = |comparison: &Comparison, point: i32| -> Vec<i32> {
+		let get_rerolls_for = |comparison: &Comparison, point: i32| -> Vec<i32> {
 			match comparison {
 				Comparison::LessThan => (1..point).collect(),
 				Comparison::GreaterThan => ((point + 1)..(sides + 1)).collect(),
@@ -529,36 +562,36 @@ where
 			}
 		};
 
-		let mut reroll_on = Vec::<i32>::new();
-		match modifiers.expanding {
-			Some(Expanding::Exploding(Exploding {
-				comparison,
-				comparison_point,
-			}))
-			| Some(Expanding::Compounding(Exploding {
-				comparison,
-				comparison_point,
-			}))
-			| Some(Expanding::Penetrating(Exploding {
-				comparison,
-				comparison_point,
-			})) => {
-				let point = comparison_point
-					.unwrap_or_else(|| Integer::new(sides))
-					.value();
-				reroll_on.append(&mut add_rerolls_for(&comparison, point));
+		let rerolls_iter = modifiers.reroll.iter();
+		let temp = Vec::new();
+		let all_rerolls_iter = if let Some(expanding_modifier) = modifiers.expanding.as_ref() {
+			match expanding_modifier {
+				Expanding::Exploding(rerolls)
+				| Expanding::Penetrating(rerolls)
+				| Expanding::Compounding(rerolls) => rerolls_iter.chain(rerolls.iter()),
 			}
-			_ => (),
-		}
-		for reroll_modifier in &modifiers.reroll_modifiers {
-			let point = reroll_modifier
-				.comparison_point
-				.unwrap_or_else(|| Integer::new(sides))
-				.value();
-			reroll_on.append(&mut add_rerolls_for(&reroll_modifier.comparison, point));
-		}
+		} else {
+			rerolls_iter.chain(temp.iter())
+		};
+
+		let mut reroll_on = all_rerolls_iter
+			.map(
+				|&Reroll {
+				     comparison_point,
+				     comparison,
+				 }| {
+					let point = comparison_point
+						.unwrap_or_else(|| Integer::new(sides))
+						.value();
+					get_rerolls_for(&comparison, point)
+				},
+			)
+			.flatten()
+			.collect::<Vec<_>>();
+
 		reroll_on.sort_unstable();
 		reroll_on.dedup();
+
 		let mut reroll_on_all = true;
 		for i in 1..(sides + 1) {
 			if reroll_on.iter().find(|&&x| x == i as i32).is_none() {
@@ -573,54 +606,95 @@ where
 		Ok(())
 	}
 
-	fn apply_exploding_and_reroll_modifiers(
-		&self,
-		roll: &Integer,
-		sides: i32,
-		modifiers: &Modifiers,
-	) -> Vec<NumberRoll> {
-		let mut rolls = Vec::new();
-
-		let mut rerolled = false;
-		for reroll_modifier in &modifiers.reroll_modifiers {
+	fn reroll_applies(&self, roll: &Integer, sides: i32, modifiers: &[Reroll]) -> bool {
+		for reroll_modifier in modifiers.iter() {
 			let comparison_point = reroll_modifier
 				.comparison_point
 				.unwrap_or_else(|| Integer::new(sides));
 			if roll.comparison(&reroll_modifier.comparison, &comparison_point) {
-				rolls.push(NumberRoll::NotCounted(*roll));
-				let new_roll = self.random_range(1, sides);
-				rolls.append(
-					&mut self.apply_exploding_and_reroll_modifiers(&new_roll, sides, modifiers),
-				);
-				rerolled = true;
-				break;
+				return true;
 			}
 		}
-		if !rerolled {
-			rolls.push(NumberRoll::Counted(*roll));
-		}
+		false
+	}
 
-		if let Some(expanding) = modifiers.expanding {
-			match expanding {
-				Expanding::Compounding(exploding)
-				| Expanding::Penetrating(exploding)
-				| Expanding::Exploding(exploding) => {
-					let comparison_point = exploding
-						.comparison_point
-						.unwrap_or_else(|| Integer::new(sides));
-					if roll.comparison(&exploding.comparison, &comparison_point) {
-						let new_roll = self.random_range(1, sides);
-						rolls.append(
-							&mut self
-								.apply_exploding_and_reroll_modifiers(&new_roll, sides, modifiers),
-						);
+	fn apply_reroll_modifiers(
+		&self,
+		next_roll_value: &Integer,
+		rolls: &mut Vec<NumberRoll>,
+		sides: i32,
+		reroll_modifiers: &[Reroll],
+	) {
+		if reroll_modifiers.is_empty() {
+			rolls.push(NumberRoll::Counted(*next_roll_value))
+		} else if self.reroll_applies(&next_roll_value, sides, reroll_modifiers) {
+			rolls.push(NumberRoll::NotCounted(*next_roll_value));
+			let new_roll = self.random_range(1, sides);
+			self.apply_reroll_modifiers(&new_roll, rolls, sides, reroll_modifiers);
+		} else {
+			rolls.push(NumberRoll::Counted(*next_roll_value));
+		}
+	}
+
+	fn apply_exploding_modifiers(
+		&self,
+		rolls: &mut Vec<NumberRoll>,
+		sides: i32,
+		modifiers: &[Reroll],
+	) {
+		if let Some(NumberRoll::Counted(counted)) = rolls.last() {
+			for modifier in modifiers.iter() {
+				let comparison_point = modifier
+					.comparison_point
+					.unwrap_or_else(|| Integer::new(sides));
+				if counted.comparison(&modifier.comparison, &comparison_point) {
+					let new_roll = self.random_range(1, sides);
+					rolls.push(NumberRoll::Counted(new_roll));
+					self.apply_exploding_modifiers(rolls, sides, modifiers);
+					break;
+				}
+			}
+		}
+	}
+	fn apply_penetrating_modifiers(
+		&self,
+		rolls: &mut Vec<NumberRoll>,
+		sides: i32,
+		modifiers: &[Reroll],
+		is_first: bool,
+	) {
+		if let Some(NumberRoll::Counted(counted)) = rolls.last() {
+			let do_penetrating_roll = if is_first {
+				self.reroll_applies(counted, sides, modifiers)
+			} else {
+				self.reroll_applies(&Integer::new(counted.value() + 1), sides, modifiers)
+			};
+			if do_penetrating_roll {
+				let raw_roll = self.random_range(1, sides).value();
+				rolls.push(NumberRoll::Counted(Integer::new(raw_roll - 1)));
+				self.apply_penetrating_modifiers(rolls, sides, modifiers, false);
+			}
+		}
+	}
+	fn apply_compounding_modifiers(
+		&self,
+		rolls: &mut Vec<NumberRoll>,
+		sides: i32,
+		modifiers: &[Reroll],
+	) {
+		if let Some(NumberRoll::Counted(counted)) = rolls.last_mut() {
+			if self.reroll_applies(counted, sides, modifiers) {
+				loop {
+					let next_roll = self.random_range(1, sides);
+					*counted = *counted + next_roll;
+					if !self.reroll_applies(&next_roll, sides, modifiers) {
+						break;
 					}
 				}
 			}
 		}
-
-		rolls
 	}
+
 	fn apply_drop_keep_modifiers(
 		&self,
 		_rolls: &[NumberRoll],

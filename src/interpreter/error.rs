@@ -26,5 +26,7 @@ pub enum InterpretError {
 	ErrorInMacro(String, Box<InterpretError>),
 	ThisMacroCannotBeNested(String),
 
+	MultipleTypesOfExpandingModifiersNotSupported,
+
 	Unkown,
 }

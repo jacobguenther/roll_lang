@@ -12,7 +12,7 @@ pub type Root = Vec<Node>;
 pub enum Node {
 	StringLiteral(String),
 	Macro(Macro),
-	Roll(Roll),
+	Roll(Box<Roll>),
 	ParseError(ParseError),
 }
 #[derive(Debug, Clone)]
@@ -87,7 +87,7 @@ pub struct Computed {
 #[derive(Debug, Clone)]
 pub struct Modifiers {
 	pub expanding: Option<Expanding>,
-	pub reroll_modifiers: Vec<Reroll>,
+	pub reroll: Vec<Reroll>,
 	pub post_modifiers: Vec<PostModifier>,
 }
 impl Default for Modifiers {
@@ -99,19 +99,18 @@ impl Modifiers {
 	pub fn new() -> Modifiers {
 		Modifiers {
 			expanding: None,
-			reroll_modifiers: Vec::new(),
+			reroll: Vec::new(),
 			post_modifiers: Vec::new(),
 		}
 	}
 }
 
-#[derive(Debug, Copy, Clone)]
-pub enum Modifier {
-	Reroll(Reroll),
-	Expanding(Expanding),
-	PostModifier(PostModifier),
+#[derive(Debug, Clone)]
+pub enum Expanding {
+	Exploding(Vec<Reroll>),
+	Penetrating(Vec<Reroll>),
+	Compounding(Vec<Reroll>),
 }
-
 #[derive(Debug, Copy, Clone)]
 pub struct Reroll {
 	pub comparison: Comparison,
@@ -128,15 +127,6 @@ impl RerollT for Reroll {
 		}
 	}
 }
-#[derive(Debug, Copy, Clone)]
-pub enum Expanding {
-	Exploding(Exploding),
-	Compounding(Compounding),
-	Penetrating(Penetrating),
-}
-pub type Exploding = Reroll;
-pub type Compounding = Reroll;
-pub type Penetrating = Reroll;
 
 #[derive(Debug, Copy, Clone)]
 pub enum PostModifier {

@@ -71,7 +71,7 @@ impl ToString for NumberRoll {
 	fn to_string(&self) -> String {
 		match self {
 			NumberRoll::Counted(int) => format!("{}", int.value()),
-			NumberRoll::NotCounted(_) => String::from("not-counted"),
+			NumberRoll::NotCounted(n) => format!("roll_not_counted({})", n.value()),
 		}
 	}
 }
