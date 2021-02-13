@@ -6,9 +6,16 @@ use crate::lexer::token::Token;
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum ParseError {
 	UnexpectedToken(Token),
+
 	ExpectedPunctuation(String),
+	ExpectedLiteral(String),
+	ExpectedOperator(String),
+
+	MultipleTypesOfExpandingModifiersNotSupported,
+
 	ExpectedInteger,
 	DoesNotMatch,
+
 	OutOfBounds,
 	UnexpectedTooltip(String),
 	Unknown,

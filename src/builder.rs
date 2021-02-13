@@ -1,7 +1,7 @@
 // File: builder.rs
 
-use crate::interpreter::*;
 use crate::ast::Expression;
+use crate::interpreter::*;
 use crate::macros::Macros;
 
 use std::collections::HashMap;
@@ -39,8 +39,7 @@ impl<'s, 'r, 'm> Default for InterpreterBuilder<'s, 'r, 'm> {
 		}
 	}
 }
-impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm>
-{
+impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm> {
 	pub fn with_source<'a>(
 		&'a mut self,
 		source: &'s str,
@@ -70,9 +69,10 @@ impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm>
 		self
 	}
 
-    pub fn build<R>(&self, rand: R) -> Interpreter<'s, 'm, R>
-        where R: Fn() -> f64 + Copy
-    {
+	pub fn build<R>(&self, rand: R) -> Interpreter<'s, 'm, R>
+	where
+		R: Fn() -> f64 + Copy,
+	{
 		Interpreter::new(
 			self.source.unwrap_or(""),
 			self.roll_queries.unwrap_or(&HashMap::new()).clone(),

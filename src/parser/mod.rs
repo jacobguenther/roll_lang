@@ -52,7 +52,7 @@ impl ParserT for Parser {
 				}
 				State::Roll => match self.parse_roll() {
 					Ok(roll) => {
-						root.push(Node::Roll(roll));
+						root.push(Node::Roll(Box::new(roll)));
 						self.state = State::Start;
 					}
 					Err(parse_error) => {

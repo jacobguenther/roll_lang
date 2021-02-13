@@ -39,17 +39,16 @@ pub(super) trait ParserPrivateT {
 	fn parse_computed(&mut self) -> Result<Computed, ParseError>;
 	fn parse_computed_helper(&mut self) -> Result<Expression, ParseError>;
 
-	fn parse_modifiers(&mut self) -> Modifiers;
+	fn parse_modifiers(&mut self) -> Result<Modifiers, ParseError>;
 	fn parse_comparison(&mut self) -> Result<Comparison, ParseError>;
 	fn parse_comparison_and_integer(&mut self)
 		-> Result<(Comparison, Option<Integer>), ParseError>;
 	fn parse_comparison_and_require_integer(&mut self)
 		-> Result<(Comparison, Integer), ParseError>;
 
-	fn parse_expanding(&mut self) -> Result<Expanding, ParseError>;
-	fn parse_exploding(&mut self) -> Result<Exploding, ParseError>;
-	fn parse_compounding(&mut self) -> Result<Compounding, ParseError>;
-	fn parse_penetrating(&mut self) -> Result<Penetrating, ParseError>;
+	fn parse_exploding(&mut self) -> Result<Reroll, ParseError>;
+	fn parse_compounding(&mut self) -> Result<Reroll, ParseError>;
+	fn parse_penetrating(&mut self) -> Result<Reroll, ParseError>;
 
 	fn parse_reroll(&mut self) -> Result<Reroll, ParseError>;
 	fn parse_high_low(&mut self) -> Result<PostModifier, ParseError>;
@@ -315,33 +314,38 @@ impl ParserPrivateT for Parser {
 				let tooltip = check_tooltip(tooltip, self.parse_tooltip())?;
 				return Ok(Atom::Dice(dice, tooltip));
 			}
-			Err(_parse_error) => self.current_index = after_tip_index,
-		};
-
-		match self.parse_number() {
-			Ok(num) => {
-				let tooltip = check_tooltip(tooltip, self.parse_tooltip())?;
-				return Ok(Atom::Number(num, tooltip));
+			Err(parse_error) => {
+				if let ParseError::MultipleTypesOfExpandingModifiersNotSupported = parse_error {
+					return Err(parse_error);
+				}
 			}
-			Err(_parse_error) => self.current_index = start_index,
 		};
+		self.current_index = after_tip_index;
+
+		if let Ok(num) = self.parse_number() {
+			let tooltip = check_tooltip(tooltip, self.parse_tooltip())?;
+			return Ok(Atom::Number(num, tooltip));
+		}
+		self.current_index = start_index;
 
 		if let Some(tip) = tooltip {
 			return Err(ParseError::UnexpectedTooltip(tip));
 		}
 
-		match self.parse_roll_query() {
-			Ok(query) => return Ok(Atom::RollQuery(query)),
-			Err(_parse_error) => self.current_index = start_index,
+		if let Ok(query) = self.parse_roll_query() {
+			return Ok(Atom::RollQuery(query));
 		}
-		match self.parse_function() {
-			Ok(function) => return Ok(Atom::Function(function)),
-			Err(_parse_error) => self.current_index = start_index,
+		self.current_index = start_index;
+
+		if let Ok(function) = self.parse_function() {
+			return Ok(Atom::Function(function));
 		};
-		match self.parse_macro() {
-			Ok(nested_macro) => return Ok(Atom::Macro(nested_macro)),
-			Err(_parse_error) => self.current_index = start_index,
+		self.current_index = start_index;
+
+		if let Ok(nested_macro) = self.parse_macro() {
+			return Ok(Atom::Macro(nested_macro));
 		};
+		self.current_index = start_index;
 
 		if self.is_inline_roll() {
 			self.step_lexemes();
@@ -490,19 +494,19 @@ impl ParserPrivateT for Parser {
 		let start_index = self.current_index;
 		match self.parse_normal() {
 			Ok(normal) => {
-				return Ok(Dice::Normal(normal, self.parse_modifiers()));
+				return Ok(Dice::Normal(normal, self.parse_modifiers()?));
 			}
 			Err(_parse_error) => self.current_index = start_index,
 		};
 		match self.parse_fate() {
 			Ok(fate) => {
-				return Ok(Dice::Fate(fate, self.parse_modifiers()));
+				return Ok(Dice::Fate(fate, self.parse_modifiers()?));
 			}
 			Err(_parse_error) => self.current_index = start_index,
 		};
 		match self.parse_computed() {
 			Ok(computed) => {
-				return Ok(Dice::Computed(computed, self.parse_modifiers()));
+				return Ok(Dice::Computed(computed, self.parse_modifiers()?));
 			}
 			Err(_parse_error) => self.current_index = start_index,
 		}
@@ -567,16 +571,63 @@ impl ParserPrivateT for Parser {
 			},
 		}
 	}
-	fn parse_modifiers(&mut self) -> Modifiers {
+	fn parse_modifiers(&mut self) -> Result<Modifiers, ParseError> {
 		let mut modifiers = Modifiers::new();
-
-		modifiers.expanding = self.parse_expanding().ok();
+		let mut expanding = None;
 		loop {
 			let mut found_one = false;
 			let start_index = self.current_index;
+			match self.parse_exploding() {
+				Ok(exploding) => {
+					if expanding.is_none() {
+						expanding = Some(Expanding::Exploding(vec![exploding]));
+					} else if let Some(Expanding::Exploding(exploding_points)) = expanding.as_mut()
+					{
+						exploding_points.push(exploding);
+					} else {
+						return Err(ParseError::MultipleTypesOfExpandingModifiersNotSupported);
+					}
+					found_one = true;
+				}
+				Err(_parse_error) => self.current_index = start_index,
+			}
+			let start_index = self.current_index;
+			match self.parse_penetrating() {
+				Ok(penetrating) => {
+					if expanding.is_none() {
+						expanding = Some(Expanding::Penetrating(vec![penetrating]));
+					} else if let Some(Expanding::Penetrating(penetrating_points)) =
+						expanding.as_mut()
+					{
+						penetrating_points.push(penetrating);
+					} else {
+						return Err(ParseError::MultipleTypesOfExpandingModifiersNotSupported);
+					}
+					found_one = true;
+				}
+				Err(_parse_error) => self.current_index = start_index,
+			}
+			let start_index = self.current_index;
+			match self.parse_compounding() {
+				Ok(compounding) => {
+					if expanding.is_none() {
+						expanding = Some(Expanding::Compounding(vec![compounding]));
+					} else if let Some(Expanding::Compounding(compounding_points)) =
+						expanding.as_mut()
+					{
+						compounding_points.push(compounding);
+					} else {
+						return Err(ParseError::MultipleTypesOfExpandingModifiersNotSupported);
+					}
+					found_one = true;
+				}
+				Err(_parse_error) => self.current_index = start_index,
+			}
+			let start_index = self.current_index;
+
 			match self.parse_reroll() {
 				Ok(reroll_modifier) => {
-					modifiers.reroll_modifiers.push(reroll_modifier);
+					modifiers.reroll.push(reroll_modifier);
 					found_one = true;
 				}
 				Err(_parse_error) => self.current_index = start_index,
@@ -609,7 +660,8 @@ impl ParserPrivateT for Parser {
 				break;
 			}
 		}
-		modifiers
+		modifiers.expanding = expanding;
+		Ok(modifiers)
 	}
 	fn parse_comparison(&mut self) -> Result<Comparison, ParseError> {
 		let comparison = match self.current()? {
@@ -658,50 +710,37 @@ impl ParserPrivateT for Parser {
 		}
 	}
 
-	fn parse_expanding(&mut self) -> Result<Expanding, ParseError> {
-		let start_index = self.current_index;
-		match self.parse_exploding() {
-			Ok(exploding) => return Ok(Expanding::Exploding(exploding)),
-			Err(_parse_error) => self.current_index = start_index,
-		}
-		match self.parse_compounding() {
-			Ok(exploding) => return Ok(Expanding::Compounding(exploding)),
-			Err(_parse_error) => self.current_index = start_index,
-		}
-		Ok(Expanding::Penetrating(self.parse_penetrating()?))
-	}
-
-	fn parse_exploding(&mut self) -> Result<Exploding, ParseError> {
+	fn parse_exploding(&mut self) -> Result<Reroll, ParseError> {
 		let start_index = self.current_index;
 		if let Err(parse_error) = self.match_current_to_operator("!") {
 			self.current_index = start_index;
 			return Err(parse_error);
 		}
 		match self.parse_comparison_and_require_integer() {
-			Ok((comparison, integer)) => Ok(Exploding::new(comparison, Some(integer))),
-			Err(_) => Ok(Exploding::new(Comparison::Equal, None)),
+			Ok((comparison, integer)) => Ok(Reroll::new(comparison, Some(integer))),
+			Err(_) => Ok(Reroll::new(Comparison::Equal, None)),
 		}
 	}
-	fn parse_compounding(&mut self) -> Result<Compounding, ParseError> {
+	fn parse_compounding(&mut self) -> Result<Reroll, ParseError> {
 		let start_index = self.current_index;
 		if let Err(parse_error) = self.match_current_to_operator("!!") {
 			self.current_index = start_index;
 			return Err(parse_error);
 		}
 		match self.parse_comparison_and_require_integer() {
-			Ok((comparison, integer)) => Ok(Penetrating::new(comparison, Some(integer))),
-			Err(_) => Ok(Compounding::new(Comparison::Equal, None)),
+			Ok((comparison, integer)) => Ok(Reroll::new(comparison, Some(integer))),
+			Err(_) => Ok(Reroll::new(Comparison::Equal, None)),
 		}
 	}
-	fn parse_penetrating(&mut self) -> Result<Penetrating, ParseError> {
+	fn parse_penetrating(&mut self) -> Result<Reroll, ParseError> {
 		let start_index = self.current_index;
 		if let Err(parse_error) = self.match_current_to_operator("!p") {
 			self.current_index = start_index;
 			return Err(parse_error);
 		}
 		match self.parse_comparison_and_require_integer() {
-			Ok((comparison, integer)) => Ok(Exploding::new(comparison, Some(integer))),
-			Err(_) => Ok(Exploding::new(Comparison::Equal, None)),
+			Ok((comparison, integer)) => Ok(Reroll::new(comparison, Some(integer))),
+			Err(_) => Ok(Reroll::new(Comparison::Equal, None)),
 		}
 	}
 	fn parse_reroll(&mut self) -> Result<Reroll, ParseError> {
@@ -810,7 +849,7 @@ impl ParserPrivateT for Parser {
 				return Ok(token);
 			}
 		}
-		Err(ParseError::DoesNotMatch)
+		Err(ParseError::ExpectedPunctuation(punctuation.to_owned()))
 	}
 	fn match_current_to_punctuation_skip_whitespace(
 		&mut self,
@@ -823,7 +862,7 @@ impl ParserPrivateT for Parser {
 				return Ok(token);
 			}
 		}
-		Err(ParseError::DoesNotMatch)
+		Err(ParseError::ExpectedPunctuation(punctuation.to_owned()))
 	}
 	fn match_current_to_literal(&mut self, literal: &str) -> Result<Token, ParseError> {
 		if let Lexeme::Literal(token) = self.current()? {
@@ -833,7 +872,7 @@ impl ParserPrivateT for Parser {
 				return Ok(token);
 			}
 		}
-		Err(ParseError::DoesNotMatch)
+		Err(ParseError::ExpectedLiteral(literal.to_owned()))
 	}
 	fn match_current_to_operator(&mut self, operator: &str) -> Result<Token, ParseError> {
 		if let Lexeme::Operator(token) = self.current()? {
@@ -843,7 +882,7 @@ impl ParserPrivateT for Parser {
 				return Ok(token);
 			}
 		}
-		Err(ParseError::DoesNotMatch)
+		Err(ParseError::ExpectedOperator(operator.to_owned()))
 	}
 
 	fn is_roll(&self) -> bool {
