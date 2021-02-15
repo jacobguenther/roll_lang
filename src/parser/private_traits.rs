@@ -383,7 +383,7 @@ impl ParserPrivateT for Parser {
 
 	fn parse_function(&mut self) -> Result<Function, ParseError> {
 		if let Lexeme::Literal(token) = self.current()? {
-			if let "abs" | "ceil" | "floor" | "round" = token.source() {
+			if let "abs" | "ceil" | "floor" | "round" | "round_half_down" = token.source() {
 				let start_index = self.current_index;
 				let token = token.clone();
 				self.step_lexemes();
@@ -398,6 +398,7 @@ impl ParserPrivateT for Parser {
 					"ceil" => Function::Ceil(expression),
 					"floor" => Function::Floor(expression),
 					"round" => Function::Round(expression),
+					"round_half_down" => Function::RoundHalfDown(expression),
 					_ => return Err(ParseError::Unknown),
 				};
 				self.skip_whitespace();
