@@ -56,10 +56,10 @@ pub enum Atom {
 	Number(Number, Tooltip),
 	Dice(Dice, Tooltip),
 	Function(Function),
-	RollQuery(RollQuery), // is a tooltip
+	RollQuery(RollQuery),
 	ParenthesesExpression(Box<Expression>),
-	InlineRoll(Box<Expression>), // is a tooltip
-	Macro(Macro),                // is a tooltip
+	InlineRoll(Box<Expression>),
+	Macro(Macro),
 }
 
 #[derive(Debug, Clone)]
@@ -153,6 +153,7 @@ pub enum Function {
 	Floor(Box<Expression>),
 	Ceil(Box<Expression>),
 	Round(Box<Expression>),
+	RoundHalfDown(Box<Expression>),
 	Abs(Box<Expression>),
 }
 

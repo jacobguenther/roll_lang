@@ -422,6 +422,11 @@ where
 				let expression_output = interpret_function_helper("round", expression, formula)?;
 				expression_output.round()
 			}
+			Function::RoundHalfDown(expression) => {
+				let expression_output =
+					interpret_function_helper("round_half_down", expression, formula)?;
+				expression_output.round_half_down()
+			}
 			Function::Abs(expression) => {
 				let expression_output = interpret_function_helper("abs", expression, formula)?;
 				expression_output.abs()

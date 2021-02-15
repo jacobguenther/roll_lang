@@ -23,6 +23,12 @@ impl fmt::Display for Number {
 	}
 }
 impl Number {
+	pub fn as_float(&self) -> Float {
+		match self {
+			Number::Integer(i) => Float::new(i.value() as f32),
+			Number::Float(f) => *f,
+		}
+	}
 	pub fn floor(&self) -> Number {
 		match self {
 			Number::Integer(_) => *self,
@@ -39,6 +45,20 @@ impl Number {
 		match self {
 			Number::Integer(_) => *self,
 			Number::Float(float) => Number::Integer(Integer::new(float.value().round() as i32)),
+		}
+	}
+	pub fn round_half_down(&self) -> Number {
+		match self {
+			Number::Integer(_) => *self,
+			Number::Float(float) => {
+				let value = float.value();
+				let lower = self.floor().as_float().value();
+				if value - lower == 0.5 {
+					Number::Float(Float::new(lower))
+				} else {
+					self.ceil()
+				}
+			}
 		}
 	}
 	pub fn abs(&self) -> Number {
