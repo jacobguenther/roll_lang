@@ -1,6 +1,7 @@
 // File: tests/mod.rs
 
 pub mod comments_tooltips;
+pub mod drop_keep;
 pub mod functions;
 pub mod macros;
 pub mod modifires;
@@ -34,12 +35,22 @@ fn helper_return_result<R: Copy + Fn() -> f64>(random_func: R, source: &str) -> 
 
 #[test]
 fn playground() {
+	let r = || -> f64 {
+		let nums = [0.0, 0.1, 0.3, 0.4];
+		static mut I: usize = 0;
+		unsafe {
+			let rand = nums[I];
+			I += 1;
+			if I >= 4 {
+				I = 0;
+			}
+			rand
+		}
+	};
 	println!(
 		"{}",
 		InterpreterBuilder::default()
-			.with_source(
-				"I deal /r d6[spear] + [[ 3[str mod] + 4[prof bonus] ]][modifiers] \\ damage"
-			)
+			.with_source("/r 4d10kl2")
 			.build(r)
 			.interpret()
 			.to_string()

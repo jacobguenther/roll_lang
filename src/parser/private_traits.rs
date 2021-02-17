@@ -51,9 +51,9 @@ pub(super) trait ParserPrivateT {
 	fn parse_penetrating(&mut self) -> Result<Reroll, ParseError>;
 
 	fn parse_reroll(&mut self) -> Result<Reroll, ParseError>;
-	fn parse_high_low(&mut self) -> Result<PostModifier, ParseError>;
-	fn parse_successes(&mut self) -> Result<PostModifier, ParseError>;
-	fn parse_cirtical(&mut self) -> Result<PostModifier, ParseError>;
+	fn parse_drop_keep(&mut self) -> Result<DropKeep, ParseError>;
+	fn parse_successes(&mut self) -> Result<Successes, ParseError>;
+	fn parse_cirtical(&mut self) -> Result<Successes, ParseError>;
 
 	fn step_lexemes(&mut self);
 	fn step_lexemes_skip_whitespace(&mut self);
@@ -314,11 +314,11 @@ impl ParserPrivateT for Parser {
 				let tooltip = check_tooltip(tooltip, self.parse_tooltip())?;
 				return Ok(Atom::Dice(dice, tooltip));
 			}
-			Err(parse_error) => {
-				if let ParseError::MultipleTypesOfExpandingModifiersNotSupported = parse_error {
-					return Err(parse_error);
-				}
-			}
+			Err(parse_error) => match parse_error {
+				ParseError::MultipleTypesOfExpandingModifiersNotSupported
+				| ParseError::MultipleDropKeepModifiersNotSupported => return Err(parse_error),
+				_ => (),
+			},
 		};
 		self.current_index = after_tip_index;
 
@@ -636,7 +636,7 @@ impl ParserPrivateT for Parser {
 			let start_index = self.current_index;
 			match self.parse_successes() {
 				Ok(successes_modifier) => {
-					modifiers.post_modifiers.push(successes_modifier);
+					modifiers.successes.push(successes_modifier);
 					found_one = true;
 				}
 				Err(_parse_error) => self.current_index = start_index,
@@ -644,15 +644,18 @@ impl ParserPrivateT for Parser {
 			let start_index = self.current_index;
 			match self.parse_cirtical() {
 				Ok(critical_modifier) => {
-					modifiers.post_modifiers.push(critical_modifier);
+					modifiers.successes.push(critical_modifier);
 					found_one = true;
 				}
 				Err(_parse_error) => self.current_index = start_index,
 			};
 			let start_index = self.current_index;
-			match self.parse_high_low() {
-				Ok(critical_modifier) => {
-					modifiers.post_modifiers.push(critical_modifier);
+			match self.parse_drop_keep() {
+				Ok(drop_keep) => {
+					if let Some(_) = modifiers.drop_keep {
+						return Err(ParseError::MultipleDropKeepModifiersNotSupported);
+					}
+					modifiers.drop_keep = Some(drop_keep);
 					found_one = true;
 				}
 				Err(_parse_error) => self.current_index = start_index,
@@ -755,36 +758,32 @@ impl ParserPrivateT for Parser {
 			}
 		}
 	}
-	fn parse_high_low(&mut self) -> Result<PostModifier, ParseError> {
+	fn parse_drop_keep(&mut self) -> Result<DropKeep, ParseError> {
 		if let Lexeme::Literal(token) = self.current()? {
 			if let "dh" | "k" | "kh" | "d" | "dl" | "kl" = token.source() {
-				let start_index = self.current_index;
 				let token = token.clone();
 				self.step_lexemes_skip_whitespace();
 				let count = match self.parse_integer() {
 					Ok(int) => int,
-					Err(_parse_error) => {
-						self.current_index = start_index;
-						return Err(ParseError::ExpectedInteger);
-					}
+					Err(_parse_error) => Integer::new(1),
 				};
 				return match token.source() {
-					"dh" => Ok(PostModifier::DropHighest(count)),
-					"k" | "kh" => Ok(PostModifier::KeepHighest(count)),
-					"d" | "dl" => Ok(PostModifier::DropLowest(count)),
-					"kl" => Ok(PostModifier::KeepLowest(count)),
+					"dh" => Ok(DropKeep::DropHighest(count)),
+					"k" | "kh" => Ok(DropKeep::KeepHighest(count)),
+					"d" | "dl" => Ok(DropKeep::DropLowest(count)),
+					"kl" => Ok(DropKeep::KeepLowest(count)),
 					_ => Err(ParseError::Unknown),
 				};
 			}
 		}
 		Err(ParseError::DoesNotMatch)
 	}
-	fn parse_successes(&mut self) -> Result<PostModifier, ParseError> {
+	fn parse_successes(&mut self) -> Result<Successes, ParseError> {
 		let comparison = self.parse_comparison()?;
 		let integer = self.parse_integer()?;
-		Ok(PostModifier::Success(comparison, integer))
+		Ok(Successes::Success(comparison, integer))
 	}
-	fn parse_cirtical(&mut self) -> Result<PostModifier, ParseError> {
+	fn parse_cirtical(&mut self) -> Result<Successes, ParseError> {
 		if let Lexeme::Literal(token) = self.current()? {
 			if let "cs" | "cf" = token.source() {
 				let start_index = self.current_index;
@@ -798,8 +797,8 @@ impl ParserPrivateT for Parser {
 					}
 				};
 				return match token.source() {
-					"cs" => Ok(PostModifier::CriticalSuccess(comparison, integer)),
-					"cf" => Ok(PostModifier::CriticalFailure(comparison, integer)),
+					"cs" => Ok(Successes::CriticalSuccess(comparison, integer)),
+					"cf" => Ok(Successes::CriticalFailure(comparison, integer)),
 					_ => Err(ParseError::Unknown),
 				};
 			}

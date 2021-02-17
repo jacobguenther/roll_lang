@@ -88,7 +88,8 @@ pub struct Computed {
 pub struct Modifiers {
 	pub expanding: Option<Expanding>,
 	pub reroll: Vec<Reroll>,
-	pub post_modifiers: Vec<PostModifier>,
+	pub drop_keep: Option<DropKeep>,
+	pub successes: Vec<Successes>,
 }
 impl Default for Modifiers {
 	fn default() -> Modifiers {
@@ -100,7 +101,8 @@ impl Modifiers {
 		Modifiers {
 			expanding: None,
 			reroll: Vec::new(),
-			post_modifiers: Vec::new(),
+			drop_keep: None,
+			successes: Vec::new(),
 		}
 	}
 }
@@ -129,14 +131,19 @@ impl RerollT for Reroll {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum PostModifier {
-	KeepHighest(Integer),
-	KeepLowest(Integer),
-	DropHighest(Integer),
-	DropLowest(Integer),
+pub enum Successes {
 	CriticalSuccess(Comparison, Integer),
 	CriticalFailure(Comparison, Integer),
 	Success(Comparison, Integer),
+	Failure(Comparison, Integer),
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum DropKeep {
+	DropLowest(Integer),
+	DropHighest(Integer),
+	KeepLowest(Integer),
+	KeepHighest(Integer),
 }
 
 #[derive(Debug, Copy, Clone)]

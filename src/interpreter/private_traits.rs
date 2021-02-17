@@ -131,11 +131,7 @@ pub(super) trait InterpreterPrivateT {
 		modifiers: &[Reroll],
 	);
 
-	fn apply_drop_keep_modifiers(
-		&self,
-		rolls: &[NumberRoll],
-		modifiers: &Modifiers,
-	) -> Vec<NumberRoll>;
+	fn apply_drop_keep_modifiers(&self, rolls: &mut Vec<NumberRoll>, modifiers: &Modifiers);
 
 	fn interpret_comment(&self, option_comment: &Option<String>, formula: &mut FormulaFragments);
 }
@@ -476,7 +472,7 @@ where
 
 		self.validate_modifiers(modifiers, sides)?;
 
-		let rolls = (0..normal.count.value())
+		let mut rolls = (0..normal.count.value())
 			.map(|_i| {
 				let roll = self.random_range(1, sides);
 
@@ -508,6 +504,8 @@ where
 			})
 			.flatten()
 			.collect::<Vec<_>>();
+
+		self.apply_drop_keep_modifiers(&mut rolls, modifiers);
 
 		let result = rolls.iter().fold(0, |mut acc, el| {
 			if let NumberRoll::Counted(roll) = el {
@@ -700,12 +698,90 @@ where
 		}
 	}
 
-	fn apply_drop_keep_modifiers(
-		&self,
-		_rolls: &[NumberRoll],
-		_modifiers: &Modifiers,
-	) -> Vec<NumberRoll> {
-		vec![]
+	fn apply_drop_keep_modifiers(&self, rolls: &mut Vec<NumberRoll>, modifiers: &Modifiers) {
+		if let Some(dk) = modifiers.drop_keep {
+			let mut sorted = rolls.clone();
+			sorted.sort_unstable();
+
+			match dk {
+				DropKeep::DropLowest(count) => {
+					let target = sorted[count.value() as usize - 1].value();
+
+					let count = count.value();
+					let mut drop_count = 0;
+
+					for roll in rolls.iter_mut() {
+						if let NumberRoll::Counted(int) = roll {
+							let value = int.value();
+							if value <= target {
+								*roll = NumberRoll::NotCounted(Integer::new(value));
+								drop_count += 1;
+							}
+							if drop_count == count {
+								break;
+							}
+						}
+					}
+				}
+				DropKeep::DropHighest(count) => {
+					let target = sorted[sorted.len() - count.value() as usize].value();
+
+					let count = count.value();
+					let mut drop_count = 0;
+
+					for roll in rolls.iter_mut() {
+						if let NumberRoll::Counted(int) = roll {
+							let value = int.value();
+							if value >= target {
+								*roll = NumberRoll::NotCounted(Integer::new(value));
+								drop_count += 1;
+							}
+							if drop_count == count {
+								break;
+							}
+						}
+					}
+				}
+				DropKeep::KeepLowest(count) => {
+					let target = sorted[count.value() as usize - 1].value();
+
+					let count = count.value();
+					let mut keep_count = 0;
+
+					for roll in rolls.iter_mut() {
+						if let NumberRoll::Counted(int) = roll {
+							let value = int.value();
+							if value > target {
+								*roll = NumberRoll::NotCounted(Integer::new(value));
+							} else if value == target && keep_count >= count {
+								*roll = NumberRoll::NotCounted(Integer::new(value));
+							} else {
+								keep_count += 1;
+							}
+						}
+					}
+				}
+				DropKeep::KeepHighest(count) => {
+					let target = sorted[sorted.len() - count.value() as usize].value();
+
+					let count = count.value();
+					let mut keep_count = 0;
+
+					for roll in rolls.iter_mut() {
+						if let NumberRoll::Counted(int) = roll {
+							let value = int.value();
+							if value < target {
+								*roll = NumberRoll::NotCounted(Integer::new(value));
+							} else if value == target && keep_count >= count {
+								*roll = NumberRoll::NotCounted(Integer::new(value));
+							} else {
+								keep_count += 1;
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 
 	fn interpret_comment(&self, option_comment: &Option<String>, formula: &mut FormulaFragments) {

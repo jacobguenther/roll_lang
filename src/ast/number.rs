@@ -183,7 +183,7 @@ impl Neg for Number {
 	}
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct Integer {
 	i: i32,
@@ -249,7 +249,7 @@ impl Neg for Integer {
 	}
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct Float {
 	f: f32,
