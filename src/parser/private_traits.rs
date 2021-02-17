@@ -765,7 +765,7 @@ impl ParserPrivateT for Parser {
 				self.step_lexemes_skip_whitespace();
 				let count = match self.parse_integer() {
 					Ok(int) => int,
-					Err(_parse_error) => Integer::new(1),
+					Err(parse_error) => return Err(parse_error),
 				};
 				return match token.source() {
 					"dh" => Ok(DropKeep::DropHighest(count)),

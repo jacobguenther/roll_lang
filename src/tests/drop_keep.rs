@@ -15,6 +15,7 @@ fn error() {
 		None => panic!("expected error ParseError::MultipleDropKeepModifiersNotSupported got none"),
 	}
 }
+
 #[test]
 fn drop_lowest() {
 	let r = || -> f64 {
@@ -29,9 +30,7 @@ fn drop_lowest() {
 			rand
 		}
 	};
-	helper(r, "/r 3d4d", "(roll_not_counted(1)+2+3) = 5");
 	helper(r, "/r 3d4d1", "(roll_not_counted(1)+2+3) = 5");
-	helper(r, "/r 3d4dl", "(roll_not_counted(1)+2+3) = 5");
 	helper(r, "/r 3d4dl1", "(roll_not_counted(1)+2+3) = 5");
 	helper(
 		r,
@@ -70,7 +69,6 @@ fn drop_highest() {
 			rand
 		}
 	};
-	helper(r, "/r 3d4dh", "(1+2+roll_not_counted(3)) = 3");
 	helper(r, "/r 3d4dh1", "(1+2+roll_not_counted(3)) = 3");
 	helper(
 		r,
@@ -113,11 +111,6 @@ fn keep_lowest() {
 	};
 	helper(
 		r,
-		"/r 3d4kl",
-		"(1+roll_not_counted(2)+roll_not_counted(3)) = 1",
-	);
-	helper(
-		r,
 		"/r 3d4kl1",
 		"(1+roll_not_counted(2)+roll_not_counted(3)) = 1",
 	);
@@ -137,7 +130,7 @@ fn keep_lowest() {
 	};
 	helper(
 		r,
-		"/r 3d4kl",
+		"/r 3d4kl1",
 		"(1+roll_not_counted(1)+roll_not_counted(2)) = 1",
 	);
 }
@@ -157,17 +150,7 @@ fn keep_highest() {
 	};
 	helper(
 		r,
-		"/r 3d4k",
-		"(roll_not_counted(1)+roll_not_counted(2)+3) = 3",
-	);
-	helper(
-		r,
 		"/r 3d4k1",
-		"(roll_not_counted(1)+roll_not_counted(2)+3) = 3",
-	);
-	helper(
-		r,
-		"/r 3d4kh",
 		"(roll_not_counted(1)+roll_not_counted(2)+3) = 3",
 	);
 	helper(
@@ -190,7 +173,7 @@ fn keep_highest() {
 	};
 	helper(
 		r,
-		"/r 3d4kh",
+		"/r 3d4kh1",
 		"(roll_not_counted(1)+3+roll_not_counted(3)) = 3",
 	);
 }
