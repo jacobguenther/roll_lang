@@ -652,7 +652,7 @@ impl ParserPrivateT for Parser {
 			let start_index = self.current_index;
 			match self.parse_drop_keep() {
 				Ok(drop_keep) => {
-					if let Some(_) = modifiers.drop_keep {
+					if modifiers.drop_keep.is_some() {
 						return Err(ParseError::MultipleDropKeepModifiersNotSupported);
 					}
 					modifiers.drop_keep = Some(drop_keep);

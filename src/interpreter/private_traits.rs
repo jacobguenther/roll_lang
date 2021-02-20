@@ -703,82 +703,53 @@ where
 			let mut sorted = rolls.clone();
 			sorted.sort_unstable();
 
+			let drop_helper =
+				|rolls: &mut Vec<NumberRoll>, count, target, cmp: fn(i32, i32) -> bool| {
+					let mut drop_count = 0;
+					for roll in rolls.iter_mut() {
+						if let NumberRoll::Counted(int) = roll {
+							let value = int.value();
+							if cmp(value, target) {
+								*roll = NumberRoll::NotCounted(Integer::new(value));
+								drop_count += 1;
+							}
+							if drop_count == count {
+								break;
+							}
+						}
+					}
+				};
+			let keep_helper =
+				|rolls: &mut Vec<NumberRoll>, count, target, cmp: fn(i32, i32) -> bool| {
+					let mut keep_count = 0;
+					for roll in rolls.iter_mut() {
+						if let NumberRoll::Counted(int) = roll {
+							let value = int.value();
+							if cmp(value, target) || (value == target && keep_count >= count) {
+								*roll = NumberRoll::NotCounted(Integer::new(value));
+							} else {
+								keep_count += 1;
+							}
+						}
+					}
+				};
+
 			match dk {
 				DropKeep::DropLowest(count) => {
 					let target = sorted[count.value() as usize - 1].value();
-
-					let count = count.value();
-					let mut drop_count = 0;
-
-					for roll in rolls.iter_mut() {
-						if let NumberRoll::Counted(int) = roll {
-							let value = int.value();
-							if value <= target {
-								*roll = NumberRoll::NotCounted(Integer::new(value));
-								drop_count += 1;
-							}
-							if drop_count == count {
-								break;
-							}
-						}
-					}
+					drop_helper(rolls, count.value(), target, |a, b| a <= b);
 				}
 				DropKeep::DropHighest(count) => {
 					let target = sorted[sorted.len() - count.value() as usize].value();
-
-					let count = count.value();
-					let mut drop_count = 0;
-
-					for roll in rolls.iter_mut() {
-						if let NumberRoll::Counted(int) = roll {
-							let value = int.value();
-							if value >= target {
-								*roll = NumberRoll::NotCounted(Integer::new(value));
-								drop_count += 1;
-							}
-							if drop_count == count {
-								break;
-							}
-						}
-					}
+					drop_helper(rolls, count.value(), target, |a, b| a >= b);
 				}
 				DropKeep::KeepLowest(count) => {
 					let target = sorted[count.value() as usize - 1].value();
-
-					let count = count.value();
-					let mut keep_count = 0;
-
-					for roll in rolls.iter_mut() {
-						if let NumberRoll::Counted(int) = roll {
-							let value = int.value();
-							if value > target {
-								*roll = NumberRoll::NotCounted(Integer::new(value));
-							} else if value == target && keep_count >= count {
-								*roll = NumberRoll::NotCounted(Integer::new(value));
-							} else {
-								keep_count += 1;
-							}
-						}
-					}
+					keep_helper(rolls, count.value(), target, |a, b| a > b);
 				}
 				DropKeep::KeepHighest(count) => {
 					let target = sorted[sorted.len() - count.value() as usize].value();
-
-					let count = count.value();
-					let mut keep_count = 0;
-
-					for roll in rolls.iter_mut() {
-						if let NumberRoll::Counted(int) = roll {
-							let value = int.value();
-							if value < target {
-								*roll = NumberRoll::NotCounted(Integer::new(value));
-							} else if value == target && keep_count >= count {
-								*roll = NumberRoll::NotCounted(Integer::new(value));
-							} else {
-								keep_count += 1;
-							}
-						}
-					}
+					keep_helper(rolls, count.value(), target, |a, b| a < b);
 				}
 			}
 		}

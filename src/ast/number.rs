@@ -53,7 +53,7 @@ impl Number {
 			Number::Float(float) => {
 				let value = float.value();
 				let lower = self.floor().as_float().value();
-				if value - lower == 0.5 {
+				if ((value - lower) - 0.5).abs() < f32::EPSILON {
 					Number::Float(Float::new(lower))
 				} else {
 					self.ceil()
