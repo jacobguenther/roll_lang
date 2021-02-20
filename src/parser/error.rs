@@ -12,6 +12,7 @@ pub enum ParseError {
 	ExpectedOperator(String),
 
 	MultipleTypesOfExpandingModifiersNotSupported,
+	MultipleDropKeepModifiersNotSupported,
 
 	ExpectedInteger,
 	DoesNotMatch,

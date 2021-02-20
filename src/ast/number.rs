@@ -53,7 +53,7 @@ impl Number {
 			Number::Float(float) => {
 				let value = float.value();
 				let lower = self.floor().as_float().value();
-				if value - lower == 0.5 {
+				if ((value - lower) - 0.5).abs() < f32::EPSILON {
 					Number::Float(Float::new(lower))
 				} else {
 					self.ceil()
@@ -183,7 +183,7 @@ impl Neg for Number {
 	}
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct Integer {
 	i: i32,
@@ -249,7 +249,7 @@ impl Neg for Integer {
 	}
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct Float {
 	f: f32,

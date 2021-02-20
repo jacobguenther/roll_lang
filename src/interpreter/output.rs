@@ -117,13 +117,19 @@ impl NumberRollsT for NumberRolls {
 		Integer::new(res)
 	}
 }
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum NumberRoll {
 	Counted(Integer),
 	NotCounted(Integer),
 }
-
+impl NumberRoll {
+	pub fn value(&self) -> i32 {
+		match self {
+			NumberRoll::Counted(i) | NumberRoll::NotCounted(i) => i.value(),
+		}
+	}
+}
 pub type SuccessFailRolls = Vec<SuccessFail>;
 
 #[derive(Debug, Copy, Clone)]
