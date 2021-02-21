@@ -436,11 +436,11 @@ impl ParserPrivateT for Parser {
 			if let Lexeme::Number(decimal_token) = self.current()? {
 				let decimal_token = decimal_token.clone();
 				self.step_lexemes();
-				return Ok(Float::new(
+				return Ok(
 					format!("{}.{}", integer_token.source(), decimal_token.source())
 						.parse()
 						.unwrap(),
-				));
+				);
 			}
 		}
 		Err(ParseError::DoesNotMatch)
@@ -449,7 +449,7 @@ impl ParserPrivateT for Parser {
 		if let Lexeme::Number(token) = self.current()? {
 			let token = token.clone();
 			self.step_lexemes();
-			return Ok(Integer::new(token.source().parse().unwrap()));
+			return Ok(token.source().parse().unwrap());
 		}
 		Err(ParseError::DoesNotMatch)
 	}
@@ -519,7 +519,7 @@ impl ParserPrivateT for Parser {
 			Ok(integer) => integer,
 			Err(_parse_error) => {
 				self.current_index = start_index;
-				Integer::new(1)
+				1
 			}
 		};
 		if let Err(parse_error) = self.match_current_to_literal("d") {
@@ -560,7 +560,7 @@ impl ParserPrivateT for Parser {
 	}
 	fn parse_computed_helper(&mut self) -> Result<Expression, ParseError> {
 		match self.parse_integer() {
-			Ok(int) => Ok(int.as_expression()),
+			Ok(int) => Ok(integer_as_expression(int)),
 			Err(_parse_error) => match self.parse_roll_query() {
 				Ok(query) => Ok(query.as_expression()),
 				Err(_parse_error) => {

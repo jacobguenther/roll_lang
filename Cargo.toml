@@ -19,17 +19,5 @@ opt-level = 3
 [lib]
 crate-type = ["lib"]
 
-[features]
-serialize = ["serde", "serde_json"]
-
 [dependencies]
 unicode-segmentation = "1.6.0"
-
-[dependencies.serde]
-version = "1.0.115"
-features = ["derive"]
-optional = true
-
-[dependencies.serde_json]
-version = "1.0"
-optional = true

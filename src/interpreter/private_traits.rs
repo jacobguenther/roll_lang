@@ -98,36 +98,40 @@ pub(super) trait InterpreterPrivateT {
 		formula: &mut FormulaFragments,
 	) -> Result<Number, InterpretError>;
 
-	fn random_range(&self, low: i32, high: i32) -> Integer;
-	fn validate_modifiers(&self, modifiers: &Modifiers, sides: i32) -> Result<(), InterpretError>;
+	fn random_range(&self, low: Integer, high: Integer) -> Integer;
+	fn validate_modifiers(
+		&self,
+		modifiers: &Modifiers,
+		sides: Integer,
+	) -> Result<(), InterpretError>;
 
-	fn reroll_applies(&self, roll: &Integer, sides: i32, modifiers: &[Reroll]) -> bool;
+	fn reroll_applies(&self, roll: Integer, sides: Integer, modifiers: &[Reroll]) -> bool;
 
 	fn apply_reroll_modifiers(
 		&self,
-		next_roll_value: &Integer,
+		next_roll_value: Integer,
 		rolls: &mut Vec<NumberRoll>,
-		sides: i32,
+		sides: Integer,
 		modifiers: &[Reroll],
 	);
 
 	fn apply_exploding_modifiers(
 		&self,
 		rolls: &mut Vec<NumberRoll>,
-		sides: i32,
+		sides: Integer,
 		modifiers: &[Reroll],
 	);
 	fn apply_penetrating_modifiers(
 		&self,
 		rolls: &mut Vec<NumberRoll>,
-		sides: i32,
+		sides: Integer,
 		modifiers: &[Reroll],
 		is_first: bool,
 	);
 	fn apply_compounding_modifiers(
 		&self,
 		rolls: &mut Vec<NumberRoll>,
-		sides: i32,
+		sides: Integer,
 		modifiers: &[Reroll],
 	);
 
@@ -465,19 +469,19 @@ where
 		tooltip: &Option<String>,
 		formula: &mut FormulaFragments,
 	) -> Result<Number, InterpretError> {
-		let sides = normal.sides.value();
+		let sides = normal.sides;
 		if sides < 1 {
 			return Err(InterpretError::DiceWithFewerThanOneSides);
 		}
 
 		self.validate_modifiers(modifiers, sides)?;
 
-		let mut rolls = (0..normal.count.value())
+		let mut rolls = (0..normal.count)
 			.map(|_i| {
 				let roll = self.random_range(1, sides);
 
 				let mut modified_rolls = Vec::new();
-				self.apply_reroll_modifiers(&roll, &mut modified_rolls, sides, &modifiers.reroll);
+				self.apply_reroll_modifiers(roll, &mut modified_rolls, sides, &modifiers.reroll);
 
 				if let Some(expanding) = modifiers.expanding.as_ref() {
 					match expanding {
@@ -509,7 +513,7 @@ where
 
 		let result = rolls.iter().fold(0, |mut acc, el| {
 			if let NumberRoll::Counted(roll) = el {
-				acc += roll.value();
+				acc += roll;
 			}
 			acc
 		});
@@ -522,7 +526,7 @@ where
 			formula.push_tooltip(tip);
 		}
 
-		Ok(Number::Integer(Integer::new(result)))
+		Ok(Number::Integer(result))
 	}
 
 	fn interpret_computed_dice(
@@ -551,11 +555,15 @@ where
 		self.interpret_normal_dice(&normal, modifiers, tooltip, formula)
 	}
 
-	fn random_range(&self, low: i32, high: i32) -> Integer {
-		Integer::new(low + ((self.rand)() * high as f64).floor() as i32)
+	fn random_range(&self, low: Integer, high: Integer) -> Integer {
+		low + ((self.rand)() * high as Float).floor() as Integer
 	}
-	fn validate_modifiers(&self, modifiers: &Modifiers, sides: i32) -> Result<(), InterpretError> {
-		let get_rerolls_for = |comparison: &Comparison, point: i32| -> Vec<i32> {
+	fn validate_modifiers(
+		&self,
+		modifiers: &Modifiers,
+		sides: Integer,
+	) -> Result<(), InterpretError> {
+		let get_rerolls_for = |comparison: &Comparison, point: Integer| -> Vec<Integer> {
 			match comparison {
 				Comparison::LessThan => (1..point).collect(),
 				Comparison::GreaterThan => ((point + 1)..(sides + 1)).collect(),
@@ -583,9 +591,7 @@ where
 				     comparison_point,
 				     comparison,
 				 }| {
-					let point = comparison_point
-						.unwrap_or_else(|| Integer::new(sides))
-						.value();
+					let point = comparison_point.unwrap_or(sides);
 					get_rerolls_for(&comparison, point)
 				},
 			)
@@ -597,7 +603,7 @@ where
 
 		let mut reroll_on_all = true;
 		for i in 1..(sides + 1) {
-			if reroll_on.iter().find(|&&x| x == i as i32).is_none() {
+			if reroll_on.iter().find(|&&x| x == i).is_none() {
 				reroll_on_all = false;
 				break;
 			}
@@ -609,12 +615,10 @@ where
 		Ok(())
 	}
 
-	fn reroll_applies(&self, roll: &Integer, sides: i32, modifiers: &[Reroll]) -> bool {
+	fn reroll_applies(&self, roll: Integer, sides: Integer, modifiers: &[Reroll]) -> bool {
 		for reroll_modifier in modifiers.iter() {
-			let comparison_point = reroll_modifier
-				.comparison_point
-				.unwrap_or_else(|| Integer::new(sides));
-			if roll.comparison(&reroll_modifier.comparison, &comparison_point) {
+			let comparison_point = reroll_modifier.comparison_point.unwrap_or(sides);
+			if compare_integers(&reroll_modifier.comparison, roll, comparison_point) {
 				return true;
 			}
 		}
@@ -623,34 +627,32 @@ where
 
 	fn apply_reroll_modifiers(
 		&self,
-		next_roll_value: &Integer,
+		next_roll_value: Integer,
 		rolls: &mut Vec<NumberRoll>,
-		sides: i32,
+		sides: Integer,
 		reroll_modifiers: &[Reroll],
 	) {
 		if reroll_modifiers.is_empty() {
-			rolls.push(NumberRoll::Counted(*next_roll_value))
-		} else if self.reroll_applies(&next_roll_value, sides, reroll_modifiers) {
-			rolls.push(NumberRoll::NotCounted(*next_roll_value));
+			rolls.push(NumberRoll::Counted(next_roll_value))
+		} else if self.reroll_applies(next_roll_value, sides, reroll_modifiers) {
+			rolls.push(NumberRoll::NotCounted(next_roll_value));
 			let new_roll = self.random_range(1, sides);
-			self.apply_reroll_modifiers(&new_roll, rolls, sides, reroll_modifiers);
+			self.apply_reroll_modifiers(new_roll, rolls, sides, reroll_modifiers);
 		} else {
-			rolls.push(NumberRoll::Counted(*next_roll_value));
+			rolls.push(NumberRoll::Counted(next_roll_value));
 		}
 	}
 
 	fn apply_exploding_modifiers(
 		&self,
 		rolls: &mut Vec<NumberRoll>,
-		sides: i32,
+		sides: Integer,
 		modifiers: &[Reroll],
 	) {
 		if let Some(NumberRoll::Counted(counted)) = rolls.last() {
 			for modifier in modifiers.iter() {
-				let comparison_point = modifier
-					.comparison_point
-					.unwrap_or_else(|| Integer::new(sides));
-				if counted.comparison(&modifier.comparison, &comparison_point) {
+				let comparison_point = modifier.comparison_point.unwrap_or(sides);
+				if compare_integers(&modifier.comparison, *counted, comparison_point) {
 					let new_roll = self.random_range(1, sides);
 					rolls.push(NumberRoll::Counted(new_roll));
 					self.apply_exploding_modifiers(rolls, sides, modifiers);
@@ -662,19 +664,19 @@ where
 	fn apply_penetrating_modifiers(
 		&self,
 		rolls: &mut Vec<NumberRoll>,
-		sides: i32,
+		sides: Integer,
 		modifiers: &[Reroll],
 		is_first: bool,
 	) {
 		if let Some(NumberRoll::Counted(counted)) = rolls.last() {
 			let do_penetrating_roll = if is_first {
-				self.reroll_applies(counted, sides, modifiers)
+				self.reroll_applies(*counted, sides, modifiers)
 			} else {
-				self.reroll_applies(&Integer::new(counted.value() + 1), sides, modifiers)
+				self.reroll_applies(counted + 1, sides, modifiers)
 			};
 			if do_penetrating_roll {
-				let raw_roll = self.random_range(1, sides).value();
-				rolls.push(NumberRoll::Counted(Integer::new(raw_roll - 1)));
+				let raw_roll = self.random_range(1, sides);
+				rolls.push(NumberRoll::Counted(raw_roll - 1));
 				self.apply_penetrating_modifiers(rolls, sides, modifiers, false);
 			}
 		}
@@ -682,15 +684,15 @@ where
 	fn apply_compounding_modifiers(
 		&self,
 		rolls: &mut Vec<NumberRoll>,
-		sides: i32,
+		sides: Integer,
 		modifiers: &[Reroll],
 	) {
 		if let Some(NumberRoll::Counted(counted)) = rolls.last_mut() {
-			if self.reroll_applies(counted, sides, modifiers) {
+			if self.reroll_applies(*counted, sides, modifiers) {
 				loop {
 					let next_roll = self.random_range(1, sides);
-					*counted = *counted + next_roll;
-					if !self.reroll_applies(&next_roll, sides, modifiers) {
+					*counted += next_roll;
+					if !self.reroll_applies(next_roll, sides, modifiers) {
 						break;
 					}
 				}
@@ -704,13 +706,12 @@ where
 			sorted.sort_unstable();
 
 			let drop_helper =
-				|rolls: &mut Vec<NumberRoll>, count, target, cmp: fn(i32, i32) -> bool| {
+				|rolls: &mut Vec<NumberRoll>, count, target, cmp: fn(Integer, Integer) -> bool| {
 					let mut drop_count = 0;
 					for roll in rolls.iter_mut() {
-						if let NumberRoll::Counted(int) = roll {
-							let value = int.value();
-							if cmp(value, target) {
-								*roll = NumberRoll::NotCounted(Integer::new(value));
+						if let NumberRoll::Counted(value) = roll {
+							if cmp(*value, target) {
+								*roll = NumberRoll::NotCounted(*value);
 								drop_count += 1;
 							}
 							if drop_count == count {
@@ -720,13 +721,12 @@ where
 					}
 				};
 			let keep_helper =
-				|rolls: &mut Vec<NumberRoll>, count, target, cmp: fn(i32, i32) -> bool| {
+				|rolls: &mut Vec<NumberRoll>, count, target, cmp: fn(Integer, Integer) -> bool| {
 					let mut keep_count = 0;
 					for roll in rolls.iter_mut() {
-						if let NumberRoll::Counted(int) = roll {
-							let value = int.value();
-							if cmp(value, target) || (value == target && keep_count >= count) {
-								*roll = NumberRoll::NotCounted(Integer::new(value));
+						if let NumberRoll::Counted(value) = roll {
+							if cmp(*value, target) || (*value == target && keep_count >= count) {
+								*roll = NumberRoll::NotCounted(*value);
 							} else {
 								keep_count += 1;
 							}
@@ -736,20 +736,20 @@ where
 
 			match dk {
 				DropKeep::DropLowest(count) => {
-					let target = sorted[count.value() as usize - 1].value();
-					drop_helper(rolls, count.value(), target, |a, b| a <= b);
+					let target = sorted[count as usize - 1].value();
+					drop_helper(rolls, count, target, |a, b| a <= b);
 				}
 				DropKeep::DropHighest(count) => {
-					let target = sorted[sorted.len() - count.value() as usize].value();
-					drop_helper(rolls, count.value(), target, |a, b| a >= b);
+					let target = sorted[sorted.len() - count as usize].value();
+					drop_helper(rolls, count, target, |a, b| a >= b);
 				}
 				DropKeep::KeepLowest(count) => {
-					let target = sorted[count.value() as usize - 1].value();
-					keep_helper(rolls, count.value(), target, |a, b| a > b);
+					let target = sorted[count as usize - 1].value();
+					keep_helper(rolls, count, target, |a, b| a > b);
 				}
 				DropKeep::KeepHighest(count) => {
-					let target = sorted[sorted.len() - count.value() as usize].value();
-					keep_helper(rolls, count.value(), target, |a, b| a < b);
+					let target = sorted[sorted.len() - count as usize].value();
+					keep_helper(rolls, count, target, |a, b| a < b);
 				}
 			}
 		}
