@@ -3,11 +3,7 @@
 use super::InterpretError;
 use crate::ast::number::*;
 
-#[cfg(feature = "serialize")]
-use serde::{Deserialize, Serialize};
-
 #[derive(Debug)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct Output {
 	pub source: String,
 	pub fragments: Vec<OutputFragment>,
@@ -24,19 +20,16 @@ impl Output {
 }
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum OutputFragment {
 	StringLit(String),
 	Roll(RollType),
 }
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum RollType {
 	ExplicitRoll(ExpressionOutput),
 	InlineRoll(ExpressionOutput),
 }
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct ExpressionOutput {
 	pub formula_fragments: FormulaFragments,
 	pub result: Number,
@@ -93,7 +86,6 @@ impl FormulaFragmentsT for FormulaFragments {
 	}
 }
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum FormulaFragment {
 	// string, tooltip
 	Basic(String, Option<String>),
@@ -111,29 +103,27 @@ impl NumberRollsT for NumberRolls {
 		let mut res = 0;
 		for number_roll in self {
 			if let NumberRoll::Counted(int) = number_roll {
-				res += int.value();
+				res += int;
 			}
 		}
-		Integer::new(res)
+		res
 	}
 }
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum NumberRoll {
 	Counted(Integer),
 	NotCounted(Integer),
 }
 impl NumberRoll {
-	pub fn value(&self) -> i32 {
+	pub fn value(&self) -> Integer {
 		match self {
-			NumberRoll::Counted(i) | NumberRoll::NotCounted(i) => i.value(),
+			NumberRoll::Counted(i) | NumberRoll::NotCounted(i) => *i,
 		}
 	}
 }
 pub type SuccessFailRolls = Vec<SuccessFail>;
 
 #[derive(Debug, Copy, Clone)]
-#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum SuccessFail {
 	Success(Integer),
 	Fail(Integer),
