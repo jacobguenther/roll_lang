@@ -54,6 +54,7 @@ pub(super) trait ParserPrivateT {
 	fn parse_drop_keep(&mut self) -> Result<DropKeep, ParseError>;
 	fn parse_successes(&mut self) -> Result<Successes, ParseError>;
 	fn parse_cirtical(&mut self) -> Result<Successes, ParseError>;
+	fn parse_sort(&mut self) -> Result<Sort, ParseError>;
 
 	fn step_lexemes(&mut self);
 	fn step_lexemes_skip_whitespace(&mut self);
@@ -70,6 +71,7 @@ pub(super) trait ParserPrivateT {
 		punctuation: &str,
 	) -> Result<Token, ParseError>;
 	fn match_current_to_literal(&mut self, literal: &str) -> Result<Token, ParseError>;
+	fn match_current_to_keyword(&mut self, keyword: &str) -> Result<Token, ParseError>;
 	fn match_current_to_operator(&mut self, operator: &str) -> Result<Token, ParseError>;
 
 	fn is_roll(&self) -> bool;
@@ -96,7 +98,7 @@ impl ParserPrivateT for Parser {
 			} else if self.is_roll() || self.is_inline_roll() {
 				self.state = State::Roll;
 				break;
-			} else if self.current().unwrap().token().source() == "#" {
+			} else if self.current().unwrap().token().source() == "#" { // what is this for?
 				break;
 			} else {
 				literal.push_str(self.current().unwrap().source());
@@ -168,15 +170,16 @@ impl ParserPrivateT for Parser {
 				}
 				return Ok(Macro { name: macro_name });
 			}
-			Err(_parse_error) => {
-				if let Lexeme::Literal(token) = self.current()? {
+			Err(_parse_error) => match self.current()? {
+				Lexeme::Literal(token) | Lexeme::Keyword(token) => {
 					let token = token.clone();
 					self.step_lexemes();
 					return Ok(Macro {
 						name: token.source().to_string(),
 					});
 				}
-			}
+				_ => (),
+			},
 		};
 		self.current_index = start_index;
 		Err(ParseError::DoesNotMatch)
@@ -316,7 +319,8 @@ impl ParserPrivateT for Parser {
 			}
 			Err(parse_error) => match parse_error {
 				ParseError::MultipleTypesOfExpandingModifiersNotSupported
-				| ParseError::MultipleDropKeepModifiersNotSupported => return Err(parse_error),
+				| ParseError::MultipleDropKeepModifiersNotSupported
+				| ParseError::MultipleSortModifiersNotSupported => return Err(parse_error),
 				_ => (),
 			},
 		};
@@ -382,7 +386,7 @@ impl ParserPrivateT for Parser {
 	}
 
 	fn parse_function(&mut self) -> Result<Function, ParseError> {
-		if let Lexeme::Literal(token) = self.current()? {
+		if let Lexeme::Keyword(token) = self.current()? {
 			if let "abs" | "ceil" | "floor" | "round" | "round_half_down" = token.source() {
 				let start_index = self.current_index;
 				let token = token.clone();
@@ -522,7 +526,7 @@ impl ParserPrivateT for Parser {
 				1
 			}
 		};
-		if let Err(parse_error) = self.match_current_to_literal("d") {
+		if let Err(parse_error) = self.match_current_to_keyword("d") {
 			self.current_index = start_index;
 			return Err(parse_error);
 		};
@@ -537,7 +541,7 @@ impl ParserPrivateT for Parser {
 	fn parse_fate(&mut self) -> Result<Fate, ParseError> {
 		let start_index = self.current_index;
 		let count = self.parse_integer()?;
-		match self.match_current_to_literal("dF") {
+		match self.match_current_to_keyword("dF") {
 			Ok(_token) => Ok(Fate { count }),
 			Err(parse_error) => {
 				self.current_index = start_index;
@@ -551,7 +555,7 @@ impl ParserPrivateT for Parser {
 	//     | ["(" <expression> ")"] "d" "(" <expression> ")"
 	fn parse_computed(&mut self) -> Result<Computed, ParseError> {
 		let count = self.parse_computed_helper()?;
-		self.match_current_to_literal("d")?;
+		self.match_current_to_keyword("d")?;
 		let sides = self.parse_computed_helper()?;
 		Ok(Computed {
 			count: Box::new(count),
@@ -573,7 +577,7 @@ impl ParserPrivateT for Parser {
 		}
 	}
 	fn parse_modifiers(&mut self) -> Result<Modifiers, ParseError> {
-		let mut modifiers = Modifiers::new();
+		let mut modifiers = Modifiers::default();
 		let mut expanding = None;
 		loop {
 			let mut found_one = false;
@@ -660,6 +664,18 @@ impl ParserPrivateT for Parser {
 				}
 				Err(_parse_error) => self.current_index = start_index,
 			};
+			let start_index = self.current_index;
+			match self.parse_sort() {
+				Ok(sort) => {
+					if modifiers.sort.is_some() {
+						return Err(ParseError::MultipleSortModifiersNotSupported);
+					}
+					modifiers.sort = Some(sort);
+					println!("Found sourt modifier {:?}", sort);
+					found_one = true;
+				}
+				Err(_parse_error) => self.current_index = start_index,
+			}
 			if !found_one {
 				break;
 			}
@@ -749,7 +765,7 @@ impl ParserPrivateT for Parser {
 	}
 	fn parse_reroll(&mut self) -> Result<Reroll, ParseError> {
 		let start_index = self.current_index;
-		self.match_current_to_literal("r")?;
+		self.match_current_to_keyword("r")?;
 		match self.parse_comparison_and_require_integer() {
 			Ok((comparison, integer)) => Ok(Reroll::new(comparison, Some(integer))),
 			Err(parse_error) => {
@@ -759,7 +775,7 @@ impl ParserPrivateT for Parser {
 		}
 	}
 	fn parse_drop_keep(&mut self) -> Result<DropKeep, ParseError> {
-		if let Lexeme::Literal(token) = self.current()? {
+		if let Lexeme::Keyword(token) = self.current()? {
 			if let "dh" | "k" | "kh" | "d" | "dl" | "kl" = token.source() {
 				let token = token.clone();
 				self.step_lexemes_skip_whitespace();
@@ -784,7 +800,7 @@ impl ParserPrivateT for Parser {
 		Ok(Successes::Success(comparison, integer))
 	}
 	fn parse_cirtical(&mut self) -> Result<Successes, ParseError> {
-		if let Lexeme::Literal(token) = self.current()? {
+		if let Lexeme::Keyword(token) = self.current()? {
 			if let "cs" | "cf" = token.source() {
 				let start_index = self.current_index;
 				let token = token.clone();
@@ -801,6 +817,22 @@ impl ParserPrivateT for Parser {
 					"cf" => Ok(Successes::CriticalFailure(comparison, integer)),
 					_ => Err(ParseError::Unknown),
 				};
+			}
+		}
+		Err(ParseError::DoesNotMatch)
+	}
+	fn parse_sort(&mut self) -> Result<Sort, ParseError> {
+		if let Lexeme::Keyword(token) = self.current()? {
+			match token.source() {
+				"s" | "sa" => {
+					self.step_lexemes();
+					return Ok(Sort::Ascending);
+				}
+				"sd" => {
+					self.step_lexemes();
+					return Ok(Sort::Decending);
+				}
+				_ => (),
 			}
 		}
 		Err(ParseError::DoesNotMatch)
@@ -874,6 +906,16 @@ impl ParserPrivateT for Parser {
 		}
 		Err(ParseError::ExpectedLiteral(literal.to_owned()))
 	}
+	fn match_current_to_keyword(&mut self, keyword: &str) -> Result<Token, ParseError> {
+		if let Lexeme::Keyword(token) = self.current()? {
+			if token.source() == keyword {
+				let token = token.clone();
+				self.step_lexemes_skip_whitespace();
+				return Ok(token);
+			}
+		}
+		Err(ParseError::ExpectedKeyword(keyword.to_owned()))
+	}
 	fn match_current_to_operator(&mut self, operator: &str) -> Result<Token, ParseError> {
 		if let Lexeme::Operator(token) = self.current()? {
 			if token.source() == operator {
@@ -895,7 +937,7 @@ impl ParserPrivateT for Parser {
 		let next = self.next_as_option();
 		let roll = next.is_some()
 			&& match next.unwrap() {
-				Lexeme::Literal(token) => token.source() == "roll" || token.source() == "r",
+				Lexeme::Keyword(token) => token.source() == "roll" || token.source() == "r",
 				_ => false,
 			};
 		slash && roll

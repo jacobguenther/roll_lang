@@ -5,6 +5,7 @@ pub mod drop_keep;
 pub mod functions;
 pub mod macros;
 pub mod modifires;
+pub mod sort;
 
 use output::Output;
 
@@ -33,7 +34,7 @@ fn helper_return_result<R: Copy + Fn() -> f64>(random_func: R, source: &str) -> 
 		.interpret()
 }
 
-#[test]
+// #[test]
 fn playground() {
 	let r = || -> f64 {
 		let nums = [0.0, 0.1, 0.3, 0.4];
@@ -55,7 +56,7 @@ fn playground() {
 			.interpret()
 			.to_string()
 	);
-	// assert!(false);
+	assert!(false);
 }
 
 #[test]

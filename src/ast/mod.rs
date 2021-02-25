@@ -90,19 +90,16 @@ pub struct Modifiers {
 	pub reroll: Vec<Reroll>,
 	pub drop_keep: Option<DropKeep>,
 	pub successes: Vec<Successes>,
+	pub sort: Option<Sort>,
 }
 impl Default for Modifiers {
 	fn default() -> Modifiers {
-		Modifiers::new()
-	}
-}
-impl Modifiers {
-	pub fn new() -> Modifiers {
 		Modifiers {
 			expanding: None,
 			reroll: Vec::new(),
 			drop_keep: None,
 			successes: Vec::new(),
+			sort: None,
 		}
 	}
 }
@@ -144,6 +141,12 @@ pub enum DropKeep {
 	DropHighest(Integer),
 	KeepLowest(Integer),
 	KeepHighest(Integer),
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum Sort {
+	Ascending,
+	Decending,
 }
 
 #[derive(Debug, Copy, Clone)]
