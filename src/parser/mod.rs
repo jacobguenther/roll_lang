@@ -38,6 +38,7 @@ impl Parser {
 }
 impl ParserT for Parser {
 	fn parse(&mut self) -> Root {
+		println!("{:?}", self.lexemes);
 		let mut root = Root::new();
 		loop {
 			match self.state {

@@ -9,10 +9,12 @@ pub enum ParseError {
 
 	ExpectedPunctuation(String),
 	ExpectedLiteral(String),
+	ExpectedKeyword(String),
 	ExpectedOperator(String),
 
 	MultipleTypesOfExpandingModifiersNotSupported,
 	MultipleDropKeepModifiersNotSupported,
+	MultipleSortModifiersNotSupported,
 
 	ExpectedInteger,
 	DoesNotMatch,
