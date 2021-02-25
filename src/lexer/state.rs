@@ -5,6 +5,7 @@ pub enum State {
 	Start,
 	Whitespace,
 	Literal,
+	Keyword,
 	Digit,
 	Done,
 }

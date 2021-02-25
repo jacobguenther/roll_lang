@@ -10,6 +10,25 @@ use token::{Token, TokenT};
 
 use unicode_segmentation::UnicodeSegmentation;
 
+static Keywords: [&'static str; 16] = [
+	"abs",
+	"ceil",
+	"d",
+	"dh",
+	"dl",
+	"floor",
+	"k",
+	"kh",
+	"kl",
+	"r",
+	"roll",
+	"round",
+	"round_half_down",
+	"s",
+	"sa",
+	"sd",
+];
+
 pub struct Lexer<'a> {
 	graphemes: Vec<&'a str>,
 	state: State,
@@ -38,6 +57,7 @@ impl<'a> Iterator for Lexer<'a> {
 			match self.state {
 				State::Start => self.handle_start(&mut lexeme),
 				State::Whitespace => self.handle_whitespace(&mut lexeme),
+				State::Keyword => self.handle_keyword(&mut lexeme),
 				State::Literal => self.handle_literal(&mut lexeme),
 				State::Digit => self.handle_digit(&mut lexeme),
 				State::Done => break,
@@ -53,14 +73,18 @@ trait LexerPrivateT {
 	fn at_end(&self) -> bool;
 
 	fn add_one(&mut self, lexeme: &mut Lexeme);
+	fn remove_one(&mut self, lexeme: &mut Lexeme);
 
 	fn template_function_match_repeated(&mut self, check: fn(&str) -> bool, lexeme: &mut Lexeme);
 
 	fn handle_start(&mut self, lexeme: &mut Lexeme);
 	fn handle_whitespace(&mut self, lexeme: &mut Lexeme);
+	fn handle_keyword(&mut self, lexeme: &mut Lexeme);
 	fn handle_literal(&mut self, lexeme: &mut Lexeme);
 	fn handle_digit(&mut self, lexeme: &mut Lexeme);
 
+	fn is_keyword_substr(s: &str) -> bool;
+	fn is_keyword(s: &str) -> bool;
 	fn is_whitespace(s: &str) -> bool;
 	fn is_digit(s: &str) -> bool;
 	fn is_comparison_operator(s: &str) -> bool;
@@ -82,6 +106,15 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 	fn add_one(&mut self, lexeme: &mut Lexeme) {
 		lexeme.push_str(&self.current_char().unwrap());
 		self.current_index += 1;
+	}
+	fn remove_one(&mut self, lexeme: &mut Lexeme) {
+		let source = lexeme.source();
+		let mut index = source.len() - 1;
+		while !source.is_char_boundary(index) {
+			index -= 1;
+		}
+		lexeme.truncate(index);
+		self.current_index -= 1;
 	}
 
 	fn template_function_match_repeated(&mut self, check: fn(&str) -> bool, lexeme: &mut Lexeme) {
@@ -144,6 +177,9 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 			self.add_one(lexeme);
 			*lexeme = lexeme.into(&LexemeType::Punctuation);
 			self.state = State::Done;
+		} else if Lexer::is_keyword_substr(lexeme.source()) {
+			*lexeme = lexeme.into(&LexemeType::Keyword);
+			self.state = State::Keyword;
 		} else {
 			*lexeme = lexeme.into(&LexemeType::Literal);
 			self.state = State::Literal;
@@ -172,6 +208,24 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 			}
 		}
 	}
+	fn handle_keyword(&mut self, lexeme: &mut Lexeme) {
+		let start = self.current_index;
+		while Lexer::is_keyword_substr(lexeme.source()) && !self.at_end() {
+			println!("{:?}", lexeme);
+			self.add_one(lexeme);
+		}
+		println!("{:?}", lexeme);
+		while !Lexer::is_keyword(lexeme.source()) && self.current_index > start {
+			self.remove_one(lexeme);
+		}
+		if Lexer::is_keyword(lexeme.source()) {
+			self.state = State::Done;
+		} else {
+			self.state = State::Literal;
+			*lexeme = lexeme.into(&LexemeType::Literal);
+			self.handle_literal(lexeme);
+		}
+	}
 	fn handle_digit(&mut self, lexeme: &mut Lexeme) {
 		self.template_function_match_repeated(Lexer::is_digit, lexeme);
 	}
@@ -193,6 +247,22 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 		true
 	}
 
+	fn is_keyword_substr(s: &str) -> bool {
+		for keyword in Keywords.iter() {
+			if let Some(sub) = keyword.find(s) {
+				return true;
+			}
+		}
+		false
+	}
+	fn is_keyword(s: &str) -> bool {
+		for keyword in Keywords.iter() {
+			if **keyword == *s {
+				return true;
+			}
+		}
+		false
+	}
 	fn is_comparison_operator(s: &str) -> bool {
 		matches!(s, "<" | ">" | "=" | "<=" | ">=")
 	}

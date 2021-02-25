@@ -8,6 +8,7 @@ pub trait TokenT {
 	fn start(&self) -> usize;
 	fn end(&self) -> usize;
 	fn length(&self) -> usize;
+	fn truncate(&mut self, size: usize);
 	fn push_str(&mut self, s: &str);
 }
 #[derive(Debug, Clone, PartialEq)]
@@ -36,6 +37,9 @@ impl TokenT for Token {
 	}
 	fn length(&self) -> usize {
 		self.source.len()
+	}
+	fn truncate(&mut self, size: usize) {
+		self.source.truncate(size);
 	}
 	fn push_str(&mut self, s: &str) {
 		self.source = format!("{}{}", self.source, s);
