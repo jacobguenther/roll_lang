@@ -134,8 +134,8 @@ pub(super) trait InterpreterPrivateT {
 		sides: Integer,
 		modifiers: &[Reroll],
 	);
-
 	fn apply_drop_keep_modifiers(&self, rolls: &mut Vec<NumberRoll>, modifiers: &Modifiers);
+	fn apply_sort_modifier(&self, rolls: &mut Vec<NumberRoll>, sort: Option<Sort>);
 
 	fn interpret_comment(&self, option_comment: &Option<String>, formula: &mut FormulaFragments);
 }
@@ -511,6 +511,8 @@ where
 
 		self.apply_drop_keep_modifiers(&mut rolls, modifiers);
 
+		self.apply_sort_modifier(&mut rolls, modifiers.sort);
+
 		let result = rolls.iter().fold(0, |mut acc, el| {
 			if let NumberRoll::Counted(roll) = el {
 				acc += roll;
@@ -755,6 +757,29 @@ where
 		}
 	}
 
+	fn apply_sort_modifier(&self, rolls: &mut Vec<NumberRoll>, sort: Option<Sort>) {
+		let to_values = |a: &NumberRoll, b: &NumberRoll| -> (Integer, Integer) {
+			let a = match a {
+				NumberRoll::Counted(v) | NumberRoll::NotCounted(v) => v
+			};
+			let b = match b {
+				NumberRoll::Counted(v) | NumberRoll::NotCounted(v) => v
+			};
+			(*a, *b)
+		};
+		if let Some(sort) = sort {
+			match sort {
+				Sort::Ascending => rolls.sort_by(|a: &NumberRoll, b: &NumberRoll| {
+					let (a, b) = to_values(a, b);
+					a.cmp(&b)
+				}),
+				Sort::Decending => rolls.sort_by(|a: &NumberRoll, b: &NumberRoll| {
+					let (a, b) = to_values(a, b);
+					b.cmp(&a)
+				}),
+			}
+		}
+	}
 	fn interpret_comment(&self, option_comment: &Option<String>, formula: &mut FormulaFragments) {
 		match option_comment {
 			Some(comment) => formula.push_str(&format!("[{}]", comment)),
