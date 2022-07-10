@@ -8,6 +8,12 @@ use crate::parser::error::ParseError;
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
+pub enum NotSupportedYet {
+	FateDice,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum InterpretError {
 	LexError,
 	ParseError(ParseError),
@@ -28,5 +34,6 @@ pub enum InterpretError {
 
 	MultipleTypesOfExpandingModifiersNotSupported,
 
+	NotSupportedYet(NotSupportedYet),
 	Unkown,
 }
