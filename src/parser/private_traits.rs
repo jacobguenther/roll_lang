@@ -3,6 +3,7 @@
 use super::{error::ParseError, state::State, Parser};
 use crate::ast::{number::*, *};
 use crate::lexer::{
+	keywords::Keyword,
 	lexeme::Lexeme,
 	token::{Token, TokenT},
 };
@@ -71,7 +72,11 @@ pub(super) trait ParserPrivateT {
 		punctuation: &str,
 	) -> Result<Token, ParseError>;
 	fn match_current_to_literal(&mut self, literal: &str) -> Result<Token, ParseError>;
-	fn match_current_to_keyword(&mut self, keyword: &str) -> Result<Token, ParseError>;
+	fn match_current_to_keyword(&mut self, keyword: Keyword) -> Result<(), ParseError>;
+	fn match_current_to_one_of_keywords(
+		&mut self,
+		keyword: &[Keyword],
+	) -> Result<Keyword, ParseError>;
 	fn match_current_to_operator(&mut self, operator: &str) -> Result<Token, ParseError>;
 
 	fn is_roll(&self) -> bool;
@@ -98,7 +103,8 @@ impl ParserPrivateT for Parser {
 			} else if self.is_roll() || self.is_inline_roll() {
 				self.state = State::Roll;
 				break;
-			} else if self.current().unwrap().token().source() == "#" { // what is this for?
+			} else if self.current().unwrap().token().source() == "#" {
+				// what is this for?
 				break;
 			} else {
 				literal.push_str(self.current().unwrap().source());
@@ -171,7 +177,7 @@ impl ParserPrivateT for Parser {
 				return Ok(Macro { name: macro_name });
 			}
 			Err(_parse_error) => match self.current()? {
-				Lexeme::Literal(token) | Lexeme::Keyword(token) => {
+				Lexeme::Literal(token) | Lexeme::Keyword(token, _) => {
 					let token = token.clone();
 					self.step_lexemes();
 					return Ok(Macro {
@@ -386,34 +392,37 @@ impl ParserPrivateT for Parser {
 	}
 
 	fn parse_function(&mut self) -> Result<Function, ParseError> {
-		if let Lexeme::Keyword(token) = self.current()? {
-			if let "abs" | "ceil" | "floor" | "round" | "round_half_down" = token.source() {
-				let start_index = self.current_index;
-				let token = token.clone();
-				self.step_lexemes();
-				if let Err(parse_error) = self.match_current_to_punctuation_skip_whitespace("(") {
-					self.current_index = start_index;
-					return Err(parse_error);
-				}
+		let start_index = self.current_index;
+		let keyword = self.match_current_to_one_of_keywords(&[
+			Keyword::Abs,
+			Keyword::Ceil,
+			Keyword::Floor,
+			Keyword::Round,
+			Keyword::RoundHalfDown,
+		])?;
 
-				let expression = Box::new(self.parse_expression()?);
-				let function = match token.source() {
-					"abs" => Function::Abs(expression),
-					"ceil" => Function::Ceil(expression),
-					"floor" => Function::Floor(expression),
-					"round" => Function::Round(expression),
-					"round_half_down" => Function::RoundHalfDown(expression),
-					_ => return Err(ParseError::Unknown),
-				};
-				self.skip_whitespace();
-				if let Err(parse_error) = self.match_current_to_punctuation_skip_whitespace(")") {
-					self.current_index = start_index;
-					return Err(parse_error);
-				}
-				return Ok(function);
-			}
+		if let Err(parse_error) = self.match_current_to_punctuation_skip_whitespace("(") {
+			self.current_index = start_index;
+			return Err(parse_error);
 		}
-		Err(ParseError::DoesNotMatch)
+
+		let expression = Box::new(self.parse_expression()?);
+		let function = match keyword {
+			Keyword::Abs => Function::Abs(expression),
+			Keyword::Ceil => Function::Ceil(expression),
+			Keyword::Floor => Function::Floor(expression),
+			Keyword::Round => Function::Round(expression),
+			Keyword::RoundHalfDown => Function::RoundHalfDown(expression),
+			_ => return Err(ParseError::Unknown),
+		};
+
+		self.skip_whitespace();
+
+		if let Err(parse_error) = self.match_current_to_punctuation_skip_whitespace(")") {
+			self.current_index = start_index;
+			return Err(parse_error);
+		}
+		return Ok(function);
 	}
 
 	fn parse_number(&mut self) -> Result<Number, ParseError> {
@@ -473,9 +482,7 @@ impl ParserPrivateT for Parser {
 				Ok(_token) => prompt_complete = true,
 				Err(_parse_error) => {
 					if !prompt_complete {
-						roll_query
-							.prompt
-							.push_str(self.current()?.token().source());
+						roll_query.prompt.push_str(self.current()?.token().source());
 						self.step_lexemes();
 					} else {
 						roll_query
@@ -526,10 +533,7 @@ impl ParserPrivateT for Parser {
 				1
 			}
 		};
-		if let Err(parse_error) = self.match_current_to_keyword("d") {
-			self.current_index = start_index;
-			return Err(parse_error);
-		};
+		self.match_current_to_keyword(Keyword::D)?;
 		match self.parse_integer() {
 			Ok(sides) => Ok(Normal { count, sides }),
 			Err(parse_error) => {
@@ -539,15 +543,16 @@ impl ParserPrivateT for Parser {
 		}
 	}
 	fn parse_fate(&mut self) -> Result<Fate, ParseError> {
-		let start_index = self.current_index;
-		let count = self.parse_integer()?;
-		match self.match_current_to_keyword("dF") {
-			Ok(_token) => Ok(Fate { count }),
-			Err(parse_error) => {
-				self.current_index = start_index;
-				Err(parse_error)
-			}
-		}
+		// let start_index = self.current_index;
+		// let count = self.parse_integer()?;
+		// match self.match_current_to_keyword(Keyword::FateDice) {
+		// 	Ok(_token) => Ok(Fate { count }),
+		// 	Err(parse_error) => {
+		// 		self.current_index = start_index;
+		// 		Err(parse_error)
+		// 	}
+		// }
+		Err(ParseError::Unknown)
 	}
 	// <computed> ::=
 	//       [(<integer> | <roll_query>)] "d" "(" <expression> ")"
@@ -555,7 +560,7 @@ impl ParserPrivateT for Parser {
 	//     | ["(" <expression> ")"] "d" "(" <expression> ")"
 	fn parse_computed(&mut self) -> Result<Computed, ParseError> {
 		let count = self.parse_computed_helper()?;
-		self.match_current_to_keyword("d")?;
+		self.match_current_to_keyword(Keyword::D)?;
 		let sides = self.parse_computed_helper()?;
 		Ok(Computed {
 			count: Box::new(count),
@@ -671,7 +676,6 @@ impl ParserPrivateT for Parser {
 						return Err(ParseError::MultipleSortModifiersNotSupported);
 					}
 					modifiers.sort = Some(sort);
-					println!("Found sourt modifier {:?}", sort);
 					found_one = true;
 				}
 				Err(_parse_error) => self.current_index = start_index,
@@ -691,7 +695,7 @@ impl ParserPrivateT for Parser {
 				"<=" => Ok(Comparison::LessThanEqual),
 				">=" => Ok(Comparison::GreaterThanEqual),
 				"=" => Ok(Comparison::Equal),
-				_ => return Err(ParseError::DoesNotMatch),
+				_ => return Err(ParseError::Unknown),
 			},
 			_ => return Err(ParseError::DoesNotMatch),
 		};
@@ -765,7 +769,7 @@ impl ParserPrivateT for Parser {
 	}
 	fn parse_reroll(&mut self) -> Result<Reroll, ParseError> {
 		let start_index = self.current_index;
-		self.match_current_to_keyword("r")?;
+		self.match_current_to_one_of_keywords(&[Keyword::R, Keyword::Reroll])?;
 		match self.parse_comparison_and_require_integer() {
 			Ok((comparison, integer)) => Ok(Reroll::new(comparison, Some(integer))),
 			Err(parse_error) => {
@@ -775,24 +779,30 @@ impl ParserPrivateT for Parser {
 		}
 	}
 	fn parse_drop_keep(&mut self) -> Result<DropKeep, ParseError> {
-		if let Lexeme::Keyword(token) = self.current()? {
-			if let "dh" | "k" | "kh" | "d" | "dl" | "kl" = token.source() {
-				let token = token.clone();
-				self.step_lexemes_skip_whitespace();
-				let count = match self.parse_integer() {
-					Ok(int) => int,
-					Err(parse_error) => return Err(parse_error),
-				};
-				return match token.source() {
-					"dh" => Ok(DropKeep::DropHighest(count)),
-					"k" | "kh" => Ok(DropKeep::KeepHighest(count)),
-					"d" | "dl" => Ok(DropKeep::DropLowest(count)),
-					"kl" => Ok(DropKeep::KeepLowest(count)),
-					_ => Err(ParseError::Unknown),
-				};
+		let start_index = self.current_index;
+		let keyword = self.match_current_to_one_of_keywords(&[
+			Keyword::DropHighest,
+			Keyword::KeepHighest,
+			Keyword::D,
+			Keyword::DropLowest,
+			Keyword::KeepLowest,
+		])?;
+
+		let count = match self.parse_integer() {
+			Ok(int) => int,
+			Err(parse_error) => {
+				self.current_index = start_index;
+				return Err(parse_error);
 			}
+		};
+
+		match keyword {
+			Keyword::DropHighest => Ok(DropKeep::DropHighest(count)),
+			Keyword::KeepHighest => Ok(DropKeep::KeepHighest(count)),
+			Keyword::D | Keyword::DropLowest => Ok(DropKeep::DropLowest(count)),
+			Keyword::KeepLowest => Ok(DropKeep::KeepLowest(count)),
+			_ => Err(ParseError::Unknown),
 		}
-		Err(ParseError::DoesNotMatch)
 	}
 	fn parse_successes(&mut self) -> Result<Successes, ParseError> {
 		let comparison = self.parse_comparison()?;
@@ -800,42 +810,34 @@ impl ParserPrivateT for Parser {
 		Ok(Successes::Success(comparison, integer))
 	}
 	fn parse_cirtical(&mut self) -> Result<Successes, ParseError> {
-		if let Lexeme::Keyword(token) = self.current()? {
-			if let "cs" | "cf" = token.source() {
-				let start_index = self.current_index;
-				let token = token.clone();
-				self.step_lexemes_skip_whitespace();
-				let (comparison, integer) = match self.parse_comparison_and_require_integer() {
-					Ok((comparison, integer)) => (comparison, integer),
-					Err(parse_error) => {
-						self.current_index = start_index;
-						return Err(parse_error);
-					}
-				};
-				return match token.source() {
-					"cs" => Ok(Successes::CriticalSuccess(comparison, integer)),
-					"cf" => Ok(Successes::CriticalFailure(comparison, integer)),
-					_ => Err(ParseError::Unknown),
-				};
+		let start_index = self.current_index;
+
+		let keyword = self.match_current_to_one_of_keywords(&[
+			Keyword::CriticalSuccess,
+			Keyword::CriticalFailure,
+		])?;
+
+		let (comparison, integer) = match self.parse_comparison_and_require_integer() {
+			Ok((comparison, integer)) => (comparison, integer),
+			Err(parse_error) => {
+				self.current_index = start_index;
+				return Err(parse_error);
 			}
+		};
+		match keyword {
+			Keyword::CriticalSuccess => Ok(Successes::CriticalSuccess(comparison, integer)),
+			Keyword::CriticalFailure => Ok(Successes::CriticalFailure(comparison, integer)),
+			_ => Err(ParseError::Unknown),
 		}
-		Err(ParseError::DoesNotMatch)
 	}
 	fn parse_sort(&mut self) -> Result<Sort, ParseError> {
-		if let Lexeme::Keyword(token) = self.current()? {
-			match token.source() {
-				"s" | "sa" => {
-					self.step_lexemes();
-					return Ok(Sort::Ascending);
-				}
-				"sd" => {
-					self.step_lexemes();
-					return Ok(Sort::Decending);
-				}
-				_ => (),
-			}
+		let keyword = self
+			.match_current_to_one_of_keywords(&[Keyword::SortAscending, Keyword::SortDecending])?;
+		match keyword {
+			Keyword::SortAscending => Ok(Sort::Ascending),
+			Keyword::SortDecending => Ok(Sort::Decending),
+			_ => Err(ParseError::Unknown),
 		}
-		Err(ParseError::DoesNotMatch)
 	}
 
 	fn step_lexemes(&mut self) {
@@ -906,15 +908,33 @@ impl ParserPrivateT for Parser {
 		}
 		Err(ParseError::ExpectedLiteral(literal.to_owned()))
 	}
-	fn match_current_to_keyword(&mut self, keyword: &str) -> Result<Token, ParseError> {
-		if let Lexeme::Keyword(token) = self.current()? {
-			if token.source() == keyword {
-				let token = token.clone();
+	fn match_current_to_keyword(&mut self, looking_for: Keyword) -> Result<(), ParseError> {
+		if let Lexeme::Keyword(_, keyword) = self.current()? {
+			if looking_for == *keyword {
 				self.step_lexemes_skip_whitespace();
-				return Ok(token);
+				return Ok(());
 			}
 		}
-		Err(ParseError::ExpectedKeyword(keyword.to_owned()))
+		Err(ParseError::ExpectedKeyword(looking_for.to_owned()))
+	}
+	fn match_current_to_one_of_keywords(
+		&mut self,
+		one_of: &[Keyword],
+	) -> Result<Keyword, ParseError> {
+		let err = || ParseError::ExpectedOneOfKeywords(one_of.iter().copied().collect());
+
+		let keyword = if let Lexeme::Keyword(_, keyword) = self.current()? {
+			*keyword
+		} else {
+			return Err(err());
+		};
+
+		if one_of.iter().any(|k| *k == keyword) {
+			self.step_lexemes_skip_whitespace();
+			return Ok(keyword);
+		}
+
+		return Err(err());
 	}
 	fn match_current_to_operator(&mut self, operator: &str) -> Result<Token, ParseError> {
 		if let Lexeme::Operator(token) = self.current()? {
@@ -937,7 +957,7 @@ impl ParserPrivateT for Parser {
 		let next = self.next_as_option();
 		let roll = next.is_some()
 			&& match next.unwrap() {
-				Lexeme::Keyword(token) => token.source() == "roll" || token.source() == "r",
+				Lexeme::Keyword(token, _) => token.source() == "roll" || token.source() == "r",
 				_ => false,
 			};
 		slash && roll

@@ -6,6 +6,9 @@ pub enum State {
 	Whitespace,
 	Literal,
 	Keyword,
+	Punctuation,
+	Comparison,
+	Operator,
 	Digit,
 	Done,
 }

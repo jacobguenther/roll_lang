@@ -1,23 +1,13 @@
 // lexer/lexeme.rs
 
+use super::keywords::Keyword;
 use super::token::{Token, TokenT};
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub(super) enum LexemeType {
-	Whitespace,
-	Literal,
-	Keyword,
-	Number,
-	Comparison,
-	Operator,
-	Punctuation,
-}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Lexeme {
 	Whitespace(Token),
 	Literal(Token),
-	Keyword(Token),
+	Keyword(Token, Keyword),
 	Number(Token),
 	Comparison(Token),
 	Operator(Token),
@@ -28,22 +18,11 @@ impl Lexeme {
 		match self {
 			Lexeme::Whitespace(t)
 			| Lexeme::Literal(t)
-			| Lexeme::Keyword(t)
+			| Lexeme::Keyword(t, _)
 			| Lexeme::Number(t)
 			| Lexeme::Comparison(t)
 			| Lexeme::Operator(t)
 			| Lexeme::Punctuation(t) => t,
-		}
-	}
-	pub(super) fn into(&mut self, lexeme: &LexemeType) -> Lexeme {
-		match lexeme {
-			LexemeType::Whitespace => Lexeme::Whitespace(self.token().clone()),
-			LexemeType::Literal => Lexeme::Literal(self.token().clone()),
-			LexemeType::Keyword => Lexeme::Keyword(self.token().clone()),
-			LexemeType::Number => Lexeme::Number(self.token().clone()),
-			LexemeType::Comparison => Lexeme::Comparison(self.token().clone()),
-			LexemeType::Operator => Lexeme::Operator(self.token().clone()),
-			LexemeType::Punctuation => Lexeme::Punctuation(self.token().clone()),
 		}
 	}
 }
@@ -64,7 +43,7 @@ impl TokenT for Lexeme {
 		match self {
 			Lexeme::Whitespace(t)
 			| Lexeme::Literal(t)
-			| Lexeme::Keyword(t)
+			| Lexeme::Keyword(t, _)
 			| Lexeme::Number(t)
 			| Lexeme::Comparison(t)
 			| Lexeme::Operator(t)
@@ -75,7 +54,7 @@ impl TokenT for Lexeme {
 		match self {
 			Lexeme::Whitespace(t)
 			| Lexeme::Literal(t)
-			| Lexeme::Keyword(t)
+			| Lexeme::Keyword(t, _)
 			| Lexeme::Number(t)
 			| Lexeme::Comparison(t)
 			| Lexeme::Operator(t)

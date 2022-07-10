@@ -1,6 +1,6 @@
 // File: parser/error.rs
 
-use crate::lexer::token::Token;
+use crate::lexer::{keywords::Keyword, token::Token};
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
@@ -9,7 +9,8 @@ pub enum ParseError {
 
 	ExpectedPunctuation(String),
 	ExpectedLiteral(String),
-	ExpectedKeyword(String),
+	ExpectedKeyword(Keyword),
+	ExpectedOneOfKeywords(Vec<Keyword>),
 	ExpectedOperator(String),
 
 	MultipleTypesOfExpandingModifiersNotSupported,
