@@ -84,24 +84,13 @@ pub struct Computed {
 	pub sides: Box<Expression>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Modifiers {
 	pub expanding: Option<Expanding>,
 	pub reroll: Vec<Reroll>,
 	pub drop_keep: Option<DropKeep>,
 	pub successes: Vec<Successes>,
 	pub sort: Option<Sort>,
-}
-impl Default for Modifiers {
-	fn default() -> Modifiers {
-		Modifiers {
-			expanding: None,
-			reroll: Vec::new(),
-			drop_keep: None,
-			successes: Vec::new(),
-			sort: None,
-		}
-	}
 }
 
 #[derive(Debug, Clone)]

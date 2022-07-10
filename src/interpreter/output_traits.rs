@@ -24,7 +24,7 @@ impl ToString for OutputFragment {
 				expression_output.to_string()
 			}
 			OutputFragment::Roll(RollType::InlineRoll(expression_output)) => {
-				format!("({})", expression_output.result.to_string())
+				format!("({})", expression_output.result)
 			}
 		}
 	}

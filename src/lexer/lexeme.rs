@@ -2,7 +2,7 @@
 
 use super::token::{Token, TokenT};
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(super) enum LexemeType {
 	Whitespace,
 	Literal,
@@ -13,7 +13,7 @@ pub(super) enum LexemeType {
 	Punctuation,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Lexeme {
 	Whitespace(Token),
 	Literal(Token),

@@ -54,19 +54,19 @@ where
 	R: Fn() -> f64 + Copy,
 {
 	fn interpret(&mut self) -> Output {
-		let mut output = Output::new(&self.source);
+		let mut output = Output::new(self.source);
 		let ast = Parser::new(self.source).parse();
 		for node in &ast {
 			let result = match node {
-				Node::ParseError(parse_error) => Err(self.interpret_parse_error(&parse_error)),
+				Node::ParseError(parse_error) => Err(self.interpret_parse_error(parse_error)),
 				Node::StringLiteral(string_literal) => {
-					Ok(vec![self.interpret_string_literal(&string_literal)])
+					Ok(vec![self.interpret_string_literal(string_literal)])
 				}
-				Node::Roll(roll) => match self.interpret_roll(&roll) {
+				Node::Roll(roll) => match self.interpret_roll(roll) {
 					Ok(fragment) => Ok(vec![fragment]),
 					Err(error) => Err(error),
 				},
-				Node::Macro(my_macro) => self.interpret_macro(&my_macro),
+				Node::Macro(my_macro) => self.interpret_macro(my_macro),
 			};
 			match result {
 				Ok(mut fragments) => output.fragments.append(&mut fragments),

@@ -11,7 +11,7 @@ pub trait TokenT {
 	fn truncate(&mut self, size: usize);
 	fn push_str(&mut self, s: &str);
 }
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct Token {
 	source: String,

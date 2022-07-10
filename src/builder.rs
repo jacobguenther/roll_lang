@@ -23,21 +23,12 @@ pub fn default_query_prompter(message: &str, default: &str) -> Option<String> {
 	}
 }
 
+#[derive(Default)]
 pub struct InterpreterBuilder<'s, 'r, 'm> {
 	source: Option<&'s str>,
 	roll_queries: Option<&'r HashMap<String, Expression>>,
 	macros: Option<&'m Macros>,
 	query_prompter: Option<fn(&str, &str) -> Option<String>>,
-}
-impl<'s, 'r, 'm> Default for InterpreterBuilder<'s, 'r, 'm> {
-	fn default() -> Self {
-		Self {
-			source: None,
-			roll_queries: None,
-			macros: None,
-			query_prompter: None,
-		}
-	}
 }
 impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm> {
 	pub fn with_source<'a>(

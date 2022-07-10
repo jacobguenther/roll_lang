@@ -186,7 +186,7 @@ where
 		let (output, interpreter) = match macro_source {
 			Some(data) => {
 				let mut interpreter = Interpreter::new(
-					&data,
+					data,
 					self.roll_queries.clone(),
 					self.macros,
 					self.rand,
@@ -357,7 +357,7 @@ where
 				Ok(expression_output)
 			}
 			Atom::Macro(nested_macro) => {
-				let output_fragments = self.interpret_macro(&nested_macro)?;
+				let output_fragments = self.interpret_macro(nested_macro)?;
 				if output_fragments.len() == 1 {
 					let fragment = &output_fragments[0];
 					match fragment {
@@ -477,7 +477,7 @@ where
 		self.validate_modifiers(modifiers, sides)?;
 
 		let mut rolls = (0..normal.count)
-			.map(|_i| {
+			.flat_map(|_i| {
 				let roll = self.random_range(1, sides);
 
 				let mut modified_rolls = Vec::new();
@@ -506,7 +506,6 @@ where
 
 				modified_rolls
 			})
-			.flatten()
 			.collect::<Vec<_>>();
 
 		self.apply_drop_keep_modifiers(&mut rolls, modifiers);
@@ -522,7 +521,7 @@ where
 
 		// Add all rolls to formula
 		for roll in rolls.iter() {
-			formula.push_number_roll(&roll);
+			formula.push_number_roll(roll);
 		}
 		if let Some(tip) = tooltip {
 			formula.push_tooltip(tip);
@@ -588,7 +587,7 @@ where
 		};
 
 		let mut reroll_on = all_rerolls_iter
-			.map(
+			.flat_map(
 				|&Reroll {
 				     comparison_point,
 				     comparison,
@@ -597,7 +596,6 @@ where
 					get_rerolls_for(&comparison, point)
 				},
 			)
-			.flatten()
 			.collect::<Vec<_>>();
 
 		reroll_on.sort_unstable();
@@ -605,7 +603,7 @@ where
 
 		let mut reroll_on_all = true;
 		for i in 1..(sides + 1) {
-			if reroll_on.iter().find(|&&x| x == i).is_none() {
+			if reroll_on.iter().any(|&x| x == i) {
 				reroll_on_all = false;
 				break;
 			}

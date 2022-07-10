@@ -10,7 +10,7 @@ use token::{Token, TokenT};
 
 use unicode_segmentation::UnicodeSegmentation;
 
-static Keywords: [&'static str; 16] = [
+static KEYWORDS: [&str; 16] = [
 	"abs",
 	"ceil",
 	"d",
@@ -248,15 +248,15 @@ impl<'a> LexerPrivateT for Lexer<'a> {
 	}
 
 	fn is_keyword_substr(s: &str) -> bool {
-		for keyword in Keywords.iter() {
-			if let Some(sub) = keyword.find(s) {
+		for keyword in KEYWORDS.iter() {
+			if let Some(_substr_byte_index) = keyword.find(s) {
 				return true;
 			}
 		}
 		false
 	}
 	fn is_keyword(s: &str) -> bool {
-		for keyword in Keywords.iter() {
+		for keyword in KEYWORDS.iter() {
 			if **keyword == *s {
 				return true;
 			}

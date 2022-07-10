@@ -163,7 +163,7 @@ impl ParserPrivateT for Parser {
 					match self.match_current_to_punctuation("}") {
 						Ok(_token) => break,
 						Err(_parse_error) => {
-							macro_name.push_str(&self.current()?.token().source());
+							macro_name.push_str(self.current()?.token().source());
 							self.current_index += 1;
 						}
 					}
@@ -475,12 +475,12 @@ impl ParserPrivateT for Parser {
 					if !prompt_complete {
 						roll_query
 							.prompt
-							.push_str(&self.current()?.token().source());
+							.push_str(self.current()?.token().source());
 						self.step_lexemes();
 					} else {
 						roll_query
 							.default
-							.push_str(&self.current()?.token().source());
+							.push_str(self.current()?.token().source());
 						self.step_lexemes();
 					}
 				}
