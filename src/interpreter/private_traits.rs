@@ -3,7 +3,7 @@
 use crate::ast::{number::*, *};
 use crate::parser::{error::ParseError, *};
 
-use super::error::InterpretError;
+use super::error::{InterpretError, NotSupportedYet};
 use super::output::*;
 use super::{Interpreter, InterpreterT};
 
@@ -90,13 +90,10 @@ pub(super) trait InterpreterPrivateT {
 		tooltip: &Option<String>,
 		formula: &mut FormulaFragments,
 	) -> Result<Number, InterpretError>;
-	fn interpret_computed_dice(
+	fn calc_normal_dice_from_computed_dice(
 		&mut self,
-		normal: &Computed,
-		modifiers: &Modifiers,
-		tooltip: &Option<String>,
-		formula: &mut FormulaFragments,
-	) -> Result<Number, InterpretError>;
+		computed: &Computed,
+	) -> Result<Normal, InterpretError>;
 
 	fn random_range(&self, low: Integer, high: Integer) -> Integer;
 	fn validate_modifiers(
@@ -387,11 +384,12 @@ where
 			Dice::Normal(normal, modifiers) => {
 				self.interpret_normal_dice(normal, modifiers, tooltip, formula)
 			}
-			// Dice::Fate(fate, modifiers, tooltip) => self.interpret_fate_dice(fate, modifiers, &tooltip, formula),
+			Dice::Fate(_fate, _modifiers) => Err(InterpretError::NotSupportedYet(NotSupportedYet::FateDice)),
+			// self.interpret_fate_dice(fate, modifiers, tooltip, formula),
 			Dice::Computed(computed, modifiers) => {
-				self.interpret_computed_dice(computed, modifiers, tooltip, formula)
+				let normal = self.calc_normal_dice_from_computed_dice(computed)?;
+				self.interpret_normal_dice(&normal, modifiers, tooltip, formula)
 			}
-			_ => Err(InterpretError::Unkown),
 		}
 	}
 	fn interpret_function(
@@ -530,30 +528,26 @@ where
 		Ok(Number::Integer(result))
 	}
 
-	fn interpret_computed_dice(
+	fn calc_normal_dice_from_computed_dice(
 		&mut self,
 		computed: &Computed,
-		modifiers: &Modifiers,
-		tooltip: &Option<String>,
-		formula: &mut FormulaFragments,
-	) -> Result<Number, InterpretError> {
+	) -> Result<Normal, InterpretError> {
 		let mut count_formula = Vec::new();
 		let count = self.interpret_expression(&computed.count, &mut count_formula)?;
 		let mut sides_formula = Vec::new();
 		let sides = self.interpret_expression(&computed.sides, &mut sides_formula)?;
-		let normal = match (count, sides) {
-			(Number::Integer(c), Number::Integer(s)) => Normal { count: c, sides: s },
-			(Number::Float(_c), Number::Integer(_s)) => {
-				return Err(InterpretError::DiceCountMustBeAnInteger)
+		match (count, sides) {
+			(Number::Integer(count), Number::Integer(sides)) => Ok(Normal { count, sides }),
+			(Number::Float(_count), Number::Integer(_sides)) => {
+				Err(InterpretError::DiceCountMustBeAnInteger)
 			}
-			(Number::Integer(_c), Number::Float(_s)) => {
-				return Err(InterpretError::DiceSidesMustBeAnInteger)
+			(Number::Integer(_count), Number::Float(_sides)) => {
+				Err(InterpretError::DiceSidesMustBeAnInteger)
 			}
-			(Number::Float(_c), Number::Float(_s)) => {
-				return Err(InterpretError::DiceCountMustBeAnInteger)
+			(Number::Float(_count), Number::Float(_sides)) => {
+				Err(InterpretError::DiceCountMustBeAnInteger)
 			}
-		};
-		self.interpret_normal_dice(&normal, modifiers, tooltip, formula)
+		}
 	}
 
 	fn random_range(&self, low: Integer, high: Integer) -> Integer {
@@ -603,7 +597,7 @@ where
 
 		let mut reroll_on_all = true;
 		for i in 1..(sides + 1) {
-			if reroll_on.iter().any(|&x| x == i) {
+			if !reroll_on.iter().any(|&x| x == i) {
 				reroll_on_all = false;
 				break;
 			}
