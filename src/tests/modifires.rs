@@ -50,6 +50,26 @@ fn reroll() {
 		"/r 2d10r6r7 \\",
 		"(roll_not_counted(6)+roll_not_counted(7)+8+9) = 17",
 	);
+
+	helper(ra, "/r 2d10reroll10 \\", "(roll_not_counted(10)+1+2) = 3");
+
+	let ra = || {
+		let nums = [0.0, 0.0, 0.0, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
+		static mut I: usize = 0;
+		unsafe {
+			let rand = nums[I];
+			I += 1;
+			if I >= 10 {
+				I = 0;
+			}
+			rand
+		}
+	};
+	helper(
+		ra,
+		"/r d10r1 \\",
+		"(roll_not_counted(1)+roll_not_counted(1)+roll_not_counted(1)+4) = 4",
+	);
 }
 #[test]
 fn exploding() {

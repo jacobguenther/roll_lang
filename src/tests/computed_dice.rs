@@ -15,7 +15,6 @@ fn errors() {
 		None => panic!("expected error InterpretError::DiceCountMustBeAnInteger got none"),
 	}
 
-
 	let output = helper_return_result(r, "/r (10)d(1.0)");
 	println!("{:?}", output);
 	match output.error {

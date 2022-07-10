@@ -65,8 +65,16 @@ fn not_counted() {
 			rand
 		}
 	};
-	helper(ra, "/r 7d10sdr1 \\", "(5+5+4+3+2+2+2+roll_not_counted(1)) = 23");
-	helper(ra, "/r 7d10r1sa \\", "(roll_not_counted(1)+2+2+2+3+4+5+5) = 23");
+	helper(
+		ra,
+		"/r 7d10sdr1 \\",
+		"(5+5+4+3+2+2+2+roll_not_counted(1)) = 23",
+	);
+	helper(
+		ra,
+		"/r 7d10r1sa \\",
+		"(roll_not_counted(1)+2+2+2+3+4+5+5) = 23",
+	);
 
 	let ra = || {
 		let nums = [0.2, 0.1, 0.0, 0.4, 0.2];
