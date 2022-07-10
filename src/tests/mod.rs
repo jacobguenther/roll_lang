@@ -1,6 +1,7 @@
 // File: tests/mod.rs
 
 pub mod comments_tooltips;
+pub mod computed_dice;
 pub mod drop_keep;
 pub mod functions;
 pub mod macros;
