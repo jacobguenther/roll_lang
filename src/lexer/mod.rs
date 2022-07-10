@@ -3,31 +3,15 @@
 pub mod lexeme;
 mod state;
 pub mod token;
+pub mod keywords;
 
 use lexeme::{Lexeme, LexemeType};
 use state::State;
 use token::{Token, TokenT};
 
-use unicode_segmentation::UnicodeSegmentation;
+use keywords::KEYWORDS;
 
-static KEYWORDS: [&str; 16] = [
-	"abs",
-	"ceil",
-	"d",
-	"dh",
-	"dl",
-	"floor",
-	"k",
-	"kh",
-	"kl",
-	"r",
-	"roll",
-	"round",
-	"round_half_down",
-	"s",
-	"sa",
-	"sd",
-];
+use unicode_segmentation::UnicodeSegmentation;
 
 pub struct Lexer<'a> {
 	graphemes: Vec<&'a str>,
