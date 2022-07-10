@@ -18,14 +18,14 @@ use crate::parser::error::ParseError;
 pub fn r() -> f64 {
 	0.0
 }
-fn helper<R: Copy + Fn() -> f64>(random_func: R, source: &str, result: &str) {
+fn helper<R: Copy + Fn() -> f64>(random_func: R, source: &str, expected_output: &str) {
 	let output = InterpreterBuilder::default()
 		.with_source(&source)
 		.build(random_func)
 		.interpret()
 		.to_string();
 	println!("{}", source);
-	assert_eq!(&output, result);
+	assert_eq!(&output, expected_output);
 }
 fn helper_return_result<R: Copy + Fn() -> f64>(random_func: R, source: &str) -> Output {
 	InterpreterBuilder::default()
@@ -35,6 +35,7 @@ fn helper_return_result<R: Copy + Fn() -> f64>(random_func: R, source: &str) -> 
 }
 
 // #[test]
+#[allow(unused)]
 fn playground() {
 	let r = || -> f64 {
 		let nums = [0.0, 0.1, 0.3, 0.4];
