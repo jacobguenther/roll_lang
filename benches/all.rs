@@ -10,7 +10,7 @@ pub fn bench_lexer(c: &mut Criterion) {
 	let digits = "123456789012345678901234567890123456789012345678901234567890";
 	c.bench_function("lexer digits", |b| {
 		b.iter(|| {
-			black_box(Lexer::new(digits).collect::<Vec<_>>());
+			Lexer::new(black_box(digits)).collect::<Vec<_>>();
 		})
 	});
 
@@ -21,7 +21,7 @@ pub fn bench_lexer(c: &mut Criterion) {
 	);
 	c.bench_function("lexer keywords", |b| {
 		b.iter(|| {
-			black_box(Lexer::new(many_keywords.as_str()).collect::<Vec<_>>());
+			Lexer::new(black_box(many_keywords.as_str())).collect::<Vec<_>>();
 		})
 	});
 }
