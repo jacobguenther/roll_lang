@@ -35,5 +35,17 @@ pub enum InterpretError {
 	MultipleTypesOfExpandingModifiersNotSupported,
 
 	NotSupportedYet(NotSupportedYet),
-	Unkown,
+	UnknownInterpreterError,
+}
+
+impl From<ParseError> for InterpretError {
+	fn from(parse_error: ParseError) -> Self {
+		Self::ParseError(parse_error)
+	}
+}
+
+impl From<OperatorError> for InterpretError {
+	fn from(operator_error: OperatorError) -> Self {
+		Self::OperatorError(operator_error)
+	}
 }

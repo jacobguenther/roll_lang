@@ -42,6 +42,6 @@ impl TokenT for Token {
 		self.source.truncate(size);
 	}
 	fn push_str(&mut self, s: &str) {
-		self.source = format!("{}{}", self.source, s);
+		self.source.push_str(s);
 	}
 }

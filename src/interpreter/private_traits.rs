@@ -1,14 +1,13 @@
 // File: interpreter/private_traits.rs
 
 use crate::ast::{number::*, *};
-use crate::parser::{error::ParseError, *};
+use crate::parser::*;
 
 use super::error::{InterpretError, NotSupportedYet};
 use super::output::*;
 use super::{Interpreter, InterpreterT};
 
 pub(super) trait InterpreterPrivateT {
-	fn interpret_parse_error(&self, parse_error: &ParseError) -> InterpretError;
 	fn interpret_string_literal(&self, string_literal: &str) -> OutputFragment;
 	fn interpret_roll(&mut self, roll: &Roll) -> Result<OutputFragment, InterpretError>;
 	fn interpret_macro(&mut self, my_macro: &Macro) -> Result<Vec<OutputFragment>, InterpretError>;
@@ -104,46 +103,57 @@ pub(super) trait InterpreterPrivateT {
 
 	fn reroll_applies(&self, roll: Integer, sides: Integer, modifiers: &[Reroll]) -> bool;
 
-	fn apply_reroll_modifiers(
+	fn apply_reroll_once_modifiers(
 		&self,
-		next_roll_value: Integer,
 		rolls: &mut Vec<NumberRoll>,
 		sides: Integer,
 		modifiers: &[Reroll],
-	);
+	) -> bool;
+	fn apply_reroll_modifiers(
+		&self,
+		rolls: &mut Vec<NumberRoll>,
+		sides: Integer,
+		modifiers: &[Reroll],
+	) -> bool;
 
+	fn apply_expanding_modifiers(
+		&self,
+		rolls: &mut Vec<NumberRoll>,
+		start_index: usize,
+		sides: Integer,
+		modifiers: Option<&Expanding>,
+	) -> bool;
 	fn apply_exploding_modifiers(
 		&self,
 		rolls: &mut Vec<NumberRoll>,
+		start_index: usize,
 		sides: Integer,
 		modifiers: &[Reroll],
-	);
+	) -> bool;
 	fn apply_penetrating_modifiers(
 		&self,
 		rolls: &mut Vec<NumberRoll>,
+		start_index: usize,
 		sides: Integer,
 		modifiers: &[Reroll],
-		is_first: bool,
-	);
+	) -> bool;
 	fn apply_compounding_modifiers(
 		&self,
 		rolls: &mut Vec<NumberRoll>,
 		sides: Integer,
 		modifiers: &[Reroll],
-	);
+	) -> bool;
+
 	fn apply_drop_keep_modifiers(&self, rolls: &mut Vec<NumberRoll>, modifiers: &Modifiers);
 	fn apply_sort_modifier(&self, rolls: &mut Vec<NumberRoll>, sort: Option<Sort>);
 
 	fn interpret_comment(&self, option_comment: &Option<String>, formula: &mut FormulaFragments);
 }
 
-impl<'s, 'm, R> InterpreterPrivateT for Interpreter<'s, 'm, R>
+impl<'m, R> InterpreterPrivateT for Interpreter<'m, R>
 where
 	R: Fn() -> f64 + Copy,
 {
-	fn interpret_parse_error(&self, parse_error: &ParseError) -> InterpretError {
-		InterpretError::ParseError(parse_error.clone())
-	}
 	fn interpret_string_literal(&self, string_literal: &str) -> OutputFragment {
 		OutputFragment::StringLit(string_literal.to_owned())
 	}
@@ -152,22 +162,24 @@ where
 	//      <explicit_roll>
 	//    | <inline_roll>
 	// <explicit_roll> ::=
-	//    "/roll" <expression> ["\"]
+	//    ("/roll" | "/r") <expression> ["\"]
 	// <inline_roll> ::=
 	//    "[[" <expression> "]]"
 	fn interpret_roll(&mut self, roll: &Roll) -> Result<OutputFragment, InterpretError> {
 		let mut formula = FormulaFragments::new();
 		Ok(OutputFragment::Roll(match roll {
-			Roll::ExplicitRoll(expression) => {
+			Roll::ExplicitRoll(expression, source) => {
 				let result = self.interpret_expression(expression, &mut formula)?;
 				RollType::ExplicitRoll(ExpressionOutput {
+					source: source.clone(),
 					formula_fragments: formula,
 					result,
 				})
 			}
-			Roll::InlineRoll(expression) => {
+			Roll::InlineRoll(expression, source) => {
 				let result = self.interpret_expression(expression, &mut formula)?;
 				RollType::InlineRoll(ExpressionOutput {
+					source: source.clone(),
 					formula_fragments: formula,
 					result,
 				})
@@ -180,17 +192,28 @@ where
 			None => return Err(InterpretError::InterpreterConstructedWithoutMacros),
 		};
 
-		let (output, interpreter) = match macro_source {
+		let (output, _interpreter) = match macro_source {
 			Some(data) => {
+				// let source = self.source.to_owned();
+				// println!("{}", data);
+				// println!("{}", source);
+				// let (front, _) = source.split_at(my_macro.start);
+				// let (_, back) = source.split_at(my_macro.end);
+				// let modified_source = format!("{}{}{}", front, data, back);
+				// println!("{}", modified_source);
+				// println!();
+
 				let mut interpreter = Interpreter::new(
-					data,
+					// data,
+					// modified_source.as_str(),
 					self.roll_queries.clone(),
 					self.macros,
 					self.rand,
 					self.query_prmopter,
 				);
-				let output = interpreter.interpret();
-				(output, interpreter)
+				let output = interpreter.interpret(data);
+				// println!("out: {:?}", output);
+				(output, 0)
 			}
 			None => return Err(InterpretError::NoMacroNamed(my_macro.name.to_owned())),
 		};
@@ -201,7 +224,7 @@ where
 				Box::new(output.error.unwrap()),
 			))
 		} else {
-			self.roll_queries = interpreter.roll_queries;
+			// self.roll_queries = interpreter.roll_queries;
 			Ok(output.fragments)
 		}
 	}
@@ -226,7 +249,7 @@ where
 		formula: &mut FormulaFragments,
 	) -> Result<Number, InterpretError> {
 		let lhs = self.interpret_expression(lhs, formula)?;
-		formula.push_str(" + ");
+		formula.push_new_str(" + ");
 		let rhs = self.interpret_mul_div(rhs, formula)?;
 		Ok(lhs + rhs)
 	}
@@ -237,7 +260,7 @@ where
 		formula: &mut FormulaFragments,
 	) -> Result<Number, InterpretError> {
 		let lhs = self.interpret_expression(lhs, formula)?;
-		formula.push_str(" - ");
+		formula.push_new_str(" - ");
 		let rhs = self.interpret_mul_div(rhs, formula)?;
 		Ok(lhs - rhs)
 	}
@@ -276,10 +299,7 @@ where
 		let lhs = self.interpret_mul_div(lhs, formula)?;
 		formula.push_str(" / ");
 		let rhs = self.interpret_power(rhs, formula)?;
-		match lhs / rhs {
-			Ok(number) => Ok(number),
-			Err(operator_error) => Err(InterpretError::OperatorError(operator_error)),
-		}
+		Ok((lhs / rhs)?)
 	}
 
 	// <power> ::=
@@ -293,8 +313,9 @@ where
 		match power {
 			Power::Pow(u, p) => {
 				let base = self.interpret_unary(u, formula)?;
-				formula.push_str("^");
+				formula.push_str("^(");
 				let exponent = self.interpret_power(p, formula)?;
+				formula.push_str(")");
 				Ok(base.pow(&exponent))
 			}
 			Power::Unary(unary) => self.interpret_unary(unary, formula),
@@ -302,8 +323,8 @@ where
 	}
 
 	// <unary> ::=
-	//      [<inline>] "-" <unary> =
-	//    | <atom>
+	//      [<comment>] "-" <unary>
+	//    | [<comment>] <atom> [<comment>]
 	fn interpret_unary(
 		&mut self,
 		unary: &Unary,
@@ -313,9 +334,7 @@ where
 			Unary::Minus(comment, u) => {
 				self.interpret_comment(comment, formula);
 				formula.push_str("-");
-				let result = -self.interpret_unary(u, formula)?;
-
-				Ok(result)
+				Ok(-self.interpret_unary(u, formula)?)
 			}
 			Unary::Atom(leading_comment, atom, trailing_comment) => {
 				self.interpret_comment(leading_comment, formula);
@@ -356,21 +375,32 @@ where
 			Atom::Macro(nested_macro) => {
 				let output_fragments = self.interpret_macro(nested_macro)?;
 				if output_fragments.len() == 1 {
-					let fragment = &output_fragments[0];
-					match fragment {
-						OutputFragment::Roll(RollType::InlineRoll(expression))
-						| OutputFragment::Roll(RollType::ExplicitRoll(expression)) => {
-							formula.push_str("{");
+					let result = match &output_fragments[0] {
+						OutputFragment::Roll(RollType::InlineRoll(expression)) => {
+							formula.push_new_str("{(");
+							formula.push_str(String::from(expression.result).as_str());
+							formula.push_str(")}");
+							Ok(expression.result)
+						}
+						OutputFragment::Roll(RollType::ExplicitRoll(expression)) => {
+							formula.push_new_str("{");
 							formula.append(&mut expression.formula_fragments.clone());
 							formula.push_str("}");
-							return Ok(expression.result);
+							Ok(expression.result)
 						}
-						_ => (),
+						_ => return Err(InterpretError::UnknownInterpreterError),
+					};
+					if nested_macro.name.as_str().contains(char::is_whitespace) {
+						formula.push_tooltip(format!("{}{{{}}}", "#", nested_macro.name).as_str());
+					} else {
+						formula.push_tooltip(format!("{}{}", "#", nested_macro.name).as_str());
 					}
+					return result;
 				}
 				Err(InterpretError::ThisMacroCannotBeNested(
 					nested_macro.name.clone(),
 				))
+				// Err(InterpretError::UnknownInterpreterError)
 			}
 		}
 	}
@@ -384,7 +414,9 @@ where
 			Dice::Normal(normal, modifiers) => {
 				self.interpret_normal_dice(normal, modifiers, tooltip, formula)
 			}
-			Dice::Fate(_fate, _modifiers) => Err(InterpretError::NotSupportedYet(NotSupportedYet::FateDice)),
+			Dice::Fate(_fate, _modifiers) => {
+				Err(InterpretError::NotSupportedYet(NotSupportedYet::FateDice))
+			}
 			// self.interpret_fate_dice(fate, modifiers, tooltip, formula),
 			Dice::Computed(computed, modifiers) => {
 				let normal = self.calc_normal_dice_from_computed_dice(computed)?;
@@ -401,7 +433,7 @@ where
 		                                     expression: &Expression,
 		                                     formula: &mut FormulaFragments|
 		 -> Result<Number, InterpretError> {
-			formula.push_str(function_name);
+			formula.push_new_str(function_name);
 			formula.push_str("(");
 			let expression_output = self.interpret_expression(expression, formula)?;
 			formula.push_str(")");
@@ -448,10 +480,7 @@ where
 				}
 			};
 
-			let expression = match Parser::parse_expression_string(&user_input) {
-				Ok(expression) => expression,
-				Err(parse_error) => return Err(InterpretError::ParseError(parse_error)),
-			};
+			let expression = Parser::parse_expression_string(&user_input)?;
 
 			self.roll_queries
 				.insert(roll_query.prompt.clone(), expression.clone());
@@ -475,44 +504,47 @@ where
 		self.validate_modifiers(modifiers, sides)?;
 
 		let mut rolls = (0..normal.count)
-			.flat_map(|_i| {
-				let roll = self.random_range(1, sides);
-
-				let mut modified_rolls = Vec::new();
-				self.apply_reroll_modifiers(roll, &mut modified_rolls, sides, &modifiers.reroll);
-
-				if let Some(expanding) = modifiers.expanding.as_ref() {
-					match expanding {
-						Expanding::Exploding(exploding) => {
-							self.apply_exploding_modifiers(&mut modified_rolls, sides, exploding)
-						}
-						Expanding::Penetrating(penetrating) => self.apply_penetrating_modifiers(
-							&mut modified_rolls,
-							sides,
-							penetrating,
-							true,
-						),
-						Expanding::Compounding(compounding) => self.apply_compounding_modifiers(
-							&mut modified_rolls,
-							sides,
-							compounding,
-						),
-					}
-				}
-
-				// self.apply_post_modifiers(&mut modified_rolls, modifiers.post_modifiers);
-
-				modified_rolls
-			})
+			.map(|_i| NumberRoll::Counted(self.random_range(1, sides), None))
 			.collect::<Vec<_>>();
+
+		let mut _havent_applied_reroll_once =
+			if let Some(reroll_once_modifier) = modifiers.reroll_once {
+				!self.apply_reroll_once_modifiers(&mut rolls, sides, &[reroll_once_modifier])
+			} else {
+				false
+			};
+		let mut expanding_start_index = 0;
+		let mut rolls_count = rolls.len();
+
+		loop {
+			// if havent_applied_reroll_once {
+			// 	havent_applied_reroll_once = !self.apply_reroll_once_modifiers(&mut rolls, sides, &modifiers.reroll_once);
+			// }
+
+			let applied_reroll = self.apply_reroll_modifiers(&mut rolls, sides, &modifiers.reroll);
+			let applied_expanding = self.apply_expanding_modifiers(
+				&mut rolls,
+				expanding_start_index,
+				sides,
+				modifiers.expanding.as_ref(),
+			);
+
+			if !applied_reroll & !applied_expanding {
+				break;
+			} else {
+				expanding_start_index = rolls_count;
+				rolls_count = rolls.len();
+			}
+		}
 
 		self.apply_drop_keep_modifiers(&mut rolls, modifiers);
 
 		self.apply_sort_modifier(&mut rolls, modifiers.sort);
 
 		let result = rolls.iter().fold(0, |mut acc, el| {
-			if let NumberRoll::Counted(roll) = el {
-				acc += roll;
+			if let NumberRoll::Counted(roll, modifier) = el {
+				let m = modifier.unwrap_or(NumberRollValueModifier { amount: 0 });
+				acc += roll + m.amount;
 			}
 			acc
 		});
@@ -619,83 +651,162 @@ where
 		false
 	}
 
-	fn apply_reroll_modifiers(
+	fn apply_reroll_once_modifiers(
 		&self,
-		next_roll_value: Integer,
 		rolls: &mut Vec<NumberRoll>,
 		sides: Integer,
 		reroll_modifiers: &[Reroll],
-	) {
+	) -> bool {
 		if reroll_modifiers.is_empty() {
-			rolls.push(NumberRoll::Counted(next_roll_value))
-		} else if self.reroll_applies(next_roll_value, sides, reroll_modifiers) {
-			rolls.push(NumberRoll::NotCounted(next_roll_value));
-			let new_roll = self.random_range(1, sides);
-			self.apply_reroll_modifiers(new_roll, rolls, sides, reroll_modifiers);
+			return false;
+		}
+		let mut new_roll: Option<NumberRoll> = None;
+		for roll in rolls.iter_mut() {
+			if let NumberRoll::Counted(value, _) = roll {
+				if self.reroll_applies(*value, sides, reroll_modifiers) {
+					*roll = NumberRoll::NotCounted(*value, ReasonNotCounted::Rerolled);
+					new_roll = Some(NumberRoll::Counted(self.random_range(1, sides), None));
+					break;
+				}
+			}
+		}
+		if let Some(new_roll) = new_roll {
+			rolls.push(new_roll);
+			true
 		} else {
-			rolls.push(NumberRoll::Counted(next_roll_value));
+			false
+		}
+	}
+
+	fn apply_reroll_modifiers(
+		&self,
+		rolls: &mut Vec<NumberRoll>,
+		sides: Integer,
+		reroll_modifiers: &[Reroll],
+	) -> bool {
+		if reroll_modifiers.is_empty() {
+			return false;
+		}
+		let mut new_rolls = Vec::new();
+		for roll in rolls.iter_mut() {
+			if let NumberRoll::Counted(value, _) = roll {
+				if self.reroll_applies(*value, sides, reroll_modifiers) {
+					*roll = NumberRoll::NotCounted(*value, ReasonNotCounted::Rerolled);
+					new_rolls.push(NumberRoll::Counted(self.random_range(1, sides), None));
+				}
+			}
+		}
+		if !new_rolls.is_empty() {
+			rolls.append(&mut new_rolls);
+			true
+		} else {
+			false
+		}
+	}
+
+	fn apply_expanding_modifiers(
+		&self,
+		rolls: &mut Vec<NumberRoll>,
+		start_index: usize,
+		sides: Integer,
+		modifiers: Option<&Expanding>,
+	) -> bool {
+		match modifiers {
+			Some(Expanding::Exploding(modifiers)) => {
+				self.apply_exploding_modifiers(rolls, start_index, sides, modifiers)
+			}
+			Some(Expanding::Penetrating(modifiers)) => {
+				self.apply_penetrating_modifiers(rolls, start_index, sides, modifiers)
+			}
+			Some(Expanding::Compounding(modifiers)) => {
+				self.apply_compounding_modifiers(rolls, sides, modifiers)
+			}
+			_ => false,
 		}
 	}
 
 	fn apply_exploding_modifiers(
 		&self,
 		rolls: &mut Vec<NumberRoll>,
+		start_index: usize,
 		sides: Integer,
 		modifiers: &[Reroll],
-	) {
-		if let Some(NumberRoll::Counted(counted)) = rolls.last() {
-			for modifier in modifiers.iter() {
-				let comparison_point = modifier.comparison_point.unwrap_or(sides);
-				if compare_integers(&modifier.comparison, *counted, comparison_point) {
-					let new_roll = self.random_range(1, sides);
-					rolls.push(NumberRoll::Counted(new_roll));
-					self.apply_exploding_modifiers(rolls, sides, modifiers);
-					break;
+	) -> bool {
+		let mut new_rolls = Vec::new();
+		for roll in rolls[start_index..].iter() {
+			if let NumberRoll::Counted(value, _) = roll {
+				for modifier in modifiers.iter() {
+					let comparison_point = modifier.comparison_point.unwrap_or(sides);
+					if compare_integers(&modifier.comparison, *value, comparison_point) {
+						let new_roll = self.random_range(1, sides);
+						new_rolls.push(NumberRoll::Counted(new_roll, None));
+						break;
+					}
 				}
 			}
+		}
+		if !new_rolls.is_empty() {
+			rolls.append(&mut new_rolls);
+			true
+		} else {
+			false
 		}
 	}
 	fn apply_penetrating_modifiers(
 		&self,
 		rolls: &mut Vec<NumberRoll>,
+		start_index: usize,
 		sides: Integer,
 		modifiers: &[Reroll],
-		is_first: bool,
-	) {
-		if let Some(NumberRoll::Counted(counted)) = rolls.last() {
-			let do_penetrating_roll = if is_first {
-				self.reroll_applies(*counted, sides, modifiers)
-			} else {
-				self.reroll_applies(counted + 1, sides, modifiers)
-			};
-			if do_penetrating_roll {
-				let raw_roll = self.random_range(1, sides);
-				rolls.push(NumberRoll::Counted(raw_roll - 1));
-				self.apply_penetrating_modifiers(rolls, sides, modifiers, false);
+	) -> bool {
+		println!("before exploding {:?}", rolls);
+		let starting_len = rolls.len();
+		let did_exploding_mods =
+			self.apply_exploding_modifiers(rolls, start_index, sides, modifiers);
+		println!("after exploding {:?}", rolls);
+
+		if did_exploding_mods {
+			for roll in rolls[starting_len..].iter_mut() {
+				if let NumberRoll::Counted(value, None) = roll {
+					*roll =
+						NumberRoll::Counted(*value, Some(NumberRollValueModifier { amount: -1 }));
+				}
 			}
 		}
+		println!("before penetrating {:?}", rolls);
+		println!();
+		did_exploding_mods
 	}
 	fn apply_compounding_modifiers(
 		&self,
 		rolls: &mut Vec<NumberRoll>,
 		sides: Integer,
 		modifiers: &[Reroll],
-	) {
-		if let Some(NumberRoll::Counted(counted)) = rolls.last_mut() {
-			if self.reroll_applies(*counted, sides, modifiers) {
+	) -> bool {
+		for roll in rolls.iter_mut() {
+			if let NumberRoll::Counted(v, m) = roll {
+				let mut roll_value = *v;
+				let mut modifier = match m {
+					Some(m) => *m,
+					None => NumberRollValueModifier { amount: 0 },
+				};
 				loop {
-					let next_roll = self.random_range(1, sides);
-					*counted += next_roll;
-					if !self.reroll_applies(next_roll, sides, modifiers) {
+					if self.reroll_applies(roll_value, sides, modifiers) {
+						let next_roll = self.random_range(1, sides);
+						modifier.amount += next_roll;
+						roll_value = next_roll;
+					} else {
+						*m = Some(modifier);
 						break;
 					}
 				}
 			}
 		}
+		false
 	}
 
 	fn apply_drop_keep_modifiers(&self, rolls: &mut Vec<NumberRoll>, modifiers: &Modifiers) {
-		if let Some(dk) = modifiers.drop_keep {
+		if let Some(drop_keep_modifier) = modifiers.drop_keep {
 			let mut sorted = rolls.clone();
 			sorted.sort_unstable();
 
@@ -703,9 +814,10 @@ where
 				|rolls: &mut Vec<NumberRoll>, count, target, cmp: fn(Integer, Integer) -> bool| {
 					let mut drop_count = 0;
 					for roll in rolls.iter_mut() {
-						if let NumberRoll::Counted(value) = roll {
-							if cmp(*value, target) {
-								*roll = NumberRoll::NotCounted(*value);
+						if let NumberRoll::Counted(_, _) = roll {
+							let value = roll.value();
+							if cmp(value, target) {
+								*roll = NumberRoll::NotCounted(value, ReasonNotCounted::Dropped);
 								drop_count += 1;
 							}
 							if drop_count == count {
@@ -714,21 +826,24 @@ where
 						}
 					}
 				};
-			let keep_helper =
-				|rolls: &mut Vec<NumberRoll>, count, target, cmp: fn(Integer, Integer) -> bool| {
-					let mut keep_count = 0;
-					for roll in rolls.iter_mut() {
-						if let NumberRoll::Counted(value) = roll {
-							if cmp(*value, target) || (*value == target && keep_count >= count) {
-								*roll = NumberRoll::NotCounted(*value);
-							} else {
-								keep_count += 1;
-							}
+			let keep_helper = |rolls: &mut Vec<NumberRoll>,
+			                   keep_count,
+			                   target,
+			                   cmp: fn(Integer, Integer) -> bool| {
+				let mut kept_so_far = 0;
+				for roll in rolls.iter_mut() {
+					if let NumberRoll::Counted(_, _) = roll {
+						let value = roll.value();
+						if cmp(value, target) || (value == target && kept_so_far >= keep_count) {
+							*roll = NumberRoll::NotCounted(value, ReasonNotCounted::Dropped);
+						} else {
+							kept_so_far += 1;
 						}
 					}
-				};
+				}
+			};
 
-			match dk {
+			match drop_keep_modifier {
 				DropKeep::DropLowest(count) => {
 					let target = sorted[count as usize - 1].value();
 					drop_helper(rolls, count, target, |a, b| a <= b);
@@ -749,23 +864,19 @@ where
 		}
 	}
 
-	fn apply_sort_modifier(&self, rolls: &mut Vec<NumberRoll>, sort: Option<Sort>) {
+	fn apply_sort_modifier(&self, rolls: &mut Vec<NumberRoll>, sort_modifier: Option<Sort>) {
 		let to_values = |a: &NumberRoll, b: &NumberRoll| -> (Integer, Integer) {
-			let a = match a {
-				NumberRoll::Counted(v) | NumberRoll::NotCounted(v) => v
-			};
-			let b = match b {
-				NumberRoll::Counted(v) | NumberRoll::NotCounted(v) => v
-			};
-			(*a, *b)
+			let a = a.value();
+			let b = b.value();
+			(a, b)
 		};
-		if let Some(sort) = sort {
+		if let Some(sort) = sort_modifier {
 			match sort {
 				Sort::Ascending => rolls.sort_by(|a: &NumberRoll, b: &NumberRoll| {
 					let (a, b) = to_values(a, b);
 					a.cmp(&b)
 				}),
-				Sort::Decending => rolls.sort_by(|a: &NumberRoll, b: &NumberRoll| {
+				Sort::Descending => rolls.sort_by(|a: &NumberRoll, b: &NumberRoll| {
 					let (a, b) = to_values(a, b);
 					b.cmp(&a)
 				}),

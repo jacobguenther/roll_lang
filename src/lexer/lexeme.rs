@@ -25,6 +25,27 @@ impl Lexeme {
 			| Lexeme::Punctuation(t) => t,
 		}
 	}
+	pub fn is_whitespace(&self) -> bool {
+		matches!(self, Lexeme::Whitespace(_t))
+	}
+	pub fn is_literal(&self) -> bool {
+		matches!(self, Lexeme::Literal(_t))
+	}
+	pub fn is_keyword(&self) -> bool {
+		matches!(self, Lexeme::Keyword(_t, _which))
+	}
+	pub fn is_number(&self) -> bool {
+		matches!(self, Lexeme::Number(_t))
+	}
+	pub fn is_comparison(&self) -> bool {
+		matches!(self, Lexeme::Comparison(_t))
+	}
+	pub fn is_operator(&self) -> bool {
+		matches!(self, Lexeme::Operator(_t))
+	}
+	pub fn is_punctuation(&self) -> bool {
+		matches!(self, Lexeme::Punctuation(_t))
+	}
 }
 impl TokenT for Lexeme {
 	fn source(&self) -> &str {

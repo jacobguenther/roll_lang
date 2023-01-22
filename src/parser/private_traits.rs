@@ -52,6 +52,8 @@ pub(super) trait ParserPrivateT {
 	fn parse_penetrating(&mut self) -> Result<Reroll, ParseError>;
 
 	fn parse_reroll(&mut self) -> Result<Reroll, ParseError>;
+	fn parse_reroll_once(&mut self) -> Result<Reroll, ParseError>;
+
 	fn parse_drop_keep(&mut self) -> Result<DropKeep, ParseError>;
 	fn parse_successes(&mut self) -> Result<Successes, ParseError>;
 	fn parse_cirtical(&mut self) -> Result<Successes, ParseError>;
@@ -83,7 +85,7 @@ pub(super) trait ParserPrivateT {
 	fn is_inline_roll(&self) -> bool;
 }
 
-impl ParserPrivateT for Parser {
+impl<'a> ParserPrivateT for Parser<'a> {
 	fn parse_start(&mut self) {
 		self.state = if self.current().is_err() {
 			State::Done
@@ -104,7 +106,7 @@ impl ParserPrivateT for Parser {
 				self.state = State::Roll;
 				break;
 			} else if self.current().unwrap().token().source() == "#" {
-				// what is this for?
+				// potentially a macro
 				break;
 			} else {
 				literal.push_str(self.current().unwrap().source());
@@ -157,41 +159,68 @@ impl ParserPrivateT for Parser {
 	}
 	fn parse_macro(&mut self) -> Result<Macro, ParseError> {
 		let start_index = self.current_index;
-		self.skip_whitespace();
-		if let Err(parse_error) = self.match_current_to_punctuation("#") {
-			self.current_index = start_index;
-			return Err(parse_error);
+
+		// self.skip_whitespace();
+
+		let token = match self.match_current_to_punctuation("#") {
+			Ok(token) => token,
+			Err(err) => {
+				self.current_index = start_index;
+				return Err(err);
+			}
 		};
+
+		let start_byte = token.start();
+
 		match self.match_current_to_punctuation("{") {
 			Ok(_token) => {
 				let mut macro_name = String::new();
+				let mut end = 0;
 				loop {
 					match self.match_current_to_punctuation("}") {
 						Ok(_token) => break,
 						Err(_parse_error) => {
 							macro_name.push_str(self.current()?.token().source());
-							self.current_index += 1;
+							self.step_lexemes();
+							end = self.current().unwrap().token().end();
 						}
 					}
 				}
-				return Ok(Macro { name: macro_name });
+
+				Ok(Macro {
+					start: start_byte,
+					end,
+					name: macro_name,
+				})
 			}
-			Err(_parse_error) => match self.current()? {
-				Lexeme::Literal(token) | Lexeme::Keyword(token, _) => {
-					let token = token.clone();
+			Err(_parse_error) => {
+				let mut end = 0;
+
+				let mut macro_name = String::new();
+				loop {
+					if let Ok(Lexeme::Literal(token)) = self.current() {
+						macro_name.push_str(token.source());
+						end = token.end();
+					} else if let Ok(Lexeme::Keyword(token, _)) = self.current() {
+						macro_name.push_str(token.source());
+						end = token.end();
+					} else {
+						break;
+					}
 					self.step_lexemes();
-					return Ok(Macro {
-						name: token.source().to_string(),
-					});
 				}
-				_ => (),
-			},
-		};
-		self.current_index = start_index;
-		Err(ParseError::DoesNotMatch)
+
+				Ok(Macro {
+					start: start_byte,
+					end,
+					name: macro_name,
+				})
+			}
+		}
 	}
 	fn parse_roll(&mut self) -> Result<Roll, ParseError> {
 		if self.is_roll() {
+			let start = self.current_index;
 			self.step_lexemes();
 			self.step_lexemes();
 			let expression = self.parse_expression()?;
@@ -202,18 +231,37 @@ impl ParserPrivateT for Parser {
 					self.current_index = start_index - 1;
 					match self.current().unwrap() {
 						Lexeme::Whitespace(_) => (),
-						_ => self.current_index += 1,
+						_ => self.step_lexemes(),
 					}
 				}
 			}
-			Ok(Roll::ExplicitRoll(expression))
+			let end = self.current_index;
+			let roll_source =
+				self.lexemes[start..end]
+					.iter()
+					.fold(String::new(), |mut accum, lexeme| {
+						accum.push_str(lexeme.source());
+						accum
+					});
+			Ok(Roll::ExplicitRoll(expression, roll_source))
 		} else {
+			let start = self.current_index;
+
 			self.step_lexemes();
 			self.step_lexemes();
 			let expression = self.parse_expression()?;
 			self.match_current_to_punctuation("]")?;
 			self.match_current_to_punctuation("]")?;
-			Ok(Roll::InlineRoll(expression))
+
+			let end = self.current_index;
+			let roll_source =
+				self.lexemes[start..end]
+					.iter()
+					.fold(String::new(), |mut accum, lexeme| {
+						accum.push_str(lexeme.source());
+						accum
+					});
+			Ok(Roll::InlineRoll(expression, roll_source))
 		}
 	}
 	fn parse_expression(&mut self) -> Result<Expression, ParseError> {
@@ -420,9 +468,10 @@ impl ParserPrivateT for Parser {
 
 		if let Err(parse_error) = self.match_current_to_punctuation_skip_whitespace(")") {
 			self.current_index = start_index;
-			return Err(parse_error);
+			Err(parse_error)
+		} else {
+			Ok(function)
 		}
-		return Ok(function);
 	}
 
 	fn parse_number(&mut self) -> Result<Number, ParseError> {
@@ -584,8 +633,10 @@ impl ParserPrivateT for Parser {
 	fn parse_modifiers(&mut self) -> Result<Modifiers, ParseError> {
 		let mut modifiers = Modifiers::default();
 		let mut expanding = None;
+
 		loop {
 			let mut found_one = false;
+
 			let start_index = self.current_index;
 			match self.parse_exploding() {
 				Ok(exploding) => {
@@ -601,6 +652,7 @@ impl ParserPrivateT for Parser {
 				}
 				Err(_parse_error) => self.current_index = start_index,
 			}
+
 			let start_index = self.current_index;
 			match self.parse_penetrating() {
 				Ok(penetrating) => {
@@ -617,6 +669,7 @@ impl ParserPrivateT for Parser {
 				}
 				Err(_parse_error) => self.current_index = start_index,
 			}
+
 			let start_index = self.current_index;
 			match self.parse_compounding() {
 				Ok(compounding) => {
@@ -633,8 +686,8 @@ impl ParserPrivateT for Parser {
 				}
 				Err(_parse_error) => self.current_index = start_index,
 			}
-			let start_index = self.current_index;
 
+			let start_index = self.current_index;
 			match self.parse_reroll() {
 				Ok(reroll_modifier) => {
 					modifiers.reroll.push(reroll_modifier);
@@ -642,6 +695,16 @@ impl ParserPrivateT for Parser {
 				}
 				Err(_parse_error) => self.current_index = start_index,
 			};
+
+			let start_index = self.current_index;
+			match self.parse_reroll_once() {
+				Ok(reroll_modifier) => {
+					modifiers.reroll_once = Some(reroll_modifier);
+					found_one = true;
+				}
+				Err(_parse_error) => self.current_index = start_index,
+			};
+
 			let start_index = self.current_index;
 			match self.parse_successes() {
 				Ok(successes_modifier) => {
@@ -650,6 +713,7 @@ impl ParserPrivateT for Parser {
 				}
 				Err(_parse_error) => self.current_index = start_index,
 			};
+
 			let start_index = self.current_index;
 			match self.parse_cirtical() {
 				Ok(critical_modifier) => {
@@ -658,6 +722,7 @@ impl ParserPrivateT for Parser {
 				}
 				Err(_parse_error) => self.current_index = start_index,
 			};
+
 			let start_index = self.current_index;
 			match self.parse_drop_keep() {
 				Ok(drop_keep) => {
@@ -669,6 +734,7 @@ impl ParserPrivateT for Parser {
 				}
 				Err(_parse_error) => self.current_index = start_index,
 			};
+
 			let start_index = self.current_index;
 			match self.parse_sort() {
 				Ok(sort) => {
@@ -680,11 +746,14 @@ impl ParserPrivateT for Parser {
 				}
 				Err(_parse_error) => self.current_index = start_index,
 			}
+
 			if !found_one {
 				break;
 			}
 		}
+
 		modifiers.expanding = expanding;
+
 		Ok(modifiers)
 	}
 	fn parse_comparison(&mut self) -> Result<Comparison, ParseError> {
@@ -778,6 +847,18 @@ impl ParserPrivateT for Parser {
 			}
 		}
 	}
+	fn parse_reroll_once(&mut self) -> Result<Reroll, ParseError> {
+		let start_index = self.current_index;
+		self.match_current_to_keyword(Keyword::RerollOnce)?;
+		match self.parse_comparison_and_require_integer() {
+			Ok((comparison, integer)) => Ok(Reroll::new(comparison, Some(integer))),
+			Err(parse_error) => {
+				self.current_index = start_index;
+				Err(parse_error)
+			}
+		}
+	}
+
 	fn parse_drop_keep(&mut self) -> Result<DropKeep, ParseError> {
 		let start_index = self.current_index;
 		let keyword = self.match_current_to_one_of_keywords(&[
@@ -832,10 +913,10 @@ impl ParserPrivateT for Parser {
 	}
 	fn parse_sort(&mut self) -> Result<Sort, ParseError> {
 		let keyword = self
-			.match_current_to_one_of_keywords(&[Keyword::SortAscending, Keyword::SortDecending])?;
+			.match_current_to_one_of_keywords(&[Keyword::SortAscending, Keyword::SortDescending])?;
 		match keyword {
 			Keyword::SortAscending => Ok(Sort::Ascending),
-			Keyword::SortDecending => Ok(Sort::Decending),
+			Keyword::SortDescending => Ok(Sort::Descending),
 			_ => Err(ParseError::Unknown),
 		}
 	}
@@ -844,14 +925,14 @@ impl ParserPrivateT for Parser {
 		self.current_index += 1;
 	}
 	fn step_lexemes_skip_whitespace(&mut self) {
-		self.current_index += 1;
+		self.step_lexemes();
 		if let Ok(Lexeme::Whitespace(_)) = self.current() {
 			self.step_lexemes_skip_whitespace();
 		}
 	}
 	fn skip_whitespace(&mut self) {
 		if let Ok(Lexeme::Whitespace(_token)) = self.current() {
-			self.current_index += 1;
+			self.step_lexemes();
 			self.skip_whitespace();
 		}
 	}
@@ -921,7 +1002,7 @@ impl ParserPrivateT for Parser {
 		&mut self,
 		one_of: &[Keyword],
 	) -> Result<Keyword, ParseError> {
-		let err = || ParseError::ExpectedOneOfKeywords(one_of.iter().copied().collect());
+		let err = || ParseError::ExpectedOneOfKeywords(one_of.to_vec());
 
 		let keyword = if let Lexeme::Keyword(_, keyword) = self.current()? {
 			*keyword
@@ -931,10 +1012,10 @@ impl ParserPrivateT for Parser {
 
 		if one_of.iter().any(|k| *k == keyword) {
 			self.step_lexemes_skip_whitespace();
-			return Ok(keyword);
+			Ok(keyword)
+		} else {
+			Err(err())
 		}
-
-		return Err(err());
 	}
 	fn match_current_to_operator(&mut self, operator: &str) -> Result<Token, ParseError> {
 		if let Lexeme::Operator(token) = self.current()? {

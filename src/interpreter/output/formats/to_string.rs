@@ -1,6 +1,6 @@
-// interpreter/output_traits.rs
+// interpreter/output/formats/to_string.rs
 
-use super::output::*;
+use super::super::*;
 
 use std::string::ToString;
 
@@ -16,6 +16,7 @@ impl ToString for Output {
 		}
 	}
 }
+
 impl ToString for OutputFragment {
 	fn to_string(&self) -> String {
 		match self {
@@ -29,6 +30,7 @@ impl ToString for OutputFragment {
 		}
 	}
 }
+
 impl ToString for ExpressionOutput {
 	fn to_string(&self) -> String {
 		let mut out_string = String::new();
@@ -38,6 +40,7 @@ impl ToString for ExpressionOutput {
 		format!("{} = {}", out_string, self.result)
 	}
 }
+
 impl ToString for FormulaFragment {
 	fn to_string(&self) -> String {
 		match self {
@@ -67,11 +70,12 @@ impl ToString for FormulaFragment {
 		}
 	}
 }
+
 impl ToString for NumberRoll {
 	fn to_string(&self) -> String {
 		match self {
-			NumberRoll::Counted(int) => format!("{}", int),
-			NumberRoll::NotCounted(n) => format!("roll_not_counted({})", n),
+			NumberRoll::Counted(_, _) => self.value().to_string(),
+			NumberRoll::NotCounted(_, _) => format!("roll_not_counted({})", self.value()),
 		}
 	}
 }

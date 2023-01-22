@@ -17,12 +17,14 @@ pub enum Node {
 }
 #[derive(Debug, Clone)]
 pub struct Macro {
+	pub start: usize,
+	pub end: usize,
 	pub name: String,
 }
 #[derive(Debug, Clone)]
 pub enum Roll {
-	ExplicitRoll(Expression),
-	InlineRoll(Expression),
+	ExplicitRoll(Expression, String),
+	InlineRoll(Expression, String),
 }
 #[derive(Debug, Clone)]
 pub enum Expression {
@@ -88,6 +90,7 @@ pub struct Computed {
 pub struct Modifiers {
 	pub expanding: Option<Expanding>,
 	pub reroll: Vec<Reroll>,
+	pub reroll_once: Option<Reroll>,
 	pub drop_keep: Option<DropKeep>,
 	pub successes: Vec<Successes>,
 	pub sort: Option<Sort>,
@@ -135,7 +138,7 @@ pub enum DropKeep {
 #[derive(Debug, Copy, Clone)]
 pub enum Sort {
 	Ascending,
-	Decending,
+	Descending,
 }
 
 #[derive(Debug, Copy, Clone)]

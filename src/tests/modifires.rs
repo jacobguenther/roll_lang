@@ -30,6 +30,25 @@ fn errors() {
 }
 
 #[test]
+fn reroll_once() {
+	let ra = || {
+		let nums = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
+		static mut I: usize = 0;
+		unsafe {
+			let rand = nums[I];
+			I += 1;
+			if I >= 10 {
+				I = 0;
+			}
+			rand
+		}
+	};
+	helper(ra, "/r 2d10ro1 \\", "(roll_not_counted(1)+2+3) = 5");
+	helper(ra, "/r 2d10ro=5 \\", "(4+roll_not_counted(5)+6) = 10");
+	helper(ra, "/r 2d10ro>=7 \\", "(roll_not_counted(7)+8+9) = 17");
+}
+
+#[test]
 fn reroll() {
 	let ra = || {
 		let nums = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
@@ -88,6 +107,7 @@ fn exploding() {
 	helper(ra, "/r 2d10! \\", "(10+1+2) = 13");
 	helper(ra, "/r 2d10!3!4 \\", "(3+4+5+6) = 18");
 	helper(ra, "/r 2d10!>=8 \\", "(7+8+9+10+1) = 35");
+	helper(ra, "/r 3d10!<6 \\", "(2+3+4+5+6+7+8) = 35");
 }
 #[test]
 fn penetrating() {
@@ -103,8 +123,8 @@ fn penetrating() {
 			rand
 		}
 	};
-	helper(ra, "/r 2d10!p \\", "(10+0+2) = 12");
-	helper(ra, "/r 2d10!p3!p4 \\", "(3+3+4+6) = 16");
+	helper(ra, "/r 2d10!p \\", "(10+1+1) = 12");
+	helper(ra, "/r 2d10!p3!p4 \\", "(3+4+4+5) = 16");
 	helper(ra, "/r 2d10!p>=8 \\", "(7+8+8+9+0) = 32");
 }
 
@@ -122,7 +142,7 @@ fn compounding() {
 			rand
 		}
 	};
-	helper(ra, "/r 2d10!! \\", "(11+2) = 13"); // (10+1) (2)
-	helper(ra, "/r 2d10!!3!!4 \\", "(12+6) = 18"); // (3+4+5) (6)
-	helper(ra, "/r 2d10!!>=8 \\", "(7+28) = 35"); // (7) (8+9+10+1)
+	helper(ra, "/r 2d10!! \\", "(12+1) = 13"); // 10(2) + 1
+	helper(ra, "/r 2d10!!3!!4 \\", "(8+10) = 18"); // 3(5) + 4(6)
+	helper(ra, "/r 2d10!!>=8 \\", "(7+28) = 35"); // 7 + (8+9+10+1)
 }

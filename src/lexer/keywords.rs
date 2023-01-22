@@ -1,136 +1,126 @@
 // File: src/lexer/keywords.rs
 
+use std::convert::TryFrom;
+use std::str::FromStr;
+
+// must be alphebetical
 pub static KEYWORDS: [&str; 35] = [
-	// ambiguous
-	"r",
-	"d",
-	// init
-	"roll",
-	// functions
 	"abs",
+	"ascending",
 	"ceil",
-	"floor",
-	"round",
-	"round_half_down",
-	// dice
+	"cf",
+	"compounding",
+	"critical",
+	"cs",
+	"d",
+	"descending",
 	"dF",
-	// modifiers
-	// drops/keep
-	"drop",
 	"dh",
 	"dl",
+	"drop",
+	"exploding",
+	"failure",
+	"floor",
+	"highest",
 	"k",
 	"keep",
 	"kh",
 	"kl",
-	"highest",
 	"lowest",
-	// rerolls
+	"once",
+	"penetrating",
+	"r",
 	"reroll",
 	"ro",
-	"once",
-	// expanding
-	"exploding",
-	"compounding",
-	"penetrating",
-	// success/fails
-	"cs",
-	"cf",
-	"critical",
-	"success",
-	"failure",
-	// sorts
+	"roll",
+	"round",
+	"round_half_down",
 	"s",
-	"sort",
 	"sa",
 	"sd",
-	"ascending",
-	"decending",
+	"sort",
+	"success",
 ];
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Keyword {
-	// ambiguous
-	R,
-	D,
-	// init
-	Roll,
-	// functions
 	Abs,
+	Ascending,
 	Ceil,
-	Floor,
-	Round,
-	RoundHalfDown,
-	// dice
-	FateDice,
-	// modifiers
-	// drop
-	Drop,
+	CriticalFailure,
+	Compounding,
+	Critical,
+	CriticalSuccess,
+	D,
+	DF,
+	Descending,
 	DropHighest,
 	DropLowest,
-	// keep
+	Drop,
+	Exploding,
+	Failure,
+	Floor,
+	Highest,
 	Keep,
 	KeepHighest,
 	KeepLowest,
 	Lowest,
-	Highest,
-	// rerolls
+	Once,
+	Penetrating,
+	R,
 	Reroll,
 	RerollOnce,
-	Once,
-	// expanding
-	Exploding,
-	Compounding,
-	Penetrating,
-	// success/fail
-	CriticalSuccess,
-	CriticalFailure,
-	Critical,
-	Success,
-	Failure,
-	// sort
-	Sort,
+	Roll,
+	Round,
+	RoundHalfDown,
 	SortAscending,
-	SortDecending,
-	Ascending,
-	Decending,
+	SortDescending,
+	Sort,
+	Success,
 }
-impl std::convert::TryFrom<&str> for Keyword {
+impl FromStr for Keyword {
+	type Err = ();
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		Keyword::try_from(s)
+	}
+}
+impl TryFrom<&str> for Keyword {
 	type Error = ();
 	fn try_from(word: &str) -> Result<Keyword, Self::Error> {
 		match word {
-			"d" => Ok(Self::D),
-			"r" => Ok(Self::R),
-			"roll" => Ok(Self::Roll),
 			"abs" => Ok(Self::Abs),
+			"ascending" => Ok(Self::Ascending),
 			"ceil" => Ok(Self::Ceil),
-			"floor" => Ok(Self::Floor),
-			"round" => Ok(Self::Round),
-			"round_half_down" => Ok(Self::RoundHalfDown),
-			"dF" => Ok(Self::FateDice),
-			"drop" => Ok(Self::Drop),
-			"keep" => Ok(Self::Keep),
+			"cf" => Ok(Self::CriticalFailure),
+			"compounding" => Ok(Self::Compounding),
+			"critical" => Ok(Self::Critical),
+			"cs" => Ok(Self::CriticalSuccess),
+			"d" => Ok(Self::D),
+			"dF" => Ok(Self::DF),
+			"descending" => Ok(Self::Descending),
 			"dh" => Ok(Self::DropHighest),
 			"dl" => Ok(Self::DropLowest),
-			"k" | "kh" => Ok(Self::KeepHighest),
+			"drop" => Ok(Self::Drop),
+			"exploding" => Ok(Self::Exploding),
+			"failure" => Ok(Self::Failure),
+			"floor" => Ok(Self::Floor),
+			"highest" => Ok(Self::Highest),
+			"k" => Ok(Self::KeepHighest),
+			"keep" => Ok(Self::Keep),
+			"kh" => Ok(Self::KeepHighest),
 			"kl" => Ok(Self::KeepLowest),
 			"lowest" => Ok(Self::Lowest),
-			"highest" => Ok(Self::Highest),
+			"once" => Ok(Self::Once),
+			"penetrating" => Ok(Self::Penetrating),
+			"r" => Ok(Self::R),
 			"reroll" => Ok(Self::Reroll),
 			"ro" => Ok(Self::RerollOnce),
-			"once" => Ok(Self::Once),
-			"exploding" => Ok(Self::Exploding),
-			"compounding" => Ok(Self::Compounding),
-			"penetrating" => Ok(Self::Penetrating),
-			"cs" => Ok(Self::CriticalSuccess),
-			"cf" => Ok(Self::CriticalFailure),
-			"critical" => Ok(Self::Critical),
-			"success" => Ok(Self::Success),
-			"failure" => Ok(Self::Failure),
-			"sort" => Ok(Self::Sort),
+			"roll" => Ok(Self::Roll),
+			"round" => Ok(Self::Round),
+			"round_half_down" => Ok(Self::RoundHalfDown),
 			"s" | "sa" => Ok(Self::SortAscending),
-			"sd" => Ok(Self::SortDecending),
-			"ascending" => Ok(Self::Ascending),
-			"decending" => Ok(Self::Decending),
+			"sd" => Ok(Self::SortDescending),
+			"sort" => Ok(Self::Sort),
+			"success" => Ok(Self::Success),
 			_ => Err(()),
 		}
 	}

@@ -24,48 +24,36 @@ pub fn default_query_prompter(message: &str, default: &str) -> Option<String> {
 }
 
 #[derive(Default)]
-pub struct InterpreterBuilder<'s, 'r, 'm> {
-	source: Option<&'s str>,
+pub struct InterpreterBuilder<'r, 'm> {
 	roll_queries: Option<&'r HashMap<String, Expression>>,
 	macros: Option<&'m Macros>,
 	query_prompter: Option<fn(&str, &str) -> Option<String>>,
 }
-impl<'s, 'r, 'm> InterpreterBuilder<'s, 'r, 'm> {
-	pub fn with_source<'a>(
-		&'a mut self,
-		source: &'s str,
-	) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
-		self.source = Some(source);
-		self
-	}
+impl<'r, 'm> InterpreterBuilder<'r, 'm> {
 	pub fn with_roll_queries<'a>(
 		&'a mut self,
 		roll_queries: &'r HashMap<String, Expression>,
-	) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
+	) -> &'a mut InterpreterBuilder<'r, 'm> {
 		self.roll_queries = Some(roll_queries);
 		self
 	}
-	pub fn with_macros<'a>(
-		&'a mut self,
-		macros: &'m Macros,
-	) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
+	pub fn with_macros<'a>(&'a mut self, macros: &'m Macros) -> &'a mut InterpreterBuilder<'r, 'm> {
 		self.macros = Some(macros);
 		self
 	}
 	pub fn with_query_prompter<'a>(
 		&'a mut self,
 		prompter: fn(&str, &str) -> Option<String>,
-	) -> &'a mut InterpreterBuilder<'s, 'r, 'm> {
+	) -> &'a mut InterpreterBuilder<'r, 'm> {
 		self.query_prompter = Some(prompter);
 		self
 	}
 
-	pub fn build<R>(&self, rand: R) -> Interpreter<'s, 'm, R>
+	pub fn build<R>(&self, rand: R) -> Interpreter<'m, R>
 	where
 		R: Fn() -> f64 + Copy,
 	{
 		Interpreter::new(
-			self.source.unwrap_or(""),
 			self.roll_queries.unwrap_or(&HashMap::new()).clone(),
 			self.macros,
 			rand,

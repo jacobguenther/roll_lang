@@ -1,4 +1,6 @@
-// File: interpreter/output.rs
+// File: src/interpreter/output/mod/.rs
+
+pub mod formats;
 
 use super::InterpretError;
 use crate::ast::number::*;
@@ -31,6 +33,7 @@ pub enum RollType {
 }
 #[derive(Debug, Clone)]
 pub struct ExpressionOutput {
+	pub source: String,
 	pub formula_fragments: FormulaFragments,
 	pub result: Number,
 }
@@ -102,7 +105,7 @@ impl NumberRollsT for NumberRolls {
 	fn sum_counted_rolls(&self) -> Integer {
 		let mut res = 0;
 		for number_roll in self {
-			if let NumberRoll::Counted(int) = number_roll {
+			if let NumberRoll::Counted(int, _) = number_roll {
 				res += int;
 			}
 		}
@@ -110,14 +113,30 @@ impl NumberRollsT for NumberRolls {
 	}
 }
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct NumberRollValueModifier {
+	pub amount: Integer,
+}
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ReasonNotCounted {
+	Dropped,
+	Rerolled,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum NumberRoll {
-	Counted(Integer),
-	NotCounted(Integer),
+	Counted(Integer, Option<NumberRollValueModifier>),
+	NotCounted(Integer, ReasonNotCounted),
 }
 impl NumberRoll {
+	pub fn roll_value(&self) -> Integer {
+		match self {
+			NumberRoll::Counted(i, _) | NumberRoll::NotCounted(i, _) => *i,
+		}
+	}
 	pub fn value(&self) -> Integer {
 		match self {
-			NumberRoll::Counted(i) | NumberRoll::NotCounted(i) => *i,
+			NumberRoll::Counted(i, Some(m)) => i + m.amount,
+			NumberRoll::Counted(i, _) | NumberRoll::NotCounted(i, _) => *i,
 		}
 	}
 }
