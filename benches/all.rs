@@ -26,21 +26,25 @@ pub fn bench_lexer(c: &mut Criterion) {
 	});
 }
 
-use roll_lang::interpreter::*;
 use roll_lang::builder::*;
+use roll_lang::interpreter::*;
 
 pub fn bench_interpreter(c: &mut Criterion) {
 	let addition = "/roll 1+2+3+4+5";
 	c.bench_function("interpreter addition", |b| {
 		b.iter(|| {
-			InterpreterBuilder::default().build(rand::random::<f64>).interpret(black_box(addition));
+			InterpreterBuilder::default()
+				.build(rand::random::<f64>)
+				.interpret(black_box(addition));
 		})
 	});
 
 	let dice = "/roll d20 + 4/2[modifier] + [[4d6]][inline]";
 	c.bench_function("interpreter dice", |b| {
 		b.iter(|| {
-			InterpreterBuilder::default().build(rand::random::<f64>).interpret(black_box(dice));
+			InterpreterBuilder::default()
+				.build(rand::random::<f64>)
+				.interpret(black_box(dice));
 		})
 	});
 }
