@@ -24,7 +24,6 @@ fn comparisons() {
 
 #[test]
 fn keywords() {
-
 	let keyword_helper = |source| {
 		let lexemes = Lexer::new(source).collect::<Vec<_>>();
 		let mut lexemes_iter = lexemes.iter();

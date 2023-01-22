@@ -35,6 +35,12 @@ pub(super) trait InterpreterPrivateT {
 		mul_div: &MulDiv,
 		formula: &mut FormulaFragments,
 	) -> Result<Number, InterpretError>;
+	fn interpret_multiply_paren(
+		&mut self,
+		lhs: &Expression,
+		rhs: &MulDiv,
+		formula: &mut FormulaFragments,
+	) -> Result<Number, InterpretError>;
 	fn interpret_multiply(
 		&mut self,
 		lhs: &MulDiv,
@@ -273,12 +279,24 @@ where
 		formula: &mut FormulaFragments,
 	) -> Result<Number, InterpretError> {
 		match mul_div {
+			MulDiv::MultiplyParenthesesExpression(lhs, rhs) => self.interpret_multiply_paren(lhs, rhs, formula),
 			MulDiv::Multiply(lhs, rhs) => self.interpret_multiply(lhs, rhs, formula),
 			MulDiv::Divide(lhs, rhs) => self.interpret_divide(lhs, rhs, formula),
 			MulDiv::Power(power) => self.interpret_power(power, formula),
 		}
 	}
 
+	fn interpret_multiply_paren(
+		&mut self,
+		lhs: &Expression,
+		rhs: &MulDiv,
+		formula: &mut FormulaFragments,
+	) -> Result<Number, InterpretError> {
+		let lhs = self.interpret_expression(lhs, formula)?;
+		formula.push_str(" * ");
+		let rhs = self.interpret_mul_div(rhs, formula)?;
+		Ok(lhs * rhs)
+	}
 	fn interpret_multiply(
 		&mut self,
 		lhs: &MulDiv,
@@ -336,10 +354,13 @@ where
 				formula.push_str("-");
 				Ok(-self.interpret_unary(u, formula)?)
 			}
-			Unary::Atom(leading_comment, atom, trailing_comment) => {
+			Unary::Atom(leading_comment, atom, trailing_comment, paren_expression) => {
 				self.interpret_comment(leading_comment, formula);
-				let result = self.interpret_atom(atom, formula)?;
+				let mut result = self.interpret_atom(atom, formula)?;
 				self.interpret_comment(trailing_comment, formula);
+				if let Some(expression) = paren_expression {
+					result = result * self.interpret_expression(expression, formula)?
+				}
 				Ok(result)
 			}
 		}

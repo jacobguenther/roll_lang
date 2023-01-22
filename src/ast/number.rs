@@ -186,6 +186,7 @@ pub fn integer_as_expression(i: Integer) -> Expression {
 		None,
 		Atom::Number(Number::Integer(i), None),
 		None,
+		None,
 	))))
 }
 pub fn compare_integers(comparison: &Comparison, lhs: Integer, rhs: Integer) -> bool {

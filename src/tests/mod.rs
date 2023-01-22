@@ -25,12 +25,23 @@ pub fn r() -> f64 {
 	0.0
 }
 fn helper<R: Copy + Fn() -> f64>(random_func: R, source: &str, expected_output: &str) {
+	println!("source:   \"{}\"", source);
 	let output = InterpreterBuilder::default()
+		.with_query_prompter(|_prompt, default| {
+			if default.is_empty() {
+				Some("10".to_owned())
+			} else {
+				Some(default.to_owned())
+			}
+		})
 		.build(random_func)
 		.interpret(&source)
 		.to_string();
-	println!("{}", source);
-	assert_eq!(&output, expected_output);
+	println!(
+		"expected: \"{}\"\noutput:   \"{}\"\n",
+		expected_output, &output
+	);
+	assert_eq!(expected_output, &output);
 }
 fn helper_return_result<R: Copy + Fn() -> f64>(random_func: R, source: &str) -> Output {
 	InterpreterBuilder::default()
@@ -107,12 +118,28 @@ fn playground() {
 
 #[test]
 fn interpreter() {
+	helper(r, "/r 1+?{prompt|1}", "1 + 1 = 2");
+
 	// associativity
 	helper(r, "[[5-4+1]]", "(2)");
 	// multiply and divide
 	helper(r, "[[4*6/3]]", "(8)");
+
 	// precedence
+	helper(r, "[[4/2+2]]", "(4)");
+
 	helper(r, "[[(4+2)*2]]", "(12)");
+	helper(r, "[[2*(4+2)]]", "(12)");
+
+	helper(r, "[[(3)2+2]]", "(8)");
+	helper(r, "[[(3)(2)]]", "(6)");
+	helper(r, "[[(3)+2/2]]", "(4)");
+	helper(r, "[[(4)2/2]]", "(4)");
+
+	helper(r, "[[2(3)]]", "(6)");
+	helper(r, "[[2+2(3)]]", "(8)");
+	helper(r, "[[-2(3)]]", "(-6)");
+
 	// unicode and localization
 	helper(r, "文字 hello", "文字 hello");
 }
@@ -136,6 +163,8 @@ fn whitespaces() {
 
 	helper(r, "/r 20 + 4 * 2 \\", "20 + 4 * 2 = 28");
 	helper(r, "/r 20 + 4 * 2 \\ ", "20 + 4 * 2 = 28 ");
+
+	helper(r, "/r 20 + 4 * 2[comment] ", "20 + 4 * 2[comment] = 28 ");
 }
 
 #[test]

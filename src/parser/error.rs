@@ -6,21 +6,39 @@ use crate::lexer::{keywords::Keyword, token::Token};
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum ParseError {
 	UnexpectedToken(Token),
+	UnexpectedTooltip(String),
 
-	ExpectedPunctuation(String),
-	ExpectedLiteral(String),
-	ExpectedKeyword(Keyword),
-	ExpectedOneOfKeywords(Vec<Keyword>),
-	ExpectedOperator(String),
+	Expected(Expecting),
+	ExpectedOneOf(Vec<Expecting>),
 
 	MultipleTypesOfExpandingModifiersNotSupported,
 	MultipleDropKeepModifiersNotSupported,
 	MultipleSortModifiersNotSupported,
 
-	ExpectedInteger,
 	DoesNotMatch,
 
 	OutOfBounds,
-	UnexpectedTooltip(String),
 	Unknown,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
+pub enum Expecting {
+	Punctuation(String),
+	Literal(String),
+	Keyword(Keyword),
+	OneOfKeywords(Vec<Keyword>),
+	Operator(String),
+
+	Dice,
+	Number,
+	Integer,
+	Float,
+	Function,
+	Comparison,
+	InlineRoll,
+	ParenthesesExpression,
+
+	RollQuery,
+	Macro,
 }

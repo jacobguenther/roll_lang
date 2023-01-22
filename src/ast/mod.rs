@@ -34,6 +34,7 @@ pub enum Expression {
 }
 #[derive(Debug, Clone)]
 pub enum MulDiv {
+	MultiplyParenthesesExpression(Box<Expression>, Box<MulDiv>),
 	Multiply(Box<MulDiv>, Power),
 	Divide(Box<MulDiv>, Power),
 	Power(Power),
@@ -50,7 +51,8 @@ type Comment = Option<String>;
 #[derive(Debug, Clone)]
 pub enum Unary {
 	Minus(Comment, Box<Unary>),
-	Atom(Comment, Atom, Comment),
+	// Optionally followed by a parentheses expression
+	Atom(Comment, Atom, Comment, Option<Box<Expression>>),
 }
 
 #[derive(Debug, Clone)]
@@ -69,6 +71,11 @@ pub enum Dice {
 	Normal(Normal, Modifiers),
 	Fate(Fate, Modifiers),
 	Computed(Computed, Modifiers),
+}
+impl Dice {
+	pub fn default_count() -> Integer {
+		1
+	}
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -141,13 +148,27 @@ pub enum Sort {
 	Descending,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Comparison {
 	LessThan,
 	GreaterThan,
 	LessThanEqual,
 	GreaterThanEqual,
 	Equal,
+}
+use std::convert::TryFrom;
+impl TryFrom<&str> for Comparison {
+	type Error = ();
+	fn try_from(s: &str) -> Result<Comparison, Self::Error> {
+		match s {
+			"<" => Ok(Comparison::LessThan),
+			">" => Ok(Comparison::GreaterThan),
+			"=" => Ok(Comparison::Equal),
+			"<=" => Ok(Comparison::LessThanEqual),
+			">=" => Ok(Comparison::GreaterThanEqual),
+			_ => Err(()),
+		}
+	}
 }
 
 #[derive(Debug, Clone)]
@@ -166,23 +187,24 @@ pub struct RollQuery {
 }
 impl Default for RollQuery {
 	fn default() -> RollQuery {
-		RollQuery::new()
+		Self {
+			prompt: String::new(),
+			default: String::new(),
+		}
 	}
 }
 impl RollQuery {
-	pub fn new() -> RollQuery {
-		RollQuery {
-			prompt: String::new(),
-			default: String::new(),
+	pub fn new(prompt: &str, default: &str) -> RollQuery {
+		Self {
+			prompt: prompt.to_owned(),
+			default: default.to_owned(),
 		}
 	}
 	pub fn as_expression(&self) -> Expression {
 		Expression::MulDiv(MulDiv::Power(Power::Unary(Unary::Atom(
 			None,
-			Atom::RollQuery(RollQuery {
-				prompt: self.prompt.clone(),
-				default: self.default.clone(),
-			}),
+			Atom::RollQuery(RollQuery::new(&self.prompt, &self.default)),
+			None,
 			None,
 		))))
 	}
