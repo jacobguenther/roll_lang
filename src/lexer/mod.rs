@@ -9,6 +9,7 @@ pub mod trie;
 use lexeme::Lexeme;
 use state::State;
 use token::{Token, TokenT};
+use crate::ast::Comparison;
 
 use std::convert::TryFrom;
 
@@ -30,8 +31,8 @@ pub struct Lexer<'a> {
 impl<'a> Lexer<'a> {
 	pub fn new(source: &str) -> Lexer {
 		let alphebet = [
-			'F', '_', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
-			'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
+			'F', '_', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
+			'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
 		];
 		let mut trie = Trie {
 			root_children_ids: vec![],
@@ -76,14 +77,14 @@ impl<'a> Iterator for Lexer<'a> {
 			State::Whitespace => Some(Lexeme::Whitespace(lexeme_token)),
 			State::Keyword => {
 				let keyword = Keyword::try_from(lexeme_token.source()).unwrap();
-				Some(Lexeme::Keyword(
-					lexeme_token,
-					keyword,
-				))
-			},
+				Some(Lexeme::Keyword(lexeme_token, keyword))
+			}
 			State::Literal => Some(Lexeme::Literal(lexeme_token)),
 			State::Digit => Some(Lexeme::Number(lexeme_token)),
-			State::Comparison => Some(Lexeme::Comparison(lexeme_token)),
+			State::Comparison => {
+				let cmp = Comparison::try_from(lexeme_token.source()).unwrap();
+				Some(Lexeme::Comparison(lexeme_token, cmp))
+			}
 			State::Operator => Some(Lexeme::Operator(lexeme_token)),
 			State::Punctuation => Some(Lexeme::Punctuation(lexeme_token)),
 			State::Done => None,
@@ -241,7 +242,7 @@ impl<'a> Lexer<'a> {
 		matches!(s, "<" | ">" | "=" | "<=" | ">=")
 	}
 	fn is_operator(s: &str) -> bool {
-		matches!(s, "+" | "-" | "*" | "/" | "!" | "!!" | "%" | "**" | "^")
+		matches!(s, "+" | "-" | "*" | "/" | "!" | "!!" | "!p" | "%" | "**" | "^")
 	}
 	fn is_punctuation(s: &str) -> bool {
 		matches!(

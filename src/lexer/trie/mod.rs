@@ -221,8 +221,8 @@ mod tests {
 	// #[test]
 	fn trie() {
 		let alphebet = [
-			'F', '_', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
-			'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+			'F', '_', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
+			'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
 		];
 
 		let trie = Trie {
@@ -293,8 +293,8 @@ mod tests {
 	#[test]
 	fn keywords() {
 		let alphebet = [
-			'F', '_', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
-			'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
+			'F', '_', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
+			'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
 		];
 		let mut t = Trie {
 			root_children_ids: vec![],
