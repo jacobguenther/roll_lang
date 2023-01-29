@@ -52,23 +52,6 @@ fn helper_return_result<R: Copy + Fn() -> f64>(random_func: R, source: &str) -> 
 #[test]
 #[allow(unused)]
 fn playground() {
-	// use unicode_segmentation::UnicodeSegmentation;
-	// let s = "🇾🇺🇷🇸🇬🇬🇬🇭";
-	// println!("{}", s);
-	// println!("length: {}", s.len());
-	// println!();
-	// println!("chars: {}", s.chars().count());
-	// for c in s.chars() {
-	// 	print!("{} ", c);
-	// }
-	// println!("\n");
-	// println!("graphemes: {}", s.graphemes(true).count());
-	// for g in s.graphemes(true) {
-	// 	print!("{} ", g)
-	// }
-	// println!("\n");
-	// assert!(false);
-
 	let r = || -> f64 {
 		let nums = [0.0, 0.1, 0.3, 0.4];
 		static mut I: usize = 0;
@@ -118,6 +101,8 @@ fn playground() {
 
 #[test]
 fn interpreter() {
+	helper(r, "", "");
+
 	helper(r, "/r 1+?{prompt|1}", "1 + 1 = 2");
 
 	// associativity
@@ -126,19 +111,25 @@ fn interpreter() {
 	helper(r, "[[4*6/3]]", "(8)");
 
 	// precedence
-	helper(r, "[[4/2+2]]", "(4)");
+	helper(r, "[[ 4/2+2 ]]", "(4)");
 
-	helper(r, "[[(4+2)*2]]", "(12)");
-	helper(r, "[[2*(4+2)]]", "(12)");
+	helper(r, "[[ (4+2)*2 ]]", "(12)");
+	helper(r, "[[ 2*(4+2) ]]", "(12)");
 
-	helper(r, "[[(3)2+2]]", "(8)");
-	helper(r, "[[(3)(2)]]", "(6)");
-	helper(r, "[[(3)+2/2]]", "(4)");
-	helper(r, "[[(4)2/2]]", "(4)");
+	helper(r, "[[ (3)+2/2 ]]", "(4)");
+	helper(r, "[[ 2+2(3) ]]", "(8)");
+	helper(r, "[[ -2(3) ]]", "(-6)");
 
-	helper(r, "[[2(3)]]", "(6)");
-	helper(r, "[[2+2(3)]]", "(8)");
-	helper(r, "[[-2(3)]]", "(-6)");
+	// implicit multiplcation
+	helper(r, "[[ (2) ]]", "(2)");
+	helper(r, "[[ (2)(3) ]]", "(6)");
+	helper(r, "[[ (2)(3)(4) ]]", "(24)");
+
+	helper(r, "[[ 2(3) ]]", "(6)");
+	helper(r, "[[ 2(3)(4) ]]", "(24)");
+	helper(r, "[[ 2(3)(4)(5) ]]", "(120)");
+
+	// helper(r, "[[ (2)3(4)5(6) ]]", "(720)");
 
 	// unicode and localization
 	helper(r, "文字 hello", "文字 hello");

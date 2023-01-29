@@ -279,7 +279,7 @@ where
 		formula: &mut FormulaFragments,
 	) -> Result<Number, InterpretError> {
 		match mul_div {
-			MulDiv::MultiplyParenthesesExpression(lhs, rhs) => self.interpret_multiply_paren(lhs, rhs, formula),
+			// MulDiv::MultiplyParenthesesExpression(lhs, rhs) => self.interpret_multiply_paren(lhs, rhs, formula),
 			MulDiv::Multiply(lhs, rhs) => self.interpret_multiply(lhs, rhs, formula),
 			MulDiv::Divide(lhs, rhs) => self.interpret_divide(lhs, rhs, formula),
 			MulDiv::Power(power) => self.interpret_power(power, formula),
@@ -292,8 +292,9 @@ where
 		rhs: &MulDiv,
 		formula: &mut FormulaFragments,
 	) -> Result<Number, InterpretError> {
+		formula.push_str("(");
 		let lhs = self.interpret_expression(lhs, formula)?;
-		formula.push_str(" * ");
+		formula.push_str(")");
 		let rhs = self.interpret_mul_div(rhs, formula)?;
 		Ok(lhs * rhs)
 	}
@@ -358,8 +359,12 @@ where
 				self.interpret_comment(leading_comment, formula);
 				let mut result = self.interpret_atom(atom, formula)?;
 				self.interpret_comment(trailing_comment, formula);
-				if let Some(expression) = paren_expression {
-					result = result * self.interpret_expression(expression, formula)?
+				if let Some(expressions) = paren_expression {
+					for expr in expressions {
+						formula.push_str("(");
+						result = result * self.interpret_expression(expr, formula)?;
+						formula.push_str(")");
+					}
 				}
 				Ok(result)
 			}

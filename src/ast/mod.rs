@@ -34,7 +34,6 @@ pub enum Expression {
 }
 #[derive(Debug, Clone)]
 pub enum MulDiv {
-	MultiplyParenthesesExpression(Box<Expression>, Box<MulDiv>),
 	Multiply(Box<MulDiv>, Power),
 	Divide(Box<MulDiv>, Power),
 	Power(Power),
@@ -51,8 +50,7 @@ type Comment = Option<String>;
 #[derive(Debug, Clone)]
 pub enum Unary {
 	Minus(Comment, Box<Unary>),
-	// Optionally followed by a parentheses expression
-	Atom(Comment, Atom, Comment, Option<Box<Expression>>),
+	Atom(Comment, Atom, Comment, Option<Vec<Expression>>),
 }
 
 #[derive(Debug, Clone)]

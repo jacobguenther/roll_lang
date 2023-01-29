@@ -9,5 +9,8 @@ pub mod lexer;
 pub mod macros;
 pub mod parser;
 
+#[cfg(feature = "wasm-bindings")]
+pub mod wasm_bindings;
+
 #[cfg(test)]
 pub mod tests;

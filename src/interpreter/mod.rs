@@ -51,6 +51,7 @@ where
 {
 	fn interpret(&mut self, source: &str) -> Output {
 		let ast = Parser::new(source).parse();
+		// println!("{:#?}", ast);
 		let mut output = Output::new(source);
 		for node in ast.iter() {
 			let result = match node {

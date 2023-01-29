@@ -22,24 +22,21 @@ pub trait ParserT {
 }
 
 #[derive(Debug)]
-pub struct Parser<'a> {
+pub struct Parser {
 	state: State,
 	lexemes: Vec<Lexeme>,
 	current_index: usize,
-	lexer: Lexer<'a>,
 }
-impl<'a> Parser<'a> {
+impl Parser {
 	pub fn new(source: &str) -> Parser {
-		let lexer = Lexer::new(source);
 		Parser {
 			state: State::default(),
 			lexemes: Lexer::new(source).collect(),
 			current_index: 0,
-			lexer,
 		}
 	}
 }
-impl<'a> ParserT for Parser<'a> {
+impl ParserT for Parser {
 	fn parse(&mut self) -> Root {
 		let mut root = Root::new();
 		loop {

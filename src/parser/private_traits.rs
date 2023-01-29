@@ -92,7 +92,7 @@ pub(super) trait ParserPrivateT {
 	fn is_inline_roll(&self) -> bool;
 }
 
-impl<'a> ParserPrivateT for Parser<'a> {
+impl ParserPrivateT for Parser {
 	fn parse_start(&mut self) {
 		self.state = if self.current().is_err() {
 			State::Done
@@ -113,7 +113,7 @@ impl<'a> ParserPrivateT for Parser<'a> {
 				self.state = State::Roll;
 				break;
 			} else if self.current().unwrap().token().source() == "#" {
-				// potentially a macro
+				// start of macro, handled by caller
 				break;
 			} else {
 				literal.push_str(self.current().unwrap().source());
@@ -276,6 +276,8 @@ impl<'a> ParserPrivateT for Parser<'a> {
 			e
 		})?;
 
+		println!("{:#?}", expression);
+
 		self.skip_whitespace();
 		self.match_current_to_punctuation("]")
 			.and_then(|_| self.match_current_to_punctuation("]"))
@@ -289,7 +291,6 @@ impl<'a> ParserPrivateT for Parser<'a> {
 
 	fn parse_expression(&mut self) -> Result<Expression, ParseError> {
 		let mut start_index = self.current_index;
-
 		self.skip_whitespace();
 		let md = match self.parse_mul_div() {
 			Ok(md) => md,
@@ -333,17 +334,6 @@ impl<'a> ParserPrivateT for Parser<'a> {
 		Ok(expression)
 	}
 	fn parse_mul_div(&mut self) -> Result<MulDiv, ParseError> {
-		let start_index = self.current_index;
-		if let Ok(lhs) = self.parse_parentheses_expression() {
-			if let Ok(rhs) = self.parse_mul_div() {
-				return Ok(MulDiv::MultiplyParenthesesExpression(Box::new(lhs), Box::new(rhs)));
-			} else {
-				self.current_index = start_index;
-			}
-		} else {
-			self.current_index = start_index;
-		}
-
 		let mut mul_div = MulDiv::Power(self.parse_power()?);
 
 		loop {
@@ -413,7 +403,11 @@ impl<'a> ParserPrivateT for Parser<'a> {
 		};
 		let c2 = self.parse_comment();
 
-		let paren_expression = self.parse_parentheses_expression().map(|exp| Box::new(exp)).ok();
+		let mut v = Vec::new();
+		while let Ok(e) = self.parse_parentheses_expression() {
+			v.push(e);
+		}
+		let paren_expression = if v.is_empty() { None } else { Some(v) };
 
 		Ok(Unary::Atom(c1, a, c2, paren_expression))
 	}
@@ -637,7 +631,10 @@ impl<'a> ParserPrivateT for Parser<'a> {
 				}
 			}
 		}
-		println!("roll query:\n\tprompt: {}\n\tdefault: {}\n", prompt, default);
+		println!(
+			"roll query:\n\tprompt: {}\n\tdefault: {}\n",
+			prompt, default
+		);
 
 		Ok(RollQuery::new(&prompt, &default))
 	}

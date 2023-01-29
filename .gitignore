@@ -1,7 +1,13 @@
 package-lock.json
+Cargo.lock
+index.html
 
 /dist
 /node_modules
 /pkg
 
 /target
+
+/temp
+
+/www/roll_lang*

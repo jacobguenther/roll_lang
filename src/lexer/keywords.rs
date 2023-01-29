@@ -1,7 +1,6 @@
 // File: src/lexer/keywords.rs
 
 use std::convert::TryFrom;
-use std::str::FromStr;
 
 // must be alphebetical
 pub static KEYWORDS: [&str; 35] = [
@@ -76,12 +75,8 @@ pub enum Keyword {
 	SortDescending,
 	Sort,
 	Success,
-}
-impl FromStr for Keyword {
-	type Err = ();
-	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		Keyword::try_from(s)
-	}
+
+	NotFound,
 }
 impl TryFrom<&str> for Keyword {
 	type Error = ();
