@@ -1,0 +1,198 @@
+.monospace-font {
+	font-family: monospace;
+	font-size: 125%;
+}
+:root {
+	--background-color: #111;
+
+	--text-color: #fb5;
+	--header-color: #ccc;
+
+	--link-color: #f70;
+	--border-color: #f70;
+	--link-hover-color: #f20;
+	--menu-hover-color: #222;
+
+	--post-card-background: #333;
+}
+body {
+	background-color: var(--background-color);
+	color: var(--text-color);
+	display: block;
+}
+@media screen and (min-width: 600px) {
+	body {
+		width: 600px;
+	}
+}
+@media screen and (min-width: 900px) {
+	body {
+		margin: auto;
+		display: grid;
+		width: 100%;
+		grid-template-columns: auto auto auto;
+		grid-template-areas:
+			'header header header'
+			'. main .'
+			'footer footer footer';
+	}
+	body > form {
+		grid-area: accessibility;
+		width: max-content;
+		min-width: min-content;
+		justify-self: center;
+	}
+	body > header {
+		grid-area: header;
+	}
+	body > header * {
+		padding: 0px;
+		margin: auto;
+	}
+	body > main {
+		grid-area: main;
+		margin: auto;
+		display: grid;
+		width: fit-content;
+		max-width: 1000px;
+		grid-gap: 5px;
+		grid-template-columns: 200px auto 200px;
+		grid-template-areas: 'main-aside page-content .';
+	}
+	body > footer {
+		grid-area: footer;
+	}
+	main > aside {
+		grid-area: main-aside;
+		position: sticky;
+		top: 0;
+		height: min-content;
+		width: fit-content;
+	}
+	#page-content {
+		grid-area: page-content;
+		width: fit-content;
+	}
+	#page-content > section {
+		width: fit-content;
+	}
+	#input_insertion_section {
+		display: grid;
+		margin: 5px;
+		grid-template-columns: min-content, min-content;
+		grid-template-areas:
+			'input_operators_section input_functions_section'
+			'input_dice_section input_modifiers_section'
+			'input_other_section input_modifiers_section'
+			'. input_modifiers_section';
+			grid-gap: 5px;
+	}
+}
+
+#results_section {
+	margin: auto;
+}
+#results_div_wrapper {
+	display: flex;
+	flex-direction: column-reverse;
+	height: 240px;
+	width: 320px;
+	overflow: auto;
+
+	scroll-behavior: smooth;
+	border-style: outset;
+	border-color: var(--border-color);
+}
+#input {
+	width: 280px;
+}
+#results_div > * {
+	max-height: 100%;
+}
+
+#input_controls {
+	margin: auto;
+}
+
+#input_insertion_section h4,
+#input_insertion_section p {
+	padding: 0px;
+	margin: 0px;
+}
+#input_operators_section,
+#input_functions_section,
+#input_dice_section,
+#input_modifiers_section,
+#input_other_section
+{
+	width: max-content;
+	height: fit-content;
+	padding: 5px;
+	margin: 5px;
+	border-style: inset;
+	border-color: var(--border-color);
+}
+#input_operators_section {
+	grid-area: input_operators_section;
+}
+#input_functions_section {
+	grid-area: input_functions_section;
+}
+#input_dice_section {
+	grid-area: input_dice_section;
+}
+#input_modifiers_section {
+	grid-area: input_modifiers_section;
+}
+
+
+#input_operators > input[type=button] {
+	display: block;
+}
+
+#dice_grid {
+	display: grid;
+	grid-template-columns: min-content min-content min-content min-content;
+	grid-column-gap: 2px;
+	grid-row-gap: 5px;
+
+	width: min-content;
+}
+#dice_grid > input[type=button] {
+	margin-right: 5;
+}
+#dice_grid > input[type=text] {
+	width: 40px;
+}
+#dice_grid *:nth-child(2n+4) {
+	justify-self: end;
+}
+#dice_grid *:nth-child(4n+4) {
+	justify-self: start;
+}
+
+
+h1, h2, h3, h4, h5, h6 {
+	color: var(--header-color);
+}
+
+body > header {
+	text-align: center;
+}
+body > header > nav {
+	justify-content: center;
+}
+body > header > nav > ul {
+	justify-content: center;
+}
+body > header > nav > ul > li {
+	display: inline-block;
+}
+
+a {
+	color: var(--link-color);
+	font-weight: bold;
+}
+a:hover {
+	color: var(--link-hover-color);
+}

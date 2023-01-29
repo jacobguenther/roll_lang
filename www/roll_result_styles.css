@@ -1,0 +1,64 @@
+.output {
+	text-decoration: underline;
+}
+.source {
+	display: none;
+}
+.explicit_roll {
+
+}
+.inline_roll {
+
+}
+
+.roll_result {
+	font-weight: bold;
+}
+
+.number_rolls {
+	position: relative;
+}
+
+.tooltip {
+	position: relative;
+}
+.tooltip_text {
+	display: none;
+	width: max-content;
+}
+.tooltip_text.text_above {
+	bottom: 100%;
+	left: 0%;
+}
+.tooltip_text.text_below {
+	top: 100%;
+	left: 0%;
+}
+.tooltip:hover > .tooltip_text{
+	display: inline-block;
+	z-index: 1;
+	position: absolute;
+
+	color: black;
+	background-color: gray;
+}
+
+.number_roll {
+
+}
+.raw_roll_value {
+
+}
+.raw_roll_value_modifier {
+
+}
+
+.number_roll_not_counted {
+	color: lightgrey;
+}
+.reason_roll_not_counted_dropped {
+
+}
+.reason_roll_not_counted_rerolled {
+
+}

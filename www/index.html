@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel="stylesheet" href="styles.css" />
+	<link rel="stylesheet" href="roll_result_styles.css" />
+
+	<link rel="preload" as="script" href="main.js" />
+	<link rel="preload" as="script" href="roll_lang.js" />
+</head>
+<body onload="start();">
+	<header>
+		<h2>Roll Lang</h2>
+		<nav>
+			<ul>
+				<li>Docs</li>
+				<li>About</li>
+				<li>Source</li>
+			</ul>
+		</nav>
+		<hr>
+	</header>
+
+	<main>
+	<aside id="main-aside">
+		<section>
+			<h3>Examles</h3>
+			<ul>
+				<li>TODO</li>
+			</ul>
+		</section>
+		<section>
+			<h4>Shortcuts</h4>
+			<ul>
+				<li>TODO</li>
+			</ul>
+		</section>
+		<section>
+			<h4>TODO</h4>
+			<ul>
+				<li>IMPLEMENT: results queue</li>
+				<li>IMPLEMENT: inserting</li>
+				<li>IMPLEMENT: updo/redo</li>
+			</ul>
+		</section>
+	</aside>
+
+	<div id="page-content">
+		<section id="results_section">
+			<h3>Results</h3>
+			<div id="results_div_wrapper">
+			<div id="results_div">
+			</div>
+			</div>
+			<input type="button" id="results_up" value="&uarr;" disabled>
+			<input type="button" id="results_down" value="&darr;" disabled>
+			<input type="button" id="results_clear" value="clear results" disabled>
+			<br>
+			<br>
+		</section>
+
+		<section id="input_controls">
+			<input type="text" id="input" value="/roll [] \">
+			<input type="button" id="run_input" value="run">
+
+			<br>
+
+			<input type="button" id="input_undo" value="undo" disabled>
+			<input type="button" id="input_redo" value="redo" disabled>
+			<input type="button" id="input_clear" value="clear input">
+		</section>
+
+		<br>
+
+		<hr>
+		<section id="insertion_mode_section">
+			<label id="insertion_mode_label" for="insertion_mode">Insertion Mode</label>
+			<select id="insertion_mode" name="insertion_mode">
+				<option value="brackets">Insert at []</option>
+				<option value="cursor">Insert at Cursor</option>
+			</select>
+			<br>
+			<input type="button" id="insert_number_btn" name="" value="insert number">
+			<input type="text">
+		</section>
+
+		<section id="input_insertion_section">
+			<section id="input_operators_section">
+				<h4>Operators</h4>
+				<hr>
+				<input type="button" id="operator_plus_button" name="" value="[] + []">
+				<input type="button" id="operator_minus_button" name="" value="[] - []">
+				<input type="button" id="operator_mul_button" name="" value="[] * []">
+				<input type="button" id="operator_div_button" name="" value="[] / []">
+				<div>
+					<input type="button" id="operator_power_button" name="" value="[] ^ ([])">
+					<input type="button" id="operator_power_alt_button" name="" value="[] ** ([])">
+				</div>
+				<input id="operator_unary_minus_button" name="" type="button" value="-[]">
+				<div>
+					<input type="button" id="operator_parenthese_1_button" name="" value="([])">
+					<input type="button" id="operator_parenthese_2_button" name="" value="[]([])">
+					<input type="button" id="operator_parenthese_3_button" name="" value="([])([])">
+				</div>
+			</section>
+
+			<section id="input_functions_section">
+				<h4>Functions</h4>
+				<hr>
+				<input type="button" id="function_floor_button" name="" value="floor([])">
+				<input type="button" id="function_ceil_button" name="" value="ceil([])">
+				<br>
+				<input type="button" id="function_round_button" name="" value="round([])">
+				<input type="button" id="function_round_half_down_button" name="" value="round_half_down([])">
+				<br>
+				<input type="button" id="function_abs_button" name="" value="abs([])">
+			</section>
+
+			<section id="input_dice_section">
+				<h4>Dice</h4>
+				<hr>
+				<div id="dice_grid">
+					<input type="button" value="insert">
+					<input type="text">
+					<span>d</span>
+					<input type="text">
+
+					<input type="button" value="insert">
+					<span>([])</span>
+					<span>d</span>
+					<input type="text">
+
+					<input type="button" value="insert">
+					<input type="text">
+					<span>d</span>
+					<span>([])</span>
+
+					<input type="button" value="insert">
+					<span>([])</span>
+					<span>d</span>
+					<span>([])</span>
+				</div>
+			</section>
+
+			<section id="input_modifiers_section">
+				<h4>Modifiers</h4>
+				<p>Inserts at cursor</p>
+				<hr>
+
+				<input type="button" value="reroll">
+				<select>
+					<option>&equals;</option>
+					<option>&lt;</option>
+					<option>&gt;</option>
+					<option>&lt;&equals;</option>
+					<option>&gt;&equals;</option>
+				</select>
+				<input type="text">
+				<br>
+
+				<input type="button" value="reroll once" disabled>
+				<select disabled>
+					<option>&equals;</option>
+					<option>&lt;</option>
+					<option>&gt;</option>
+					<option>&lt;&equals;</option>
+					<option>&gt;&equals;</option>
+				</select>
+				<input type="text" disabled>
+				<br>
+
+				<hr>
+
+				<input type="button" value="drop lowest">
+				<input type="text" placeholder="count (optional, default=1)">
+				<br>
+				<input type="button" value="drop highest">
+				<input type="text" placeholder="count (optional, default=1)">
+				<br>
+				<input type="button" value="keep lowest">
+				<input type="text" placeholder="count (optional, default=1)">
+				<br>
+				<input type="button" value="keep highest">
+				<input type="text" placeholder="count (optional, default=1)">
+				<br>
+
+				<hr>
+
+				<input type="button" value="exploding">
+				<select>
+					<option>&equals;</option>
+					<option>&lt;</option>
+					<option>&gt;</option>
+					<option>&lt;&equals;</option>
+					<option>&gt;&equals;</option>
+				</select>
+				<input type="text">
+				<br>
+
+				<input type="button" value="compounding">
+				<select>
+					<option>&equals;</option>
+					<option>&lt;</option>
+					<option>&gt;</option>
+					<option>&lt;&equals;</option>
+					<option>&gt;&equals;</option>
+				</select>
+				<input type="text">
+				<br>
+
+				<input type="button" value="penetrating">
+				<select>
+					<option>&equals;</option>
+					<option>&lt;</option>
+					<option>&gt;</option>
+					<option>&lt;&equals;</option>
+					<option>&gt;&equals;</option>
+				</select>
+				<input type="text">
+				<br>
+
+				<hr>
+
+				<input type="button" value="critical success" disabled>
+				<br>
+				<input type="button" value="critical failure" disabled>
+				<br>
+				<input type="button" value="success" disabled>
+				<br>
+				<input type="button" value="failure" disabled>
+				<br>
+
+				<hr>
+
+				<input type="button" value="sort ascending">
+				<br>
+				<input type="button" value="sort descending">
+				<br>
+			</section>
+
+			<section id="input_other_section">
+				<h4>Other</h4>
+				<hr>
+
+				<input type="button" value="insert comment">
+				<input type="text">
+				<br>
+
+				<hr>
+
+				<input type="button" value="insert tooltip">
+				<br>
+				<label>Tip</label>
+				<input type="text">
+				<br>
+
+				<hr>
+
+				<input type="button" value="insert rollquery">
+				<br>
+				<label>Prompt</label>
+				<input type="text">
+				<br>
+				<label>Default</label>
+				<input type="text">
+			</section>
+		</section>
+	</div>
+	</main>
+
+	<footer>
+
+	</footer>
+
+	<script src="main.js"></script>
+	<script src="roll_lang.js"></script>
+
+</body>
+</html>

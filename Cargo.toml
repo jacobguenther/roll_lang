@@ -17,18 +17,42 @@ opt-level = 0
 opt-level = 3
 
 [lib]
-crate-type = ["lib"]
+crate-type = ["cdylib", "lib"]
 
+[features]
+default = ["wasm-bindings"]
+wasm-bindings = ["dep:wasm-bindgen", "dep:web-sys", "dep:js-sys"]
 
 [dependencies]
 unicode-segmentation = "1.6.0"
-trie-rs = "0.1.1"
-rand = "0.8.5"
 
+[dependencies.rand]
+version = "0.8.5"
+optional = true
+
+[dependencies.wasm-bindgen]
+version = "0.2.67"
+features = ["serde-serialize"]
+optional = true
+
+[dependencies.web-sys]
+version = "0.3"
+features = [
+	"Window",
+	"Document",
+	"HtmlDocument",
+	"Element",
+	"HtmlTextAreaElement",
+	"HtmlInputElement"
+]
+optional = true
+
+[dependencies.js-sys]
+version = "0.3.44"
+optional = true
 
 [dev-dependencies]
 criterion = "0.3"
-
 
 [[bench]]
 name = "all"
