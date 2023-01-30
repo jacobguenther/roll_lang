@@ -19,9 +19,19 @@ use trie::*;
 use unicode_segmentation::UnicodeSegmentation;
 
 
+static INIT_KEYWORDS_TRIE: std::sync::Once = std::sync::Once::new();
+static mut KEYWORDS_TRIE: Option<Trie<ALPABET_SIZE>> = None;
+pub fn keywords_trie() -> &'static mut Trie<ALPABET_SIZE> {
+	unsafe {
+		INIT_KEYWORDS_TRIE.call_once(|| {
+			KEYWORDS_TRIE = Some(Trie::default());
+		});
+		KEYWORDS_TRIE.as_mut().unwrap()
+	}
+}
+
 #[derive(Debug)]
 pub struct Lexer<'a> {
-	keywords_trie: Trie<ALPABET_SIZE>,
 	graphemes: Vec<&'a str>,
 	previous_state: State,
 	state: State,
@@ -32,7 +42,6 @@ impl<'a> Lexer<'a> {
 	pub fn new(source: &str) -> Lexer {
 		let trie = Trie::default();
 		Lexer {
-			keywords_trie: trie,
 			graphemes: UnicodeSegmentation::graphemes(source, true).collect(),
 			previous_state: State::Start,
 			state: State::Start,
@@ -60,7 +69,7 @@ impl<'a> Iterator for Lexer<'a> {
 				State::Operator
 			} else if Lexer::is_punctuation(c) {
 				State::Punctuation
-			} else if self.keywords_trie.is_prefix(c) {
+			} else if keywords_trie().is_prefix(c) {
 				State::Keyword
 			} else {
 				State::Literal
@@ -160,8 +169,7 @@ impl<'a> Lexer<'a> {
 		let mut found_exact = false;
 		let mut last_prefix_len = 0;
 		let mut matched_upto_id = None;
-		while let Some(m) = self
-			.keywords_trie
+		while let Some(m) = keywords_trie()
 			.is_match_from(&lexeme_token.source()[last_prefix_len..], matched_upto_id)
 		{
 			match m {
