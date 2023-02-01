@@ -11,7 +11,6 @@ pub trait ToHtml {
 
 impl ToHtml for Output {
 	fn to_html(&self) -> String {
-		println!("{:#?}", self);
 		let mut html_string = String::new();
 		html_string.push_str("<div class=\"output\">");
 		html_string.push_str("<div class=\"source\">");
@@ -20,7 +19,6 @@ impl ToHtml for Output {
 		for fragment in self.fragments.iter() {
 			let inner = fragment.to_html();
 			html_string.push_str(inner.as_str());
-			println!("inner {}", inner);
 		}
 
 		html_string.push_str("</div>");
