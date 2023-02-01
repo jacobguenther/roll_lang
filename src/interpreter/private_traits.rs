@@ -785,11 +785,9 @@ where
 		sides: Integer,
 		modifiers: &[Reroll],
 	) -> bool {
-		println!("before exploding {:?}", rolls);
 		let starting_len = rolls.len();
 		let did_exploding_mods =
 			self.apply_exploding_modifiers(rolls, start_index, sides, modifiers);
-		println!("after exploding {:?}", rolls);
 
 		if did_exploding_mods {
 			for roll in rolls[starting_len..].iter_mut() {
@@ -799,8 +797,6 @@ where
 				}
 			}
 		}
-		println!("before penetrating {:?}", rolls);
-		println!();
 		did_exploding_mods
 	}
 	fn apply_compounding_modifiers(
