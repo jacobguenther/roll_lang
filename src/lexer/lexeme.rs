@@ -2,14 +2,15 @@
 
 use super::keywords::Keyword;
 use super::token::{Token, TokenT};
-use crate::ast::Comparison;
+use crate::ast::{number::*, Comparison};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Lexeme {
 	Whitespace(Token),
 	Literal(Token),
 	Keyword(Token, Keyword),
-	Number(Token),
+	Integer(Token, Integer),
+	Float(Token, Float),
 	Comparison(Token, Comparison),
 	Operator(Token),
 	Punctuation(Token),
@@ -20,7 +21,8 @@ impl Lexeme {
 			Lexeme::Whitespace(t)
 			| Lexeme::Literal(t)
 			| Lexeme::Keyword(t, _)
-			| Lexeme::Number(t)
+			| Lexeme::Integer(t, _)
+			| Lexeme::Float(t, _)
 			| Lexeme::Comparison(t, _)
 			| Lexeme::Operator(t)
 			| Lexeme::Punctuation(t) => t,
@@ -35,8 +37,11 @@ impl Lexeme {
 	pub fn is_keyword(&self) -> bool {
 		matches!(self, Lexeme::Keyword(_t, _keyword))
 	}
-	pub fn is_number(&self) -> bool {
-		matches!(self, Lexeme::Number(_t))
+	pub fn is_integer(&self) -> bool {
+		matches!(self, Lexeme::Integer(_t, _i))
+	}
+	pub fn is_float(&self) -> bool {
+		matches!(self, Lexeme::Integer(_t, _f))
 	}
 	pub fn is_comparison(&self) -> bool {
 		matches!(self, Lexeme::Comparison(_t, _comparison))
@@ -66,7 +71,8 @@ impl TokenT for Lexeme {
 			Lexeme::Whitespace(t)
 			| Lexeme::Literal(t)
 			| Lexeme::Keyword(t, _)
-			| Lexeme::Number(t)
+			| Lexeme::Integer(t, _)
+			| Lexeme::Float(t, _)
 			| Lexeme::Comparison(t, _)
 			| Lexeme::Operator(t)
 			| Lexeme::Punctuation(t) => t.truncate(size),
@@ -77,7 +83,8 @@ impl TokenT for Lexeme {
 			Lexeme::Whitespace(t)
 			| Lexeme::Literal(t)
 			| Lexeme::Keyword(t, _)
-			| Lexeme::Number(t)
+			| Lexeme::Integer(t, _)
+			| Lexeme::Float(t, _)
 			| Lexeme::Comparison(t, _)
 			| Lexeme::Operator(t)
 			| Lexeme::Punctuation(t) => t.push_str(s),

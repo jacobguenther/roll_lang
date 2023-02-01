@@ -9,6 +9,7 @@ pub enum State {
 	Punctuation,
 	Comparison,
 	Operator,
-	Digit,
+	Integer,
+	Float,
 	Done,
 }

@@ -16,8 +16,10 @@ use std::convert::TryFrom;
 use keywords::Keyword;
 
 use trie::*;
-use unicode_segmentation::UnicodeSegmentation;
-
+use unicode_segmentation::{
+	Graphemes,
+	UnicodeSegmentation
+};
 
 static INIT_KEYWORDS_TRIE: std::sync::Once = std::sync::Once::new();
 static mut KEYWORDS_TRIE: Option<Trie<ALPABET_SIZE>> = None;
@@ -32,7 +34,9 @@ pub fn keywords_trie() -> &'static mut Trie<ALPABET_SIZE> {
 
 #[derive(Debug)]
 pub struct Lexer<'a> {
-	graphemes: Vec<&'a str>,
+	graphemes: Graphemes<'a>,
+	current: Option<&'a str>,
+
 	previous_state: State,
 	state: State,
 	current_index: usize,
@@ -40,13 +44,16 @@ pub struct Lexer<'a> {
 
 impl<'a> Lexer<'a> {
 	pub fn new(source: &str) -> Lexer {
-		let trie = Trie::default();
-		Lexer {
-			graphemes: UnicodeSegmentation::graphemes(source, true).collect(),
+		let mut lexer = Lexer {
+			graphemes: UnicodeSegmentation::graphemes(source, true),
+			current: None,
+
 			previous_state: State::Start,
 			state: State::Start,
 			current_index: 0,
-		}
+		};
+		lexer.advance();
+		lexer
 	}
 }
 impl<'a> Iterator for Lexer<'a> {
@@ -56,43 +63,40 @@ impl<'a> Iterator for Lexer<'a> {
 			return None;
 		}
 
-		self.state = State::Start;
-		self.update_state({
-			let c = self.current_unchecked();
-			if Lexer::is_digit(c) {
-				State::Digit
-			} else if Lexer::is_whitespace(c) {
-				State::Whitespace
-			} else if Lexer::is_comparison_operator(c) {
-				State::Comparison
-			} else if Lexer::is_operator(c) {
-				State::Operator
-			} else if Lexer::is_punctuation(c) {
-				State::Punctuation
-			} else if keywords_trie().is_prefix(c) {
-				State::Keyword
-			} else {
-				State::Literal
-			}
-		});
-
 		let mut lexeme_token = Token::new(self.current_index);
-		self.add_one_to(&mut lexeme_token);
 
-		if self.at_end() {
-			self.update_state(State::Done);
+		self.update_state(State::Start);
+		loop {
+			self.handle_digit(&mut lexeme_token);
+			if self.state == State::Done {
+				break;
+			}
+			self.handle_operator(&mut lexeme_token);
+			if self.state == State::Done {
+				break;
+			}
+			self.handle_comparison(&mut lexeme_token);
+			if self.state == State::Done {
+				break;
+			}
+			self.handle_whitespace(&mut lexeme_token);
+			if self.state == State::Done {
+				break;
+			}
+			if let Some(c) = self.current() {
+				if Lexer::is_punctuation(c) {
+					self.update_state(State::Punctuation);
+					self.push_current_on(&mut lexeme_token);
+					self.advance();
+					self.update_state(State::Done);
+					break;
+				}
+			}
+			self.handle_keyword(&mut lexeme_token);
+			if self.state == State::Done {
+				break;
+			}
 		}
-
-		match self.state {
-			State::Digit => self.handle_digit(&mut lexeme_token),
-			State::Whitespace => self.handle_whitespace(&mut lexeme_token),
-			State::Keyword => self.handle_keyword(&mut lexeme_token),
-			State::Literal => self.handle_literal(&mut lexeme_token),
-			State::Operator => self.handle_operator(&mut lexeme_token),
-			State::Comparison => self.handle_comparison(&mut lexeme_token),
-			State::Punctuation => self.update_state(State::Done),
-			_ => (),
-		};
 
 		match self.previous_state {
 			State::Start => None,
@@ -103,7 +107,14 @@ impl<'a> Iterator for Lexer<'a> {
 				Some(Lexeme::Keyword(lexeme_token, keyword))
 			}
 			State::Literal => Some(Lexeme::Literal(lexeme_token)),
-			State::Digit => Some(Lexeme::Number(lexeme_token)),
+			State::Integer => {
+				let int = lexeme_token.source().parse().unwrap();
+				Some(Lexeme::Integer(lexeme_token, int))
+			}
+			State::Float => {
+				let float = lexeme_token.source().parse().unwrap();
+				Some(Lexeme::Float(lexeme_token, float))
+			}
 			State::Comparison => {
 				let cmp = Comparison::try_from(lexeme_token.source()).unwrap();
 				Some(Lexeme::Comparison(lexeme_token, cmp))
@@ -116,26 +127,21 @@ impl<'a> Iterator for Lexer<'a> {
 
 impl<'a> Lexer<'a> {
 	fn current(&self) -> Option<&str> {
-		self.graphemes.get(self.current_index).cloned()
+		self.current
 	}
 	fn current_unchecked(&self) -> &str {
-		self.graphemes[self.current_index]
-	}
-
-	#[allow(dead_code)]
-	fn pervious(&self) -> Option<&str> {
-		self.graphemes.get(self.current_index - 1).cloned()
-	}
-	fn previous_unchecked(&self) -> &str {
-		self.graphemes[self.current_index - 1]
+		self.current.unwrap()
 	}
 
 	fn at_end(&self) -> bool {
-		self.current_index >= self.graphemes.len()
+		self.current.is_none()
 	}
-	fn add_one_to(&mut self, lexeme_token: &mut Token) {
-		lexeme_token.push_str(self.current_unchecked());
+	fn advance(&mut self) {
 		self.current_index += 1;
+		self.current = self.graphemes.next();
+	}
+	fn push_current_on(&mut self, lexeme_token: &mut Token) {
+		lexeme_token.push_str(self.current_unchecked());
 	}
 	fn update_state(&mut self, new: State) {
 		self.previous_state = self.state;
@@ -143,80 +149,153 @@ impl<'a> Lexer<'a> {
 	}
 
 	fn handle_digit(&mut self, lexeme_token: &mut Token) {
-		self.template_function_match_repeated(Lexer::is_digit, lexeme_token);
+		self.template_function_match_repeated(Lexer::is_digit, lexeme_token, State::Integer);
+		if self.current() == Some(".") {
+			self.push_current_on(lexeme_token);
+			self.advance();
+			self.template_function_match_repeated(Lexer::is_digit, lexeme_token, State::Float);
+		}
 	}
 	fn handle_whitespace(&mut self, lexeme_token: &mut Token) {
-		self.template_function_match_repeated(Lexer::is_whitespace, lexeme_token);
+		self.template_function_match_repeated(Lexer::is_whitespace, lexeme_token, State::Whitespace);
 	}
 	fn handle_comparison(&mut self, lexeme_token: &mut Token) {
-		let p = self.previous_unchecked();
-		let c = self.current_unchecked();
-		if (p == "<" || p == ">") && c == "=" {
-			self.add_one_to(lexeme_token);
+		match self.current() {
+			Some("<") | Some(">") => {
+				self.update_state(State::Comparison);
+				self.push_current_on(lexeme_token);
+				self.advance();
+				if self.current() == Some("=") {
+					self.push_current_on(lexeme_token);
+					self.advance();
+				}
+			}
+			Some("=") => {
+				self.update_state(State::Comparison);
+				self.push_current_on(lexeme_token);
+				self.advance();
+			}
+			_ => {
+				self.update_state(State::Start);
+				return;
+			},
 		}
 		self.update_state(State::Done);
 	}
 	fn handle_operator(&mut self, lexeme_token: &mut Token) {
-		let p = self.previous_unchecked();
-		let c = self.current_unchecked();
-		if (p == "*" && c == "*") || (p == "!" && (c == "!" || c == "p")) {
-			self.add_one_to(lexeme_token);
+		match self.current() {
+			Some("*") => {
+				self.update_state(State::Operator);
+				self.push_current_on(lexeme_token);
+				self.advance();
+				if self.current() == Some("*") {
+					self.push_current_on(lexeme_token);
+					self.advance();
+				}
+				self.update_state(State::Done);
+			}
+			Some("!") => {
+				self.update_state(State::Operator);
+				self.push_current_on(lexeme_token);
+				self.advance();
+				if matches!(self.current(), Some("!") | Some("p")) {
+					self.push_current_on(lexeme_token);
+					self.advance();
+				}
+				self.update_state(State::Done);
+			}
+			Some("/") | Some("+") | Some("-") | Some("%") | Some("^") => {
+				self.update_state(State::Operator);
+				self.push_current_on(lexeme_token);
+				self.advance();
+				self.update_state(State::Done);
+			}
+			_ => {
+				self.update_state(State::Start);
+			}
 		}
-		self.update_state(State::Done);
 	}
 	fn handle_keyword(&mut self, lexeme_token: &mut Token) {
-		let mut start = self.current_index;
+		let mut iter = self.graphemes.clone();
+
+		if self.current().is_some() {
+			self.push_current_on(lexeme_token);
+		} else {
+			self.update_state(State::Done);
+			return;
+		}
+
+		let mut exact_len = 0;
+		let mut advanced_by = 0;
+
 		let mut found_exact = false;
 		let mut last_prefix_len = 0;
 		let mut matched_upto_id = None;
+
 		while let Some(m) = keywords_trie()
 			.is_match_from(&lexeme_token.source()[last_prefix_len..], matched_upto_id)
 		{
 			match m {
 				TrieMatch::Prefix(id) => {
 					last_prefix_len = lexeme_token.source().len();
-					matched_upto_id = Some(id)
-				}
-				TrieMatch::Exact(id) => {
-					found_exact = true;
-					start = self.current_index;
-					last_prefix_len = lexeme_token.source().len();
 					matched_upto_id = Some(id);
 				}
+				TrieMatch::Exact(id) => {
+					last_prefix_len = lexeme_token.source().len();
+					matched_upto_id = Some(id);
+
+					found_exact = true;
+					exact_len = advanced_by + 1;
+				}
 				TrieMatch::ExactLongest => {
+					self.update_state(State::Keyword);
+					for _ in 0..advanced_by + 1 {
+						self.advance();
+					}
 					self.update_state(State::Done);
 					return;
 				}
 			}
-			if self.at_end() {
-				break;
-			} else {
-				self.add_one_to(lexeme_token);
-			}
+
+			match iter.next() {
+				Some(c) => {
+					advanced_by += 1;
+					lexeme_token.push_str(c);
+				}
+				None => break,
+			};
 		}
+
 		if found_exact {
-			self.current_index = start;
-			lexeme_token.truncate(last_prefix_len);
+			lexeme_token.truncate(exact_len);
+			self.update_state(State::Keyword);
+			for _ in 0..exact_len {
+				self.advance();
+			}
 			self.update_state(State::Done);
 		} else {
-			self.update_state(State::Literal);
+			for _ in 0..advanced_by + 1 {
+				self.advance();
+			}
 			self.handle_literal(lexeme_token);
+			self.update_state(State::Literal);
+			self.update_state(State::Done);
 		}
 	}
 	fn handle_literal(&mut self, lexeme_token: &mut Token) {
-		let is_literal = |c: &str| -> bool {
-			!Lexer::is_digit(c)
-				&& !Lexer::is_whitespace(c)
-				&& !Lexer::is_operator(c)
-				&& !Lexer::is_punctuation(c)
-				&& !Lexer::is_comparison_operator(c)
-		};
-		self.template_function_match_repeated(is_literal, lexeme_token);
+		self.template_function_match_repeated(Lexer::is_literal, lexeme_token, State::Literal);
 	}
 
+	fn is_literal(c: &str) -> bool {
+		!Lexer::is_digit(c)
+			&& !Lexer::is_whitespace(c)
+			&& !Lexer::is_operator(c)
+			&& !Lexer::is_punctuation(c)
+			&& !Lexer::is_comparison_operator(c)
+	}
 	// invariant: s contains only 1 grapheme
 	fn is_whitespace(s: &str) -> bool {
-		s.contains(char::is_whitespace)
+		matches!(s, " " | "\t" | "\n")
 	}
 
 	// invariant: s contains only 1 grapheme
@@ -244,14 +323,21 @@ impl<'a> Lexer<'a> {
 		&mut self,
 		check: fn(&str) -> bool,
 		lexeme_token: &mut Token,
+		state: State,
 	) {
+		let mut found_one = false;
 		while let Some(c) = self.current() {
 			if check(c) {
-				self.add_one_to(lexeme_token);
+				found_one = true;
+				self.push_current_on(lexeme_token);
+				self.advance();
 			} else {
 				break;
 			}
 		}
-		self.update_state(State::Done);
+		if found_one {
+			self.update_state(state);
+			self.update_state(State::Done);
+		}
 	}
 }
