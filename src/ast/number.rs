@@ -184,7 +184,7 @@ impl Neg for Number {
 pub fn integer_as_expression(i: Integer) -> Expression {
 	Expression::MulDiv(MulDiv::Power(Power::Unary(Unary::Atom(
 		None,
-		Atom::Number(Number::Integer(i), None),
+		Box::new(Atom::Number(Number::Integer(i), None)),
 		None,
 		None,
 	))))

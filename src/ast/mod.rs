@@ -50,7 +50,7 @@ type Comment = Option<String>;
 #[derive(Debug, Clone)]
 pub enum Unary {
 	Minus(Comment, Box<Unary>),
-	Atom(Comment, Atom, Comment, Option<Vec<Expression>>),
+	Atom(Comment, Box<Atom>, Comment, Option<Vec<Expression>>),
 }
 
 #[derive(Debug, Clone)]
@@ -178,18 +178,10 @@ pub enum Function {
 	Abs(Box<Expression>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, Default)]
 pub struct RollQuery {
 	pub prompt: String,
 	pub default: String,
-}
-impl Default for RollQuery {
-	fn default() -> RollQuery {
-		Self {
-			prompt: String::new(),
-			default: String::new(),
-		}
-	}
 }
 impl RollQuery {
 	pub fn new(prompt: &str, default: &str) -> RollQuery {
@@ -201,7 +193,7 @@ impl RollQuery {
 	pub fn as_expression(&self) -> Expression {
 		Expression::MulDiv(MulDiv::Power(Power::Unary(Unary::Atom(
 			None,
-			Atom::RollQuery(RollQuery::new(&self.prompt, &self.default)),
+			Box::new(Atom::RollQuery(self.clone())),
 			None,
 			None,
 		))))
