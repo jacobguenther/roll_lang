@@ -1,6 +1,6 @@
 // File: parser/state.rs
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub(super) enum State {
 	Start,
 	StringLiteral,

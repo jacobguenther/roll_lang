@@ -9,9 +9,6 @@ use state::State;
 mod private_traits;
 use private_traits::ParserPrivateT;
 
-#[cfg(feature = "serialize")]
-use serde::{Deserialize, Serialize};
-
 use super::lexer::{lexeme::Lexeme, Lexer};
 
 use super::ast::*;
@@ -22,21 +19,23 @@ pub trait ParserT {
 }
 
 #[derive(Debug)]
-pub struct Parser {
+pub struct Parser<'a> {
+	lexer: Lexer<'a>,
 	state: State,
 	lexemes: Vec<Lexeme>,
 	current_index: usize,
 }
-impl Parser {
+impl<'a> Parser<'a> {
 	pub fn new(source: &str) -> Parser {
 		Parser {
+			lexer: Lexer::new(source),
 			state: State::default(),
-			lexemes: Lexer::new(source).collect(),
+			lexemes: Vec::new(),
 			current_index: 0,
 		}
 	}
 }
-impl ParserT for Parser {
+impl<'a> ParserT for Parser<'a> {
 	fn parse(&mut self) -> Root {
 		let mut root = Root::new();
 		loop {
