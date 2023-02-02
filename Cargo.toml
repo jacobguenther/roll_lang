@@ -22,6 +22,7 @@ crate-type = ["cdylib", "lib"]
 [features]
 default = ["wasm-bindings"]
 wasm-bindings = ["dep:wasm-bindgen", "dep:web-sys", "dep:js-sys"]
+use-rand = ["dep:rand"]
 
 [dependencies]
 unicode-segmentation = "1.6.0"
