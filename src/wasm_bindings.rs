@@ -22,7 +22,7 @@ pub fn interpret(source: &str) -> String {
 	InterpreterBuilder::default()
 		.with_query_prompter(prompt)
 		.build(rand_func)
-		.interpret(&source)
+		.interpret(source)
 		.to_html()
 }
 
