@@ -1,12 +1,22 @@
 // File: parser/private_traits.rs
 
 use super::{
-	error::{Expecting, ParseError},
+	error::{
+		Expecting,
+		ParseError,
+	},
 	state::State,
 	Parser,
 };
-use crate::ast::{number::*, *};
-use crate::lexer::{keywords::Keyword, lexeme::Lexeme, token::TokenT};
+use crate::ast::{
+	number::*,
+	*,
+};
+use crate::lexer::{
+	keywords::Keyword,
+	lexeme::Lexeme,
+	token::TokenT,
+};
 
 pub(super) trait ParserPrivateT {
 	fn parse_start(&mut self);

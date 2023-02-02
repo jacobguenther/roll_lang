@@ -10,7 +10,10 @@ use private_traits::*;
 
 use super::ast::*;
 use super::macros::Macros;
-use super::parser::{Parser, ParserT};
+use super::parser::{
+	Parser,
+	ParserT,
+};
 
 use std::collections::HashMap;
 

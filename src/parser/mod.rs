@@ -9,7 +9,10 @@ use state::State;
 mod private_traits;
 use private_traits::ParserPrivateT;
 
-use super::lexer::{lexeme::Lexeme, Lexer};
+use super::lexer::{
+	lexeme::Lexeme,
+	Lexer,
+};
 
 use super::ast::*;
 

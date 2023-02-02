@@ -1,7 +1,10 @@
 // File: interpreter/error.rs
 
 #[cfg(feature = "serialize")]
-use serde::{Deserialize, Serialize};
+use serde::{
+	Deserialize,
+	Serialize,
+};
 
 use crate::ast::error::OperatorError;
 use crate::parser::error::ParseError;

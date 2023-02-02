@@ -1,9 +1,22 @@
 // File: ast/number.rs
 
 use super::error::OperatorError;
-use super::{Atom, Comparison, Expression, MulDiv, Power, Unary};
+use super::{
+	Atom,
+	Comparison,
+	Expression,
+	MulDiv,
+	Power,
+	Unary,
+};
 use std::fmt;
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::ops::{
+	Add,
+	Div,
+	Mul,
+	Neg,
+	Sub,
+};
 
 pub type Integer = i64;
 pub type Float = f64;

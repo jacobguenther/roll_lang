@@ -1,6 +1,9 @@
 // File: parser/error.rs
 
-use crate::lexer::{keywords::Keyword, token::Token};
+use crate::lexer::{
+	keywords::Keyword,
+	token::Token,
+};
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]

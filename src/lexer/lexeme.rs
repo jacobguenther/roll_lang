@@ -1,8 +1,14 @@
 // lexer/lexeme.rs
 
 use super::keywords::Keyword;
-use super::token::{Token, TokenT};
-use crate::ast::{number::*, Comparison};
+use super::token::{
+	Token,
+	TokenT,
+};
+use crate::ast::{
+	number::*,
+	Comparison,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Lexeme {

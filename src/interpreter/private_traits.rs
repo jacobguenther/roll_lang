@@ -1,11 +1,20 @@
 // File: interpreter/private_traits.rs
 
-use crate::ast::{number::*, *};
+use crate::ast::{
+	number::*,
+	*,
+};
 use crate::parser::*;
 
-use super::error::{InterpretError, NotSupportedYet};
+use super::error::{
+	InterpretError,
+	NotSupportedYet,
+};
 use super::output::*;
-use super::{Interpreter, InterpreterT};
+use super::{
+	Interpreter,
+	InterpreterT,
+};
 
 pub(super) trait InterpreterPrivateT {
 	fn interpret_string_literal(&self, string_literal: &str) -> OutputFragment;

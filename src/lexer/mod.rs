@@ -9,7 +9,10 @@ mod trie;
 use crate::ast::Comparison;
 use lexeme::Lexeme;
 use state::State;
-use token::{Token, TokenT};
+use token::{
+	Token,
+	TokenT,
+};
 
 use std::convert::TryFrom;
 
@@ -18,7 +21,7 @@ use keywords::Keyword;
 use trie::*;
 use unicode_segmentation::{
 	Graphemes,
-	UnicodeSegmentation
+	UnicodeSegmentation,
 };
 
 static INIT_KEYWORDS_TRIE: std::sync::Once = std::sync::Once::new();
@@ -157,7 +160,11 @@ impl<'a> Lexer<'a> {
 		}
 	}
 	fn handle_whitespace(&mut self, lexeme_token: &mut Token) {
-		self.template_function_match_repeated(Lexer::is_whitespace, lexeme_token, State::Whitespace);
+		self.template_function_match_repeated(
+			Lexer::is_whitespace,
+			lexeme_token,
+			State::Whitespace,
+		);
 	}
 	fn handle_comparison(&mut self, lexeme_token: &mut Token) {
 		match self.current() {
@@ -178,7 +185,7 @@ impl<'a> Lexer<'a> {
 			_ => {
 				self.update_state(State::Start);
 				return;
-			},
+			}
 		}
 		self.update_state(State::Done);
 	}

@@ -1,7 +1,10 @@
 // File: lexer/token.rs
 
 #[cfg(feature = "serialize")]
-use serde::{Deserialize, Serialize};
+use serde::{
+	Deserialize,
+	Serialize,
+};
 
 pub trait TokenT {
 	fn source(&self) -> &str;
