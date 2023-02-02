@@ -102,6 +102,8 @@ fn playground() {
 #[test]
 fn interpreter() {
 	helper(r, "", "");
+	helper(r, "da", "da");
+	helper(r, "just some text", "just some text");
 
 	helper(r, "/r 1+?{prompt|1}", "1 + 1 = 2");
 
