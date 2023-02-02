@@ -8,6 +8,7 @@ use std::iter::Iterator;
 #[test]
 fn comparisons() {
 	let comparison_helper = |source| {
+		println!("{}", source);
 		let lexemes = Lexer::new(source).collect::<Vec<_>>();
 		let mut lexemes_iter = lexemes.iter();
 		let lexeme = lexemes_iter.next().unwrap();
