@@ -1,4 +1,10 @@
 // File: interpreter.rs
+// Author: Jacob Guenther(chmod777)
+// License: AGPLv3
+
+/*
+Handles AST->Output
+*/
 
 pub mod error;
 pub mod output;
@@ -17,25 +23,25 @@ use super::parser::{
 
 use std::collections::HashMap;
 
-pub struct Interpreter<'m, R>
+pub struct Interpreter<'m, RandomFunction>
 where
-	R: Fn() -> f64 + Copy,
+RandomFunction: Fn() -> f64 + Copy,
 {
 	roll_queries: HashMap<String, Expression>,
 	macros: Option<&'m Macros>,
-	rand: R,
+	rand: RandomFunction,
 	query_prmopter: fn(&str, &str) -> Option<String>,
 }
-impl<'m, R> Interpreter<'m, R>
+impl<'m, RandomFunction> Interpreter<'m, RandomFunction>
 where
-	R: Fn() -> f64 + Copy,
+	RandomFunction: Fn() -> f64 + Copy,
 {
 	pub fn new(
 		roll_queries: HashMap<String, Expression>,
 		macros: Option<&Macros>,
-		rand: R,
+		rand: RandomFunction,
 		query_prmopter: fn(&str, &str) -> Option<String>,
-	) -> Interpreter<'_, R> {
+	) -> Interpreter<'_, RandomFunction> {
 		Interpreter {
 			roll_queries,
 			macros,
@@ -48,9 +54,9 @@ where
 pub trait InterpreterT {
 	fn interpret(&mut self, source: &str) -> Output;
 }
-impl<'m, R> InterpreterT for Interpreter<'m, R>
+impl<'m, RandomFunction> InterpreterT for Interpreter<'m, RandomFunction>
 where
-	R: Fn() -> f64 + Copy,
+RandomFunction: Fn() -> f64 + Copy,
 {
 	fn interpret(&mut self, source: &str) -> Output {
 		let ast = Parser::new(source).parse();

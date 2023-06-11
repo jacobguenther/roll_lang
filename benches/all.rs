@@ -1,6 +1,17 @@
 // File: benches/all.rs
+// Author: Jacob Guenther(chmod777)
+// License: AGPLv3
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+/*
+Simple benchmarks for the lexer, parser, and interpreter.
+*/
+
+use criterion::{
+	black_box,
+	criterion_group,
+	criterion_main,
+	Criterion,
+};
 
 use std::iter::Iterator;
 
@@ -40,6 +51,12 @@ pub fn bench_lexer(c: &mut Criterion) {
 			let _ = Lexer::new(black_box(DICE)).collect::<Vec<_>>();
 		})
 	});
+
+	c.bench_function("lexer multiple rolls", |b| {
+		b.iter(|| {
+			let _ = Lexer::new(black_box(MULTIPLE_ROLLS)).collect::<Vec<_>>();
+		})
+	});
 }
 
 pub fn bench_parser(c: &mut Criterion) {
@@ -69,10 +86,12 @@ pub fn bench_interpreter(c: &mut Criterion) {
 	use roll_lang::builder::*;
 	use roll_lang::interpreter::*;
 
+	let rand = rand::random::<64>;
+
 	c.bench_function("interpreter addition", |b| {
 		b.iter(|| {
 			InterpreterBuilder::default()
-				.build(rand::random::<f64>)
+				.build(rand)
 				.interpret(black_box(ADDITION));
 		})
 	});
@@ -80,7 +99,7 @@ pub fn bench_interpreter(c: &mut Criterion) {
 	c.bench_function("interpreter dice", |b| {
 		b.iter(|| {
 			InterpreterBuilder::default()
-				.build(rand::random::<f64>)
+				.build(rand)
 				.interpret(black_box(DICE));
 		})
 	});
@@ -88,7 +107,7 @@ pub fn bench_interpreter(c: &mut Criterion) {
 	c.bench_function("interpreter multiple rolls", |b| {
 		b.iter(|| {
 			InterpreterBuilder::default()
-				.build(rand::random::<f64>)
+				.build(rand)
 				.interpret(black_box(MULTIPLE_ROLLS));
 		})
 	});

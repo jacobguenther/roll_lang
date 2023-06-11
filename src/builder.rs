@@ -1,4 +1,10 @@
 // File: builder.rs
+// Author: Jacob Guenther(chmod777)
+// License: AGPLv3
+
+/*
+A builder struct for creating the interepreter.
+*/
 
 use crate::ast::Expression;
 use crate::interpreter::*;

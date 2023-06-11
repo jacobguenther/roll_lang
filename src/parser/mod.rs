@@ -1,4 +1,10 @@
 // File: parser.rs
+// Author: Jacob Guenther(chmod777)
+// License: AGPLv3
+
+/*
+Handles Lexeme->AST
+*/
 
 pub mod error;
 use error::ParseError;

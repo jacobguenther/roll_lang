@@ -1,4 +1,10 @@
 // File: lexer/mod.rs
+// Author: Jacob Guenther(chmod777)
+// License: AGPLv3
+
+/*
+Handles raw input->Lexems.
+*/
 
 pub mod keywords;
 pub mod lexeme;

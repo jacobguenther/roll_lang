@@ -1,4 +1,10 @@
 // File: lib.rs
+// Author: Jacob Guenther(chmod777)
+// License: AGPLv3
+
+/*
+Documentation for the project can be found here TODO
+*/
 
 extern crate unicode_segmentation;
 
